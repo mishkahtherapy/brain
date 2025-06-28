@@ -13,14 +13,16 @@ const (
 )
 
 type TimeSlot struct {
-	ID                string    `json:"id"`
-	TherapistID       string    `json:"therapistId"`
-	DayOfWeek         DayOfWeek `json:"dayOfWeek"`
-	StartTime         string    `json:"startTime"`         // e.g. "15:00"
-	EndTime           string    `json:"endTime"`           // e.g. "16:00"
-	PreSessionBuffer  int       `json:"preSessionBuffer"`  // minutes
-	PostSessionBuffer int       `json:"postSessionBuffer"` // minutes
-	BookingIDs        []string  `json:"bookingIds"`
+	ID                TimeSlotID   `json:"id"`
+	TherapistID       TherapistID  `json:"therapistId"`
+	DayOfWeek         DayOfWeek    `json:"dayOfWeek"`
+	StartTime         string       `json:"startTime"`         // e.g. "15:00"
+	EndTime           string       `json:"endTime"`           // e.g. "16:00"
+	PreSessionBuffer  int          `json:"preSessionBuffer"`  // minutes
+	PostSessionBuffer int          `json:"postSessionBuffer"` // minutes
+	BookingIDs        []BookingID  `json:"bookingIds"`
+	CreatedAt         UTCTimestamp `json:"createdAt"`
+	UpdatedAt         UTCTimestamp `json:"updatedAt"`
 }
 
 // Helper method to convert buffer to minutes for calculations

@@ -8,6 +8,4 @@ type BookingRepository interface {
 	Update(booking *domain.Booking) error
 	Delete(id string) error
 	ListByTherapist(therapistID string) ([]*domain.Booking, error)
-	ListByClient(clientID string) ([]*domain.Booking, error)
-	ListByTimeSlot(timeslotID string) ([]*domain.Booking, error)
 }

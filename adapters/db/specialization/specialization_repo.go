@@ -1,0 +1,172 @@
+package specialization
+
+import (
+	"database/sql"
+	"errors"
+	"fmt"
+	"log/slog"
+	"strings"
+
+	"github.com/mishkahtherapy/brain/adapters/db"
+	"github.com/mishkahtherapy/brain/core/domain"
+)
+
+type SpecializationRepository struct {
+	db db.SQLDatabase
+}
+
+func NewSpecializationRepository(db db.SQLDatabase) *SpecializationRepository {
+	return &SpecializationRepository{db: db}
+}
+
+func (r *SpecializationRepository) Create(specialization *domain.Specialization) error {
+	if specialization.ID == "" {
+		return errors.New("specialization id is required")
+	}
+
+	if specialization.Name == "" {
+		return errors.New("specialization name is required")
+	}
+
+	if specialization.CreatedAt == (domain.UTCTimestamp{}) {
+		return errors.New("specialization created at is required")
+	}
+
+	if specialization.UpdatedAt == (domain.UTCTimestamp{}) {
+		return errors.New("specialization updated at is required")
+	}
+
+	query := `
+		INSERT INTO specializations (id, name, created_at, updated_at)
+		VALUES (?, ?, ?, ?)
+	`
+	_, err := r.db.Exec(
+		query,
+		specialization.ID,
+		specialization.Name,
+		specialization.CreatedAt,
+		specialization.UpdatedAt,
+	)
+	return err
+}
+
+func (r *SpecializationRepository) BulkGetByIds(ids []domain.SpecializationID) (map[domain.SpecializationID]*domain.Specialization, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	query := `
+		SELECT id, name, created_at, updated_at
+		FROM specializations
+		WHERE id IN (%s)
+	`
+	placeholders := make([]string, len(ids))
+	values := make([]interface{}, len(ids))
+	for i := range ids {
+		placeholders[i] = "?"
+		values[i] = ids[i]
+	}
+
+	query = fmt.Sprintf(query, strings.Join(placeholders, ","))
+	rows, err := r.db.Query(query, values...)
+	if err != nil {
+		slog.Error("error getting specializations by ids", "error", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	specializations := make(map[domain.SpecializationID]*domain.Specialization)
+	for rows.Next() {
+		specialization := &domain.Specialization{}
+		err := rows.Scan(
+			&specialization.ID,
+			&specialization.Name,
+			&specialization.CreatedAt,
+			&specialization.UpdatedAt,
+		)
+		if err != nil {
+			slog.Error("error scanning specialization", "error", err)
+			return nil, err
+		}
+		specializations[specialization.ID] = specialization
+	}
+	return specializations, nil
+}
+
+func (r *SpecializationRepository) GetByID(id domain.SpecializationID) (*domain.Specialization, error) {
+	query := `
+		SELECT id, name, created_at, updated_at
+		FROM specializations
+		WHERE id = ?
+	`
+	row := r.db.QueryRow(query, id)
+	specialization := &domain.Specialization{}
+	err := row.Scan(
+		&specialization.ID,
+		&specialization.Name,
+		&specialization.CreatedAt,
+		&specialization.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		slog.Error("error getting specialization by id", "error", err)
+		return nil, err
+	}
+	return specialization, nil
+}
+
+func (r *SpecializationRepository) GetByName(name string) (*domain.Specialization, error) {
+	query := `
+		SELECT id, name, created_at, updated_at
+		FROM specializations
+		WHERE name = ?
+	`
+	row := r.db.QueryRow(query, name)
+	specialization := &domain.Specialization{}
+	err := row.Scan(
+		&specialization.ID,
+		&specialization.Name,
+		&specialization.CreatedAt,
+		&specialization.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		slog.Error("error getting specialization by name", "error", err)
+		return nil, err
+	}
+	return specialization, nil
+}
+
+func (r *SpecializationRepository) GetAll() ([]*domain.Specialization, error) {
+	query := `
+		SELECT id, name, created_at, updated_at
+		FROM specializations
+		ORDER BY name ASC
+	`
+	rows, err := r.db.Query(query)
+	if err != nil {
+		slog.Error("error getting all specializations", "error", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	specializations := make([]*domain.Specialization, 0)
+	for rows.Next() {
+		specialization := &domain.Specialization{}
+		err := rows.Scan(
+			&specialization.ID,
+			&specialization.Name,
+			&specialization.CreatedAt,
+			&specialization.UpdatedAt,
+		)
+		if err != nil {
+			slog.Error("error scanning specialization", "error", err)
+			return nil, err
+		}
+		specializations = append(specializations, specialization)
+	}
+	return specializations, nil
+}
