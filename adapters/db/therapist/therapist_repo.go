@@ -166,11 +166,8 @@ func (r *TherapistRepository) GetByID(id domain.TherapistID) (*domain.Therapist,
 	if err != nil {
 		return nil, err
 	}
+
 	therapist.Specializations = specializations[id]
-
-	// Initialize empty slices for TimeSlotIDs and BookingIDs
-	therapist.TimeSlots = []domain.TimeSlot{}
-
 	return therapist, nil
 }
 
@@ -204,11 +201,8 @@ func (r *TherapistRepository) GetByEmail(email domain.Email) (*domain.Therapist,
 	if err != nil {
 		return nil, ErrFailedToGetTherapists
 	}
+
 	therapist.Specializations = specializations[therapist.ID]
-
-	// Initialize empty slices for TimeSlotIDs and BookingIDs
-	therapist.TimeSlots = []domain.TimeSlot{}
-
 	return therapist, nil
 }
 
@@ -254,13 +248,11 @@ func (r *TherapistRepository) List() ([]*domain.Therapist, error) {
 		if err != nil {
 			return nil, ErrFailedToGetTherapists
 		}
+
 		therapist.Specializations = specializations[therapist.ID]
-
-		// Initialize empty slices for TimeSlotIDs and BookingIDs
-		therapist.TimeSlots = []domain.TimeSlot{}
-
 		therapists = append(therapists, therapist)
 	}
+
 	return therapists, nil
 }
 

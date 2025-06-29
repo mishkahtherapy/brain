@@ -7,9 +7,6 @@ type Therapist struct {
 	PhoneNumber    PhoneNumber    `json:"phoneNumber"`
 	WhatsAppNumber WhatsAppNumber `json:"whatsAppNumber"`
 
-	// TODO: don't return IDs, return the time slots
-	TimeSlots []TimeSlot `json:"timeSlots"`
-
 	// TODO: don't return IDs, return the specializations
 	Specializations []Specialization `json:"specializations"`
 

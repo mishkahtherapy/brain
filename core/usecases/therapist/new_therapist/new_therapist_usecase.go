@@ -40,7 +40,6 @@ func (u *Usecase) Execute(input Input) (*domain.Therapist, error) {
 		Email:          input.Email,
 		PhoneNumber:    input.PhoneNumber,
 		WhatsAppNumber: input.WhatsAppNumber,
-		TimeSlots:      []domain.TimeSlot{},
 	}
 
 	specializations := make([]domain.Specialization, 0)
