@@ -2,7 +2,6 @@ package test
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/mishkahtherapy/brain/adapters/api"
+	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/adapters/db/specialization"
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/usecases/specialization/get_all_specializations"
@@ -175,35 +175,19 @@ func TestSpecializationE2E(t *testing.T) {
 	})
 }
 
-func setupTestDB(t *testing.T) (*sql.DB, func()) {
+func setupTestDB(_ *testing.T) (db.SQLDatabase, func()) {
 	// Create temporary database file
-	dbFile := ":memory:" // Use in-memory database for testing
+	dbFilename := ":memory:" // Use in-memory database for testing
 
-	db, err := sql.Open("sqlite", dbFile)
-	if err != nil {
-		t.Fatalf("Failed to open test database: %v", err)
-	}
-
-	// Create specializations table
-	createTableSQL := `
-		CREATE TABLE specializations (
-			id TEXT PRIMARY KEY,
-			name TEXT NOT NULL,
-			created_at DATETIME NOT NULL,
-			updated_at DATETIME NOT NULL
-		);
-	`
-
-	_, err = db.Exec(createTableSQL)
-	if err != nil {
-		t.Fatalf("Failed to create specializations table: %v", err)
-	}
-
+	database := db.NewDatabase(db.DatabaseConfig{
+		DBFilename: dbFilename,
+		SchemaFile: "../../../schema.sql",
+	})
 	// Return cleanup function
 	cleanup := func() {
-		db.Close()
+		database.Close()
 		// No need to remove file for in-memory database
 	}
 
-	return db, cleanup
+	return database, cleanup
 }

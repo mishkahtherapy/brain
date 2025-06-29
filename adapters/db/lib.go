@@ -6,10 +6,20 @@ import (
 	"os"
 )
 
+type SQLTx interface {
+	Query(query string, args ...any) (*sql.Rows, error)
+	QueryRow(query string, args ...any) *sql.Row
+	Exec(query string, args ...any) (sql.Result, error)
+
+	Commit() error
+	Rollback() error
+}
+
 type SQLDatabase interface {
 	Query(query string, args ...any) (*sql.Rows, error)
 	QueryRow(query string, args ...any) *sql.Row
 	Exec(query string, args ...any) (sql.Result, error)
+	Begin() (SQLTx, error)
 	Close() error
 }
 
@@ -18,14 +28,22 @@ type Database struct {
 }
 
 type DatabaseConfig struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
-	DBName   string
+	// Host     string
+	// Port     int
+	// User     string
+	// Password string
+	DBFilename string
+	SchemaFile string
 }
 
 func NewDatabase(config DatabaseConfig) SQLDatabase {
+	if config.SchemaFile == "" {
+		panic("schema file is required")
+	}
+	if config.DBFilename == "" {
+		panic("db filename is required")
+	}
+
 	db, err := connectDB(config)
 	if err != nil {
 		slog.Error("Failed to connect to database", "error", err)
@@ -46,21 +64,25 @@ func (d *Database) Exec(query string, args ...any) (sql.Result, error) {
 	return d.db.Exec(query, args...)
 }
 
+func (d *Database) Begin() (SQLTx, error) {
+	return d.db.Begin()
+}
+
 func (d *Database) Close() error {
 	return d.db.Close()
 }
 
 func connectDB(config DatabaseConfig) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", config.DBName)
+	db, err := sql.Open("sqlite", config.DBFilename)
 	if err != nil {
 		return nil, err
 	}
 
 	// Initialize the database
-	db.Exec("PRAGMA foreign_keys = ON")
+	db.Exec(`PRAGMA foreign_keys = ON`)
 
 	// Check if the database is has no schema tables
-	rows, err := db.Query("SELECT name FROM sqlite_master WHERE type='table' AND name='specializations'")
+	rows, err := db.Query(`SELECT name FROM sqlite_master WHERE type='table' AND name='specializations'`)
 	if err != nil {
 		return nil, err
 	}
@@ -72,11 +94,15 @@ func connectDB(config DatabaseConfig) (*sql.DB, error) {
 	}
 
 	// Load schema
-	schema, err := os.ReadFile("schema.sql")
+	schema, err := os.ReadFile(config.SchemaFile)
 	if err != nil {
 		return nil, err
 	}
-	db.Exec(string(schema))
+
+	_, err = db.Exec(string(schema))
+	if err != nil {
+		return nil, err
+	}
 
 	return db, nil
 }

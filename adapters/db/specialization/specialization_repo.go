@@ -15,25 +15,33 @@ type SpecializationRepository struct {
 	db db.SQLDatabase
 }
 
+var ErrSpecializationNotFound = errors.New("specialization not found")
+var ErrSpecializationAlreadyExists = errors.New("specialization already exists")
+var ErrSpecializationNameIsRequired = errors.New("specialization name is required")
+var ErrSpecializationCreatedAtIsRequired = errors.New("specialization created at is required")
+var ErrSpecializationUpdatedAtIsRequired = errors.New("specialization updated at is required")
+var ErrSpecializationIDIsRequired = errors.New("specialization id is required")
+var ErrFailedToGetSpecializations = errors.New("failed to get specializations")
+
 func NewSpecializationRepository(db db.SQLDatabase) *SpecializationRepository {
 	return &SpecializationRepository{db: db}
 }
 
 func (r *SpecializationRepository) Create(specialization *domain.Specialization) error {
 	if specialization.ID == "" {
-		return errors.New("specialization id is required")
+		return ErrSpecializationIDIsRequired
 	}
 
 	if specialization.Name == "" {
-		return errors.New("specialization name is required")
+		return ErrSpecializationNameIsRequired
 	}
 
 	if specialization.CreatedAt == (domain.UTCTimestamp{}) {
-		return errors.New("specialization created at is required")
+		return ErrSpecializationCreatedAtIsRequired
 	}
 
 	if specialization.UpdatedAt == (domain.UTCTimestamp{}) {
-		return errors.New("specialization updated at is required")
+		return ErrSpecializationUpdatedAtIsRequired
 	}
 
 	query := `
@@ -70,7 +78,7 @@ func (r *SpecializationRepository) BulkGetByIds(ids []domain.SpecializationID) (
 	rows, err := r.db.Query(query, values...)
 	if err != nil {
 		slog.Error("error getting specializations by ids", "error", err)
-		return nil, err
+		return nil, ErrFailedToGetSpecializations
 	}
 	defer rows.Close()
 
@@ -85,7 +93,7 @@ func (r *SpecializationRepository) BulkGetByIds(ids []domain.SpecializationID) (
 		)
 		if err != nil {
 			slog.Error("error scanning specialization", "error", err)
-			return nil, err
+			return nil, ErrFailedToGetSpecializations
 		}
 		specializations[specialization.ID] = specialization
 	}
@@ -111,7 +119,7 @@ func (r *SpecializationRepository) GetByID(id domain.SpecializationID) (*domain.
 			return nil, nil
 		}
 		slog.Error("error getting specialization by id", "error", err)
-		return nil, err
+		return nil, ErrFailedToGetSpecializations
 	}
 	return specialization, nil
 }
@@ -135,7 +143,7 @@ func (r *SpecializationRepository) GetByName(name string) (*domain.Specializatio
 			return nil, nil
 		}
 		slog.Error("error getting specialization by name", "error", err)
-		return nil, err
+		return nil, ErrFailedToGetSpecializations
 	}
 	return specialization, nil
 }
@@ -149,7 +157,7 @@ func (r *SpecializationRepository) GetAll() ([]*domain.Specialization, error) {
 	rows, err := r.db.Query(query)
 	if err != nil {
 		slog.Error("error getting all specializations", "error", err)
-		return nil, err
+		return nil, ErrFailedToGetSpecializations
 	}
 	defer rows.Close()
 
@@ -164,7 +172,7 @@ func (r *SpecializationRepository) GetAll() ([]*domain.Specialization, error) {
 		)
 		if err != nil {
 			slog.Error("error scanning specialization", "error", err)
-			return nil, err
+			return nil, ErrFailedToGetSpecializations
 		}
 		specializations = append(specializations, specialization)
 	}

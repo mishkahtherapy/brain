@@ -47,12 +47,20 @@ func (rw *ResponseWriter) WriteMethodNotAllowed() {
 	http.Error(rw.w, "Method not allowed", http.StatusMethodNotAllowed)
 }
 
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
 // WriteBadRequest writes a 400 Bad Request response
 func (rw *ResponseWriter) WriteBadRequest(message string) {
-	http.Error(rw.w, message, http.StatusBadRequest)
+	rw.w.Header().Set("Content-Type", "application/json")
+	rw.w.WriteHeader(http.StatusBadRequest)
+	json.NewEncoder(rw.w).Encode(ErrorResponse{Error: message})
 }
 
 // WriteNotFound writes a 404 Not Found response
 func (rw *ResponseWriter) WriteNotFound(message string) {
-	http.Error(rw.w, message, http.StatusNotFound)
+	rw.w.Header().Set("Content-Type", "application/json")
+	rw.w.WriteHeader(http.StatusNotFound)
+	json.NewEncoder(rw.w).Encode(ErrorResponse{Error: message})
 }

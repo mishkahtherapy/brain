@@ -1,4 +1,4 @@
-package therapists
+package new_therapist
 
 import (
 	"errors"
@@ -18,6 +18,14 @@ var ErrWhatsAppNumberIsRequired = errors.New("whatsapp number is required")
 var ErrInvalidPhoneNumber = errors.New("invalid phone number: must be in the format +1234567890")
 var ErrInvalidWhatsAppNumber = errors.New("invalid whatsapp number: must be in the format +1234567890")
 
+type Input struct {
+	Name              string                    `json:"name"`
+	Email             domain.Email              `json:"email"`
+	PhoneNumber       domain.PhoneNumber        `json:"phoneNumber"`
+	WhatsAppNumber    domain.WhatsAppNumber     `json:"whatsAppNumber"`
+	SpecializationIDs []domain.SpecializationID `json:"specializationIds"`
+}
+
 type Usecase struct {
 	therapistRepo ports.TherapistRepository
 }
@@ -26,7 +34,21 @@ func NewUsecase(therapistRepo ports.TherapistRepository) *Usecase {
 	return &Usecase{therapistRepo: therapistRepo}
 }
 
-func (u *Usecase) Execute(therapist *domain.Therapist) (*domain.Therapist, error) {
+func (u *Usecase) Execute(input Input) (*domain.Therapist, error) {
+	therapist := &domain.Therapist{
+		Name:           input.Name,
+		Email:          input.Email,
+		PhoneNumber:    input.PhoneNumber,
+		WhatsAppNumber: input.WhatsAppNumber,
+		TimeSlots:      []domain.TimeSlot{},
+	}
+
+	specializations := make([]domain.Specialization, 0)
+	for _, specID := range input.SpecializationIDs {
+		specializations = append(specializations, domain.Specialization{ID: specID})
+	}
+	therapist.Specializations = specializations
+
 	err := validateTherapist(therapist)
 	if err != nil {
 		return nil, err
