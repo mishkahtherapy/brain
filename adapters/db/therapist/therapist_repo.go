@@ -260,6 +260,67 @@ func (r *TherapistRepository) List() ([]*domain.Therapist, error) {
 	return therapists, nil
 }
 
+func (r *TherapistRepository) FindBySpecializationAndLanguage(specializationName string, mustSpeakEnglish bool) ([]*domain.Therapist, error) {
+	query := `
+	       SELECT DISTINCT t.id, t.name, t.email, t.phone_number, t.whatsapp_number, t.speaks_english, t.created_at, t.updated_at
+	       FROM therapists t
+	       JOIN therapist_specializations ts ON t.id = ts.therapist_id
+	       JOIN specializations s ON ts.specialization_id = s.id
+	       WHERE s.name = ?
+	   `
+
+	args := []interface{}{specializationName}
+
+	if mustSpeakEnglish {
+		query += " AND t.speaks_english = TRUE"
+	}
+
+	query += " ORDER BY t.name ASC"
+
+	rows, err := r.db.Query(query, args...)
+	if err != nil {
+		slog.Error("error finding therapists by specialization and language", "error", err)
+		return nil, ErrFailedToGetTherapists
+	}
+	defer rows.Close()
+
+	therapists := make([]*domain.Therapist, 0)
+	therapistIDs := make([]domain.TherapistID, 0)
+
+	for rows.Next() {
+		therapist := &domain.Therapist{}
+		err := rows.Scan(
+			&therapist.ID,
+			&therapist.Name,
+			&therapist.Email,
+			&therapist.PhoneNumber,
+			&therapist.WhatsAppNumber,
+			&therapist.SpeaksEnglish,
+			&therapist.CreatedAt,
+			&therapist.UpdatedAt,
+		)
+		if err != nil {
+			slog.Error("error scanning therapist", "error", err)
+			return nil, ErrFailedToGetTherapists
+		}
+
+		therapists = append(therapists, therapist)
+		therapistIDs = append(therapistIDs, therapist.ID)
+	}
+
+	// Load specializations for each therapist
+	specializations, err := r.bulkGetTherapistSpecializations(therapistIDs)
+	if err != nil {
+		return nil, ErrFailedToGetTherapists
+	}
+
+	for _, therapist := range therapists {
+		therapist.Specializations = specializations[therapist.ID]
+	}
+
+	return therapists, nil
+}
+
 // Helper methods for managing therapist specializations
 
 func (r *TherapistRepository) insertTherapistSpecializations(tx db.SQLTx, therapistID domain.TherapistID, specializationIDs []domain.SpecializationID) error {

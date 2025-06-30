@@ -1,0 +1,18 @@
+meta {
+  name: Update Session Notes
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{API_URL}}/sessions/:sessionId/notes
+  body: json
+  auth: inherit
+  body:json {
+    "notes": "Session notes go here."
+  }
+}
+
+params:path {
+  sessionId: 123123
+} 

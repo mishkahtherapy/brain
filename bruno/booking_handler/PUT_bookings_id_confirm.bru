@@ -1,0 +1,19 @@
+meta {
+  name: Confirm Booking
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{API_URL}}/bookings/:bookingId/confirm
+  body: json
+  auth: inherit
+  body:json {
+    "paidAmount": 9999,
+    "language": "english"
+  }
+}
+
+params:path {
+  bookingId: 123123
+} 

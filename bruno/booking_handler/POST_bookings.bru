@@ -1,0 +1,20 @@
+meta {
+  name: New Booking
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{API_URL}}/bookings
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "therapistId": "<therapistId>",
+    "clientId": "<clientId>",
+    "timeSlotId": "<timeSlotId>",
+    "startTime": "2024-12-15T10:00:00Z"
+  }
+} 

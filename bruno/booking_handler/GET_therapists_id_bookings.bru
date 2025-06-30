@@ -1,0 +1,15 @@
+meta {
+  name: Bookings by Therapist
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{API_URL}}/therapists/:therapistId/bookings
+  body: none
+  auth: inherit
+}
+
+params:path {
+  therapistId: 123123
+} 

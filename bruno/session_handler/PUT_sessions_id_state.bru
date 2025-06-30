@@ -1,0 +1,18 @@
+meta {
+  name: Update Session State
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{API_URL}}/sessions/:sessionId/state
+  body: json
+  auth: inherit
+  body:json {
+    "newState": "completed"
+  }
+}
+
+params:path {
+  sessionId: 123123
+} 

@@ -1,0 +1,18 @@
+meta {
+  name: Update Meeting URL
+  type: http
+  seq: 7
+}
+
+put {
+  url: {{API_URL}}/sessions/:sessionId/meeting_url
+  body: json
+  auth: inherit
+  body:json {
+    "meetingUrl": "https://meet.example.com/abc123"
+  }
+}
+
+params:path {
+  sessionId: 123123
+} 

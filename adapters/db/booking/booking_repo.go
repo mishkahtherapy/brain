@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"log/slog"
+	"time"
 
 	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/core/domain"
@@ -337,4 +338,52 @@ func (r *BookingRepository) scanBookings(rows *sql.Rows) ([]*domain.Booking, err
 		bookings = append(bookings, booking)
 	}
 	return bookings, nil
+}
+
+func (r *BookingRepository) ListConfirmedByTherapistForDateRange(
+	therapistID domain.TherapistID, startDate, endDate time.Time) ([]*domain.Booking, error) {
+	if therapistID == "" {
+		return nil, ErrBookingTherapistIDIsRequired
+	}
+
+	// TODO: make this a parameter.
+	// Calculate endTimeForBookingStartedBeforeRange (startDate - 1 hour)
+	// This captures bookings that start before the range but extend into it
+	oneHourBefore := startDate.Add(-time.Hour)
+
+	query := `
+	       SELECT id, timeslot_id, therapist_id, client_id, start_time, state, created_at, updated_at
+	       FROM bookings
+	       WHERE therapist_id = ?
+	       AND state = ?
+	       AND (
+		       -- Bookings that start within the range
+		       (start_time >= ? AND start_time <= ?)
+		       OR
+		       -- Bookings that start before the range but end within or after it
+		       -- (assuming fixed 1-hour duration for all bookings)
+		       (start_time >= ? AND start_time < ?)
+	       )
+	       ORDER BY start_time ASC
+	   `
+
+	rows, err := r.db.Query(
+		query,
+		therapistID,
+		domain.BookingStateConfirmed,
+		startDate, endDate, // For bookings starting within range
+		oneHourBefore, startDate, // For bookings starting before range but extending into it
+	)
+	if err != nil {
+		slog.Error("error listing confirmed bookings by therapist for date range",
+			"error", err,
+			"therapistID", therapistID,
+			"startDate", startDate,
+			"endDate", endDate,
+		)
+		return nil, ErrFailedToGetBookings
+	}
+	defer rows.Close()
+
+	return r.scanBookings(rows)
 }

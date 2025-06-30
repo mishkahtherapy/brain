@@ -1,0 +1,15 @@
+meta {
+  name: Get Therapist by ID
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{API_URL}}/therapists/:therapistId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  therapistId: 123123
+} 

@@ -1,0 +1,15 @@
+meta {
+  name: Get Client by ID
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{API_URL}}/clients/:clientId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  clientId: 123123
+} 

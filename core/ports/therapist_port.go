@@ -9,4 +9,5 @@ type TherapistRepository interface {
 	UpdateSpecializations(therapistID domain.TherapistID, specializationIDs []domain.SpecializationID) error
 	Delete(id domain.TherapistID) error
 	List() ([]*domain.Therapist, error)
+	FindBySpecializationAndLanguage(specializationName string, mustSpeakEnglish bool) ([]*domain.Therapist, error)
 }

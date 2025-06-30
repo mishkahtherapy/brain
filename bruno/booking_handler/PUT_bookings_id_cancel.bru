@@ -1,0 +1,15 @@
+meta {
+  name: Cancel Booking
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{API_URL}}/bookings/:bookingId/cancel
+  body: none
+  auth: inherit
+}
+
+params:path {
+  bookingId: 123123
+} 

@@ -9,15 +9,21 @@ import (
 	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/adapters/db/booking"
+	"github.com/mishkahtherapy/brain/adapters/db/client"
 	"github.com/mishkahtherapy/brain/adapters/db/session"
 	"github.com/mishkahtherapy/brain/adapters/db/specialization"
 	"github.com/mishkahtherapy/brain/adapters/db/therapist"
+	"github.com/mishkahtherapy/brain/adapters/db/timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/cancel_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/confirm_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/create_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/get_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/list_bookings_by_client"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/list_bookings_by_therapist"
+	"github.com/mishkahtherapy/brain/core/usecases/client/create_client"
+	"github.com/mishkahtherapy/brain/core/usecases/client/get_all_clients"
+	"github.com/mishkahtherapy/brain/core/usecases/client/get_client"
+	"github.com/mishkahtherapy/brain/core/usecases/schedule/get_schedule"
 	"github.com/mishkahtherapy/brain/core/usecases/session/create_session"
 	"github.com/mishkahtherapy/brain/core/usecases/session/get_meeting_link"
 	"github.com/mishkahtherapy/brain/core/usecases/session/get_session"
@@ -48,6 +54,7 @@ func main() {
 	// Initialize database
 	dbConfig := db.DatabaseConfig{
 		DBFilename: "./brain.db", // SQLite database file
+		SchemaFile: "./schema.sql",
 	}
 	database := db.NewDatabase(dbConfig)
 	defer database.Close()
@@ -57,8 +64,10 @@ func main() {
 	// Initialize repositories
 	specializationRepo := specialization.NewSpecializationRepository(database)
 	therapistRepo := therapist.NewTherapistRepository(database)
+	clientRepo := client.NewClientRepository(database)
 	bookingRepo := booking.NewBookingRepository(database)
 	sessionRepo := session.NewSessionRepository(database)
+	timeSlotRepo := timeslot.NewTimeSlotRepository(database)
 
 	// Initialize specialization usecases
 	newSpecializationUsecase := new_specialization.NewUsecase(specializationRepo)
@@ -71,8 +80,13 @@ func main() {
 	getTherapistUsecase := get_therapist.NewUsecase(therapistRepo)
 	updateTherapistSpecializationsUsecase := update_therapist_specializations.NewUsecase(therapistRepo, specializationRepo)
 
+	// Initialize client usecases
+	createClientUsecase := create_client.NewUsecase(clientRepo)
+	getAllClientsUsecase := get_all_clients.NewUsecase(clientRepo)
+	getClientUsecase := get_client.NewUsecase(clientRepo)
+
 	// Initialize booking usecases
-	createBookingUsecase := create_booking.NewUsecase(bookingRepo, therapistRepo, nil, nil) // Client and TimeSlot repos needed for full impl
+	createBookingUsecase := create_booking.NewUsecase(bookingRepo, therapistRepo, clientRepo, timeSlotRepo)
 	getBookingUsecase := get_booking.NewUsecase(bookingRepo)
 	confirmBookingUsecase := confirm_booking.NewUsecase(bookingRepo, sessionRepo)
 	cancelBookingUsecase := cancel_booking.NewUsecase(bookingRepo)
@@ -80,7 +94,7 @@ func main() {
 	listBookingsByClientUsecase := list_bookings_by_client.NewUsecase(bookingRepo)
 
 	// Initialize session usecases
-	createSessionUsecase := create_session.NewUsecase(sessionRepo, bookingRepo, therapistRepo, nil, nil) // Client and TimeSlot repos needed for full impl
+	createSessionUsecase := create_session.NewUsecase(sessionRepo, bookingRepo, therapistRepo, clientRepo, timeSlotRepo)
 	getSessionUsecase := get_session.NewUsecase(sessionRepo)
 	updateSessionStateUsecase := update_session_state.NewUsecase(sessionRepo)
 	updateSessionNotesUsecase := update_session_notes.NewUsecase(sessionRepo)
@@ -89,6 +103,9 @@ func main() {
 	listSessionsByClientUsecase := list_sessions_by_client.NewUsecase(sessionRepo)
 	listSessionsAdminUsecase := list_sessions_admin.NewUsecase(sessionRepo)
 	getMeetingLinkUsecase := get_meeting_link.NewUsecase(sessionRepo)
+
+	// Initialize schedule usecases
+	getScheduleUsecase := get_schedule.NewUsecase(therapistRepo, timeSlotRepo, bookingRepo)
 
 	// Initialize handlers
 	specializationHandler := api.NewSpecializationHandler(
@@ -102,6 +119,12 @@ func main() {
 		*getAllTherapistsUsecase,
 		*getTherapistUsecase,
 		*updateTherapistSpecializationsUsecase,
+	)
+
+	clientHandler := api.NewClientHandler(
+		*createClientUsecase,
+		*getAllClientsUsecase,
+		*getClientUsecase,
 	)
 
 	bookingHandler := api.NewBookingHandler(
@@ -128,6 +151,10 @@ func main() {
 		*getMeetingLinkUsecase,
 	)
 
+	scheduleHandler := api.NewScheduleHandler(
+		*getScheduleUsecase,
+	)
+
 	// Setup HTTP routes
 	mux := http.NewServeMux()
 
@@ -137,6 +164,9 @@ func main() {
 	// Register therapist routes
 	therapistHandler.RegisterRoutes(mux)
 
+	// Register client routes
+	clientHandler.RegisterRoutes(mux)
+
 	// Register booking routes
 	bookingHandler.RegisterRoutes(mux)
 
@@ -145,6 +175,9 @@ func main() {
 
 	// Register meeting link proxy routes
 	meetingLinkProxyHandler.RegisterRoutes(mux)
+
+	// Register schedule routes
+	scheduleHandler.RegisterRoutes(mux)
 
 	// Add health check endpoint
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {

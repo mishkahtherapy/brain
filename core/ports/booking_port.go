@@ -1,6 +1,10 @@
 package ports
 
-import "github.com/mishkahtherapy/brain/core/domain"
+import (
+	"time"
+
+	"github.com/mishkahtherapy/brain/core/domain"
+)
 
 type BookingRepository interface {
 	GetByID(id domain.BookingID) (*domain.Booking, error)
@@ -12,4 +16,5 @@ type BookingRepository interface {
 	ListByState(state domain.BookingState) ([]*domain.Booking, error)
 	ListByTherapistAndState(therapistID domain.TherapistID, state domain.BookingState) ([]*domain.Booking, error)
 	ListByClientAndState(clientID domain.ClientID, state domain.BookingState) ([]*domain.Booking, error)
+	ListConfirmedByTherapistForDateRange(therapistID domain.TherapistID, startDate, endDate time.Time) ([]*domain.Booking, error)
 }

@@ -59,7 +59,7 @@ func (u *Usecase) Execute(input Input) (*domain.Booking, error) {
 	}
 
 	// Check if client exists
-	client, err := u.clientRepo.GetByID(string(input.ClientID))
+	client, err := u.clientRepo.GetByID(input.ClientID)
 	if err != nil || client == nil {
 		return nil, ErrClientNotFound
 	}

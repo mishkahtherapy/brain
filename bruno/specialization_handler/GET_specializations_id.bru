@@ -1,0 +1,15 @@
+meta {
+  name: Get by ID
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{API_URL}}/specializations/:specializationId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  specializationId: 123123
+} 

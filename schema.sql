@@ -42,9 +42,9 @@ CREATE TABLE therapist_specializations (
 -- Clients table  
 CREATE TABLE clients (
     id VARCHAR(128) PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    whatsapp_number VARCHAR(20), -- International format support, nullable
+    name VARCHAR(255), -- Optional field
+    -- email VARCHAR(255) UNIQUE NOT NULL,
+    whatsapp_number VARCHAR(20) UNIQUE, -- International format support, unique
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -112,7 +112,7 @@ CREATE TABLE sessions (
 CREATE INDEX idx_therapists_email ON therapists(email);
 
 -- Client queries  
-CREATE INDEX idx_clients_email ON clients(email);
+-- CREATE INDEX idx_clients_email ON clients(email); -- Commented out since email column was removed
 
 -- Time slot queries (most critical for scheduling)
 CREATE INDEX idx_time_slots_therapist ON time_slots(therapist_id);

@@ -66,12 +66,12 @@ type TestClientRepository struct {
 	db db.SQLDatabase
 }
 
-func (r *TestClientRepository) GetByID(id string) (*domain.Client, error) {
-	query := `SELECT id, name, email, whatsapp_number, created_at, updated_at FROM clients WHERE id = ?`
+func (r *TestClientRepository) GetByID(id domain.ClientID) (*domain.Client, error) {
+	query := `SELECT id, name, whatsapp_number, created_at, updated_at FROM clients WHERE id = ?`
 	row := r.db.QueryRow(query, id)
 
 	var client domain.Client
-	err := row.Scan(&client.ID, &client.Name, &client.Email, &client.WhatsAppNumber, &client.CreatedAt, &client.UpdatedAt)
+	err := row.Scan(&client.ID, &client.Name, &client.WhatsAppNumber, &client.CreatedAt, &client.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -86,8 +86,12 @@ func (r *TestClientRepository) Update(client *domain.Client) error {
 	return nil // Not used in test
 }
 
-func (r *TestClientRepository) Delete(id string) error {
+func (r *TestClientRepository) Delete(id domain.ClientID) error {
 	return nil // Not used in test
+}
+
+func (r *TestClientRepository) GetByWhatsAppNumber(whatsappNumber domain.WhatsAppNumber) (*domain.Client, error) {
+	return nil, nil // Not used in test
 }
 
 func (r *TestClientRepository) List() ([]*domain.Client, error) {
@@ -475,9 +479,9 @@ func insertBookingTestData(t *testing.T, database db.SQLDatabase) *BookingTestDa
 
 	// Insert client
 	_, err = database.Exec(`
-		INSERT INTO clients (id, name, email, whatsapp_number, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?)
-	`, clientID, "Test Client", "test.client@example.com", "+1234567891", now, now)
+		INSERT INTO clients (id, name, whatsapp_number, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?)
+	`, clientID, "Test Client", "+1234567891", now, now)
 	if err != nil {
 		t.Fatalf("Failed to insert test client: %v", err)
 	}

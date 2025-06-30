@@ -1,0 +1,15 @@
+meta {
+  name: Booking by Id
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{API_URL}}/bookings/:bookingId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  bookingId: 123123
+}

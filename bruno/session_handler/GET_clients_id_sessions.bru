@@ -1,0 +1,15 @@
+meta {
+  name: Sessions by Client
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{API_URL}}/clients/:clientId/sessions
+  body: none
+  auth: inherit
+}
+
+params:path {
+  clientId: 123123
+} 

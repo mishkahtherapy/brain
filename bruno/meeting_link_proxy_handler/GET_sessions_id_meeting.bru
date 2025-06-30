@@ -1,0 +1,15 @@
+meta {
+  name: Get Meeting Link (Redirect)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{API_URL}}/sessions/:sessionId/meeting
+  body: none
+  auth: inherit
+}
+
+params:path {
+  sessionId: 123123
+} 

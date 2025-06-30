@@ -1,0 +1,21 @@
+meta {
+  name: New Therapist
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{API_URL}}/therapists
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "Dr. Jane Doe",
+    "email": "jane@example.com",
+    "phoneNumber": "+1234567890",
+    "whatsAppNumber": "+1234567890",
+    "specializationIds": ["<specializationId>"]
+  }
+} 

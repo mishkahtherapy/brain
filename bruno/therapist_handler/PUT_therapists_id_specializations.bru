@@ -1,0 +1,21 @@
+meta {
+  name: Update Therapist Specializations
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{API_URL}}/therapists/:therapistId/specializations
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "specializationIds": ["<specializationId>"]
+  }
+}
+
+params:path {
+  therapistId: 123123
+} 
