@@ -19,6 +19,10 @@ func (i UTCTimestamp) MarshalJSON() ([]byte, error) {
 	return json.Marshal(t.Format(time.RFC3339))
 }
 
+func (i UTCTimestamp) String() string {
+	return time.Time(i).UTC().Format(time.RFC3339)
+}
+
 // UnmarshalJSON implements json.Unmarshaler interface
 func (i *UTCTimestamp) UnmarshalJSON(data []byte) error {
 	var timeStr string

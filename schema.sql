@@ -68,17 +68,39 @@ CREATE TABLE time_slots (
 -- Bookings table (actual appointments - always 1 hour duration)
 CREATE TABLE bookings (
     id VARCHAR(128) PRIMARY KEY,
-    time_slot_id VARCHAR(128) NOT NULL,
+    timeslot_id VARCHAR(128) NOT NULL,
     therapist_id VARCHAR(128) NOT NULL,
     client_id VARCHAR(128) NOT NULL,
     start_time DATETIME NOT NULL, -- Specific start datetime for this 1-hour booking
-    status VARCHAR(20) DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'completed', 'cancelled', 'no_show')),
+    state VARCHAR(20) DEFAULT 'pending' CHECK (state IN ('pending', 'confirmed', 'cancelled')),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     
-    CONSTRAINT fk_bookings_time_slot FOREIGN KEY (time_slot_id) REFERENCES time_slots(id) ON DELETE CASCADE,
+    CONSTRAINT fk_bookings_timeslot FOREIGN KEY (timeslot_id) REFERENCES time_slots(id) ON DELETE CASCADE,
     CONSTRAINT fk_bookings_therapist FOREIGN KEY (therapist_id) REFERENCES therapists(id) ON DELETE CASCADE,
     CONSTRAINT fk_bookings_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+);
+
+-- Sessions table (therapy sessions derived from bookings)
+CREATE TABLE sessions (
+    id VARCHAR(128) PRIMARY KEY,
+    booking_id VARCHAR(128) NOT NULL UNIQUE,
+    therapist_id VARCHAR(128) NOT NULL,
+    client_id VARCHAR(128) NOT NULL,
+    timeslot_id VARCHAR(128) NOT NULL,
+    start_time DATETIME NOT NULL,
+    paid_amount INTEGER NOT NULL, -- USD cents
+    language VARCHAR(10) NOT NULL CHECK (language IN ('arabic', 'english')),
+    state VARCHAR(20) NOT NULL DEFAULT 'planned' CHECK (state IN ('planned', 'done', 'rescheduled', 'cancelled', 'refunded')),
+    notes TEXT,
+    meeting_url VARCHAR(512), -- nullable, added manually
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    
+    CONSTRAINT fk_sessions_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sessions_therapist FOREIGN KEY (therapist_id) REFERENCES therapists(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sessions_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+    CONSTRAINT fk_sessions_timeslot FOREIGN KEY (timeslot_id) REFERENCES time_slots(id) ON DELETE CASCADE
 );
 
 -- =============================================================================
@@ -102,10 +124,18 @@ CREATE INDEX idx_bookings_therapist ON bookings(therapist_id);
 CREATE INDEX idx_bookings_client ON bookings(client_id);
 CREATE INDEX idx_bookings_start_time ON bookings(start_time);
 CREATE INDEX idx_bookings_therapist_start_time ON bookings(therapist_id, start_time);
-CREATE INDEX idx_bookings_status ON bookings(status);
+CREATE INDEX idx_bookings_state ON bookings(state);
+
+-- Session queries
+CREATE INDEX idx_sessions_booking ON sessions(booking_id);
+CREATE INDEX idx_sessions_therapist ON sessions(therapist_id);
+CREATE INDEX idx_sessions_client ON sessions(client_id);
+CREATE INDEX idx_sessions_state ON sessions(state);
+CREATE INDEX idx_sessions_start_time ON sessions(start_time);
+CREATE INDEX idx_sessions_therapist_start_time ON sessions(therapist_id, start_time);
 
 -- Prevent overlapping 1-hour bookings for the same therapist
-CREATE UNIQUE INDEX idx_no_overlapping_bookings ON bookings(therapist_id, start_time) WHERE status = 'scheduled';
+CREATE UNIQUE INDEX idx_no_overlapping_bookings ON bookings(therapist_id, start_time) WHERE state = 'confirmed';
 
 -- Combined index for finding available slots
 CREATE INDEX idx_availability_search ON time_slots(therapist_id, day_of_week, start_time, end_time);
@@ -142,10 +172,10 @@ CREATE INDEX idx_availability_search ON time_slots(therapist_id, day_of_week, st
 --     b.id as booking_id,
 --     b.start_time as booking_start_time,
 --     datetime(b.start_time, '+1 hour') as booking_end_time,
---     b.status as booking_status,
+--     b.state as booking_state,
 --     c.name as client_name,
 --     c.email as client_email
 -- FROM time_slots ts
 -- JOIN therapists t ON ts.therapist_id = t.id
--- LEFT JOIN bookings b ON ts.id = b.time_slot_id
+-- LEFT JOIN bookings b ON ts.id = b.timeslot_id
 -- LEFT JOIN clients c ON b.client_id = c.id;

@@ -10,6 +10,7 @@ type ClientID string
 type TherapistID string
 type TimeSlotID string
 type BookingID string
+type SessionID string
 type SpecializationID string
 
 func NewClientID() ClientID {
@@ -22,6 +23,18 @@ func NewTherapistID() TherapistID {
 
 func NewSpecializationID() SpecializationID {
 	return SpecializationID(generatePrefixedUUID("specialization"))
+}
+
+func NewBookingID() BookingID {
+	return BookingID(generatePrefixedUUID("booking"))
+}
+
+func NewSessionID() SessionID {
+	return SessionID(generatePrefixedUUID("session"))
+}
+
+func NewTimeSlotID() TimeSlotID {
+	return TimeSlotID(generatePrefixedUUID("timeslot"))
 }
 
 func generatePrefixedUUID(prefix string) string {
