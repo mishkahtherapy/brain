@@ -59,8 +59,8 @@ func (r *TherapistRepository) Create(therapist *domain.Therapist) error {
 
 	// Insert therapist
 	query := `
-		INSERT INTO therapists (id, name, email, phone_number, whatsapp_number, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO therapists (id, name, email, phone_number, whatsapp_number, speaks_english, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	_, err = tx.Exec(
 		query,
@@ -69,6 +69,7 @@ func (r *TherapistRepository) Create(therapist *domain.Therapist) error {
 		therapist.Email,
 		therapist.PhoneNumber,
 		therapist.WhatsAppNumber,
+		therapist.SpeaksEnglish,
 		therapist.CreatedAt,
 		therapist.UpdatedAt,
 	)
@@ -138,7 +139,7 @@ func (r *TherapistRepository) UpdateSpecializations(therapistID domain.Therapist
 
 func (r *TherapistRepository) GetByID(id domain.TherapistID) (*domain.Therapist, error) {
 	query := `
-		SELECT id, name, email, phone_number, whatsapp_number, created_at, updated_at
+		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, created_at, updated_at
 		FROM therapists
 		WHERE id = ?
 	`
@@ -150,6 +151,7 @@ func (r *TherapistRepository) GetByID(id domain.TherapistID) (*domain.Therapist,
 		&therapist.Email,
 		&therapist.PhoneNumber,
 		&therapist.WhatsAppNumber,
+		&therapist.SpeaksEnglish,
 		&therapist.CreatedAt,
 		&therapist.UpdatedAt,
 	)
@@ -173,7 +175,7 @@ func (r *TherapistRepository) GetByID(id domain.TherapistID) (*domain.Therapist,
 
 func (r *TherapistRepository) GetByEmail(email domain.Email) (*domain.Therapist, error) {
 	query := `
-		SELECT id, name, email, phone_number, whatsapp_number, created_at, updated_at
+		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, created_at, updated_at
 		FROM therapists
 		WHERE email = ?
 	`
@@ -185,6 +187,7 @@ func (r *TherapistRepository) GetByEmail(email domain.Email) (*domain.Therapist,
 		&therapist.Email,
 		&therapist.PhoneNumber,
 		&therapist.WhatsAppNumber,
+		&therapist.SpeaksEnglish,
 		&therapist.CreatedAt,
 		&therapist.UpdatedAt,
 	)
@@ -215,7 +218,7 @@ func (r *TherapistRepository) Delete(id domain.TherapistID) error {
 
 func (r *TherapistRepository) List() ([]*domain.Therapist, error) {
 	query := `
-		SELECT id, name, email, phone_number, whatsapp_number, created_at, updated_at
+		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, created_at, updated_at
 		FROM therapists
 		ORDER BY name ASC
 	`
@@ -235,6 +238,7 @@ func (r *TherapistRepository) List() ([]*domain.Therapist, error) {
 			&therapist.Email,
 			&therapist.PhoneNumber,
 			&therapist.WhatsAppNumber,
+			&therapist.SpeaksEnglish,
 			&therapist.CreatedAt,
 			&therapist.UpdatedAt,
 		)

@@ -23,6 +23,7 @@ type Input struct {
 	Email             domain.Email              `json:"email"`
 	PhoneNumber       domain.PhoneNumber        `json:"phoneNumber"`
 	WhatsAppNumber    domain.WhatsAppNumber     `json:"whatsAppNumber"`
+	SpeaksEnglish     bool                      `json:"speaksEnglish"`
 	SpecializationIDs []domain.SpecializationID `json:"specializationIds"`
 }
 
@@ -40,6 +41,7 @@ func (u *Usecase) Execute(input Input) (*domain.Therapist, error) {
 		Email:          input.Email,
 		PhoneNumber:    input.PhoneNumber,
 		WhatsAppNumber: input.WhatsAppNumber,
+		SpeaksEnglish:  input.SpeaksEnglish,
 	}
 
 	specializations := make([]domain.Specialization, 0)

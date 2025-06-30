@@ -6,6 +6,7 @@ type Therapist struct {
 	Email          Email          `json:"email"`
 	PhoneNumber    PhoneNumber    `json:"phoneNumber"`
 	WhatsAppNumber WhatsAppNumber `json:"whatsAppNumber"`
+	SpeaksEnglish  bool           `json:"speaksEnglish"`
 
 	// TODO: don't return IDs, return the specializations
 	Specializations []Specialization `json:"specializations"`

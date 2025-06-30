@@ -12,6 +12,7 @@ CREATE TABLE therapists (
     email VARCHAR(255) UNIQUE NOT NULL,
     phone_number VARCHAR(20), -- Business/office phone number
     whatsapp_number VARCHAR(20), -- International format support, nullable
+    speaks_english BOOLEAN NOT NULL DEFAULT false,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
