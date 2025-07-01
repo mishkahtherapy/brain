@@ -2,8 +2,9 @@ package get_therapist_timeslot
 
 import (
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/therapist"
+	"github.com/mishkahtherapy/brain/core/domain/timeslot"
 	"github.com/mishkahtherapy/brain/core/ports"
-	"github.com/mishkahtherapy/brain/core/usecases/timeslot"
 )
 
 type Input struct {
@@ -23,7 +24,7 @@ func NewUsecase(therapistRepo ports.TherapistRepository, timeslotRepo ports.Time
 	}
 }
 
-func (u *Usecase) Execute(input Input) (*domain.TimeSlot, error) {
+func (u *Usecase) Execute(input Input) (*timeslot.TimeSlot, error) {
 	// Validate input
 	if err := u.validateInput(input); err != nil {
 		return nil, err
@@ -54,7 +55,7 @@ func (u *Usecase) Execute(input Input) (*domain.TimeSlot, error) {
 
 func (u *Usecase) validateInput(input Input) error {
 	if input.TherapistID == "" {
-		return timeslot.ErrTherapistIDIsRequired
+		return therapist.ErrTherapistIDRequired
 	}
 
 	if input.TimeslotID == "" {

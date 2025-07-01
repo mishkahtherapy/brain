@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/therapist"
 	"github.com/mishkahtherapy/brain/core/usecases/common"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/get_all_therapists"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/get_therapist"
@@ -68,20 +69,20 @@ func (h *TherapistHandler) handleNewTherapist(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	therapist, err := h.newTherapistUsecase.Execute(input)
+	newTherapist, err := h.newTherapistUsecase.Execute(input)
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
-		case domain.ErrTherapistNameRequired,
-			domain.ErrTherapistEmailRequired,
-			domain.ErrTherapistPhoneRequired,
-			domain.ErrTherapistWhatsAppRequired,
-			domain.ErrTherapistInvalidPhone,
-			domain.ErrTherapistInvalidWhatsApp:
+		case therapist.ErrTherapistNameRequired,
+			therapist.ErrTherapistEmailRequired,
+			therapist.ErrTherapistPhoneRequired,
+			therapist.ErrTherapistWhatsAppRequired,
+			therapist.ErrTherapistInvalidPhone,
+			therapist.ErrTherapistInvalidWhatsApp:
 			rw.WriteBadRequest(err.Error())
-		case domain.ErrTherapistAlreadyExists,
-			domain.ErrTherapistEmailExists,
-			domain.ErrTherapistWhatsAppExists:
+		case therapist.ErrTherapistAlreadyExists,
+			therapist.ErrTherapistEmailExists,
+			therapist.ErrTherapistWhatsAppExists:
 			rw.WriteError(err, http.StatusConflict)
 		case new_therapist.ErrSpecializationNotFound:
 			rw.WriteNotFound(err.Error())
@@ -91,7 +92,7 @@ func (h *TherapistHandler) handleNewTherapist(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if err := rw.WriteJSON(therapist, http.StatusCreated); err != nil {
+	if err := rw.WriteJSON(newTherapist, http.StatusCreated); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
 }
@@ -168,23 +169,23 @@ func (h *TherapistHandler) handleUpdateTherapistInfo(w http.ResponseWriter, r *h
 		SpeaksEnglish:  requestBody.SpeaksEnglish,
 	}
 
-	therapist, err := h.updateTherapistInfoUsecase.Execute(input)
+	updatedTherapist, err := h.updateTherapistInfoUsecase.Execute(input)
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
-		case domain.ErrTherapistIDRequired:
+		case therapist.ErrTherapistIDRequired:
 			rw.WriteBadRequest(err.Error())
-		case domain.ErrTherapistNotFound:
+		case therapist.ErrTherapistNotFound:
 			rw.WriteNotFound(err.Error())
-		case domain.ErrTherapistNameRequired,
-			domain.ErrTherapistEmailRequired,
-			domain.ErrTherapistPhoneRequired,
-			domain.ErrTherapistWhatsAppRequired,
-			domain.ErrTherapistInvalidPhone,
-			domain.ErrTherapistInvalidWhatsApp:
+		case therapist.ErrTherapistNameRequired,
+			therapist.ErrTherapistEmailRequired,
+			therapist.ErrTherapistPhoneRequired,
+			therapist.ErrTherapistWhatsAppRequired,
+			therapist.ErrTherapistInvalidPhone,
+			therapist.ErrTherapistInvalidWhatsApp:
 			rw.WriteBadRequest(err.Error())
-		case domain.ErrTherapistEmailExists,
-			domain.ErrTherapistWhatsAppExists:
+		case therapist.ErrTherapistEmailExists,
+			therapist.ErrTherapistWhatsAppExists:
 			rw.WriteError(err, http.StatusConflict)
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
@@ -192,7 +193,7 @@ func (h *TherapistHandler) handleUpdateTherapistInfo(w http.ResponseWriter, r *h
 		return
 	}
 
-	if err := rw.WriteJSON(therapist, http.StatusOK); err != nil {
+	if err := rw.WriteJSON(updatedTherapist, http.StatusOK); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
 }

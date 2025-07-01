@@ -4,13 +4,14 @@ import (
 	"time"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/timeslot"
 	"github.com/mishkahtherapy/brain/core/ports"
-	"github.com/mishkahtherapy/brain/core/usecases/timeslot"
+	timeslot_usecase "github.com/mishkahtherapy/brain/core/usecases/timeslot"
 )
 
 type Input struct {
 	TherapistID       domain.TherapistID `json:"therapistId"`
-	DayOfWeek         domain.DayOfWeek   `json:"dayOfWeek"`
+	DayOfWeek         timeslot.DayOfWeek `json:"dayOfWeek"`
 	StartTime         string             `json:"startTime"`         // "09:00"
 	EndTime           string             `json:"endTime"`           // "17:00"
 	PreSessionBuffer  int                `json:"preSessionBuffer"`  // minutes
@@ -29,7 +30,7 @@ func NewUsecase(therapistRepo ports.TherapistRepository, timeslotRepo ports.Time
 	}
 }
 
-func (u *Usecase) Execute(input Input) (*domain.TimeSlot, error) {
+func (u *Usecase) Execute(input Input) (*timeslot.TimeSlot, error) {
 	// Validate input
 	if err := u.validateInput(input); err != nil {
 		return nil, err
@@ -50,7 +51,7 @@ func (u *Usecase) Execute(input Input) (*domain.TimeSlot, error) {
 
 	// Create timeslot
 	now := domain.UTCTimestamp(time.Now().UTC())
-	newTimeslot := &domain.TimeSlot{
+	newTimeslot := &timeslot.TimeSlot{
 		ID:                timeslotID,
 		TherapistID:       input.TherapistID,
 		DayOfWeek:         input.DayOfWeek,
@@ -74,7 +75,7 @@ func (u *Usecase) Execute(input Input) (*domain.TimeSlot, error) {
 func (u *Usecase) validateInput(input Input) error {
 	// Validate required fields
 	if input.TherapistID == "" {
-		return timeslot.ErrTherapistIDIsRequired
+		return timeslot.ErrTherapistIDRequired
 	}
 
 	if input.DayOfWeek == "" {
@@ -90,17 +91,17 @@ func (u *Usecase) validateInput(input Input) error {
 	}
 
 	// Validate day of week
-	if !timeslot.IsValidDayOfWeek(input.DayOfWeek) {
+	if !timeslot_usecase.IsValidDayOfWeek(input.DayOfWeek) {
 		return timeslot.ErrInvalidDayOfWeek
 	}
 
 	// Validate time format and range
-	if err := timeslot.ValidateTimeRange(input.StartTime, input.EndTime); err != nil {
+	if err := timeslot_usecase.ValidateTimeRange(input.StartTime, input.EndTime); err != nil {
 		return err
 	}
 
 	// Validate buffer times
-	if err := timeslot.ValidateBufferTimes(input.PreSessionBuffer, input.PostSessionBuffer); err != nil {
+	if err := timeslot_usecase.ValidateBufferTimes(input.PreSessionBuffer, input.PostSessionBuffer); err != nil {
 		return err
 	}
 
@@ -115,16 +116,16 @@ func (u *Usecase) checkForOverlaps(input Input) error {
 	}
 
 	// Parse new timeslot times
-	newStart, _ := timeslot.ParseTimeString(input.StartTime)
-	newEnd, _ := timeslot.ParseTimeString(input.EndTime)
+	newStart, _ := timeslot_usecase.ParseTimeString(input.StartTime)
+	newEnd, _ := timeslot_usecase.ParseTimeString(input.EndTime)
 
 	// Check for overlaps with existing timeslots
 	for _, existing := range existingSlots {
-		existingStart, _ := timeslot.ParseTimeString(existing.StartTime)
-		existingEnd, _ := timeslot.ParseTimeString(existing.EndTime)
+		existingStart, _ := timeslot_usecase.ParseTimeString(existing.StartTime)
+		existingEnd, _ := timeslot_usecase.ParseTimeString(existing.EndTime)
 
 		// Check if time ranges overlap
-		if timeslot.TimesOverlap(newStart, newEnd, existingStart, existingEnd) {
+		if timeslot_usecase.TimesOverlap(newStart, newEnd, existingStart, existingEnd) {
 			return timeslot.ErrOverlappingTimeslot
 		}
 	}

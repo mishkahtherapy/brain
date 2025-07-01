@@ -1,9 +1,10 @@
-package client
+package client_db
 
 import (
 	"database/sql"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/client"
 	"github.com/mishkahtherapy/brain/core/ports"
 )
 
@@ -17,7 +18,7 @@ func NewClientRepository(database ports.SQLDatabase) *ClientRepository {
 	}
 }
 
-func (r *ClientRepository) Create(client *domain.Client) error {
+func (r *ClientRepository) Create(client *client.Client) error {
 	query := `
 		INSERT INTO clients (id, name, whatsapp_number, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?)
@@ -33,7 +34,7 @@ func (r *ClientRepository) Create(client *domain.Client) error {
 	return err
 }
 
-func (r *ClientRepository) GetByID(id domain.ClientID) (*domain.Client, error) {
+func (r *ClientRepository) GetByID(id domain.ClientID) (*client.Client, error) {
 	query := `
 		SELECT id, name, whatsapp_number, created_at, updated_at
 		FROM clients
@@ -41,7 +42,7 @@ func (r *ClientRepository) GetByID(id domain.ClientID) (*domain.Client, error) {
 	`
 	row := r.db.QueryRow(query, id)
 
-	var client domain.Client
+	var client client.Client
 	err := row.Scan(
 		&client.ID,
 		&client.Name,
@@ -66,7 +67,7 @@ func (r *ClientRepository) GetByID(id domain.ClientID) (*domain.Client, error) {
 	return &client, nil
 }
 
-func (r *ClientRepository) GetByWhatsAppNumber(whatsAppNumber domain.WhatsAppNumber) (*domain.Client, error) {
+func (r *ClientRepository) GetByWhatsAppNumber(whatsAppNumber domain.WhatsAppNumber) (*client.Client, error) {
 	query := `
 		SELECT id, name, whatsapp_number, created_at, updated_at
 		FROM clients
@@ -74,7 +75,7 @@ func (r *ClientRepository) GetByWhatsAppNumber(whatsAppNumber domain.WhatsAppNum
 	`
 	row := r.db.QueryRow(query, whatsAppNumber)
 
-	var client domain.Client
+	var client client.Client
 	err := row.Scan(
 		&client.ID,
 		&client.Name,
@@ -99,7 +100,7 @@ func (r *ClientRepository) GetByWhatsAppNumber(whatsAppNumber domain.WhatsAppNum
 	return &client, nil
 }
 
-func (r *ClientRepository) List() ([]*domain.Client, error) {
+func (r *ClientRepository) List() ([]*client.Client, error) {
 	query := `
 		SELECT id, name, whatsapp_number, created_at, updated_at
 		FROM clients
@@ -111,9 +112,9 @@ func (r *ClientRepository) List() ([]*domain.Client, error) {
 	}
 	defer rows.Close()
 
-	var clients []*domain.Client
+	var clients []*client.Client
 	for rows.Next() {
-		var client domain.Client
+		var client client.Client
 		err := rows.Scan(
 			&client.ID,
 			&client.Name,
@@ -138,7 +139,7 @@ func (r *ClientRepository) List() ([]*domain.Client, error) {
 	return clients, nil
 }
 
-func (r *ClientRepository) Update(client *domain.Client) error {
+func (r *ClientRepository) Update(client *client.Client) error {
 	query := `
 		UPDATE clients
 		SET name = ?, whatsapp_number = ?, updated_at = ?

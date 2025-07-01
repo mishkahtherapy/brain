@@ -2,17 +2,19 @@ package list_therapist_timeslots
 
 import (
 	"github.com/mishkahtherapy/brain/core/domain"
+
+	"github.com/mishkahtherapy/brain/core/domain/timeslot"
 	"github.com/mishkahtherapy/brain/core/ports"
-	"github.com/mishkahtherapy/brain/core/usecases/timeslot"
+	timeslot_usecase "github.com/mishkahtherapy/brain/core/usecases/timeslot"
 )
 
 type Input struct {
-	TherapistID domain.TherapistID `json:"therapistId"`
-	DayOfWeek   *domain.DayOfWeek  `json:"dayOfWeek,omitempty"` // Optional filter by day
+	TherapistID domain.TherapistID  `json:"therapistId"`
+	DayOfWeek   *timeslot.DayOfWeek `json:"dayOfWeek,omitempty"` // Optional filter by day
 }
 
 type Output struct {
-	Timeslots []domain.TimeSlot `json:"timeslots"`
+	Timeslots []timeslot.TimeSlot `json:"timeslots"`
 }
 
 type Usecase struct {
@@ -38,7 +40,7 @@ func (u *Usecase) Execute(input Input) (*Output, error) {
 		return nil, timeslot.ErrTherapistNotFound
 	}
 
-	var timeslots []*domain.TimeSlot
+	var timeslots []*timeslot.TimeSlot
 	var err error
 
 	// If day filter is provided, use ListByDay, otherwise get all therapist timeslots
@@ -53,7 +55,7 @@ func (u *Usecase) Execute(input Input) (*Output, error) {
 	}
 
 	// Convert []*domain.TimeSlot to []domain.TimeSlot for output
-	result := make([]domain.TimeSlot, len(timeslots))
+	result := make([]timeslot.TimeSlot, len(timeslots))
 	for i, ts := range timeslots {
 		result[i] = *ts
 	}
@@ -65,12 +67,12 @@ func (u *Usecase) Execute(input Input) (*Output, error) {
 
 func (u *Usecase) validateInput(input Input) error {
 	if input.TherapistID == "" {
-		return timeslot.ErrTherapistIDIsRequired
+		return timeslot.ErrTherapistIDRequired
 	}
 
 	// Validate day of week if provided
 	if input.DayOfWeek != nil {
-		if !timeslot.IsValidDayOfWeek(*input.DayOfWeek) {
+		if !timeslot_usecase.IsValidDayOfWeek(*input.DayOfWeek) {
 			return timeslot.ErrInvalidDayOfWeek
 		}
 	}

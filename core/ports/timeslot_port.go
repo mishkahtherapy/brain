@@ -1,12 +1,14 @@
 package ports
 
-import "github.com/mishkahtherapy/brain/core/domain"
+import (
+	"github.com/mishkahtherapy/brain/core/domain/timeslot"
+)
 
 type TimeSlotRepository interface {
-	GetByID(id string) (*domain.TimeSlot, error)
-	Create(timeslot *domain.TimeSlot) error
-	Update(timeslot *domain.TimeSlot) error
+	GetByID(id string) (*timeslot.TimeSlot, error)
+	Create(timeslot *timeslot.TimeSlot) error
+	Update(timeslot *timeslot.TimeSlot) error
 	Delete(id string) error
-	ListByTherapist(therapistID string) ([]*domain.TimeSlot, error)
-	ListByDay(therapistID string, day string) ([]*domain.TimeSlot, error)
+	ListByTherapist(therapistID string) ([]*timeslot.TimeSlot, error)
+	ListByDay(therapistID string, day string) ([]*timeslot.TimeSlot, error)
 }

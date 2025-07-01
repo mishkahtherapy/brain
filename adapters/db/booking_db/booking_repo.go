@@ -1,4 +1,4 @@
-package booking
+package booking_db
 
 import (
 	"database/sql"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/booking"
 	"github.com/mishkahtherapy/brain/core/ports"
 )
 
@@ -33,14 +34,14 @@ func NewBookingRepository(db ports.SQLDatabase) *BookingRepository {
 	return &BookingRepository{db: db}
 }
 
-func (r *BookingRepository) GetByID(id domain.BookingID) (*domain.Booking, error) {
+func (r *BookingRepository) GetByID(id domain.BookingID) (*booking.Booking, error) {
 	query := `
 		SELECT id, timeslot_id, therapist_id, client_id, start_time, state, created_at, updated_at
 		FROM bookings
 		WHERE id = ?
 	`
 	row := r.db.QueryRow(query, id)
-	booking := &domain.Booking{}
+	booking := &booking.Booking{}
 	err := row.Scan(
 		&booking.ID,
 		&booking.TimeSlotID,
@@ -61,7 +62,7 @@ func (r *BookingRepository) GetByID(id domain.BookingID) (*domain.Booking, error
 	return booking, nil
 }
 
-func (r *BookingRepository) Create(booking *domain.Booking) error {
+func (r *BookingRepository) Create(booking *booking.Booking) error {
 	if booking.ID == "" {
 		return ErrBookingIDIsRequired
 	}
@@ -116,7 +117,7 @@ func (r *BookingRepository) Create(booking *domain.Booking) error {
 	return nil
 }
 
-func (r *BookingRepository) Update(booking *domain.Booking) error {
+func (r *BookingRepository) Update(booking *booking.Booking) error {
 	if booking.ID == "" {
 		return ErrBookingIDIsRequired
 	}
@@ -203,7 +204,7 @@ func (r *BookingRepository) Delete(id domain.BookingID) error {
 	return nil
 }
 
-func (r *BookingRepository) ListByTherapist(therapistID domain.TherapistID) ([]*domain.Booking, error) {
+func (r *BookingRepository) ListByTherapist(therapistID domain.TherapistID) ([]*booking.Booking, error) {
 	if therapistID == "" {
 		return nil, ErrBookingTherapistIDIsRequired
 	}
@@ -224,7 +225,7 @@ func (r *BookingRepository) ListByTherapist(therapistID domain.TherapistID) ([]*
 	return r.scanBookings(rows)
 }
 
-func (r *BookingRepository) ListByClient(clientID domain.ClientID) ([]*domain.Booking, error) {
+func (r *BookingRepository) ListByClient(clientID domain.ClientID) ([]*booking.Booking, error) {
 	if clientID == "" {
 		return nil, ErrBookingClientIDIsRequired
 	}
@@ -245,7 +246,7 @@ func (r *BookingRepository) ListByClient(clientID domain.ClientID) ([]*domain.Bo
 	return r.scanBookings(rows)
 }
 
-func (r *BookingRepository) ListByState(state domain.BookingState) ([]*domain.Booking, error) {
+func (r *BookingRepository) ListByState(state booking.BookingState) ([]*booking.Booking, error) {
 	if state == "" {
 		return nil, ErrBookingStateIsRequired
 	}
@@ -266,7 +267,7 @@ func (r *BookingRepository) ListByState(state domain.BookingState) ([]*domain.Bo
 	return r.scanBookings(rows)
 }
 
-func (r *BookingRepository) ListByTherapistAndState(therapistID domain.TherapistID, state domain.BookingState) ([]*domain.Booking, error) {
+func (r *BookingRepository) ListByTherapistAndState(therapistID domain.TherapistID, state booking.BookingState) ([]*booking.Booking, error) {
 	if therapistID == "" {
 		return nil, ErrBookingTherapistIDIsRequired
 	}
@@ -291,7 +292,7 @@ func (r *BookingRepository) ListByTherapistAndState(therapistID domain.Therapist
 	return r.scanBookings(rows)
 }
 
-func (r *BookingRepository) ListByClientAndState(clientID domain.ClientID, state domain.BookingState) ([]*domain.Booking, error) {
+func (r *BookingRepository) ListByClientAndState(clientID domain.ClientID, state booking.BookingState) ([]*booking.Booking, error) {
 	if clientID == "" {
 		return nil, ErrBookingClientIDIsRequired
 	}
@@ -317,10 +318,10 @@ func (r *BookingRepository) ListByClientAndState(clientID domain.ClientID, state
 }
 
 // Helper method to scan multiple booking rows
-func (r *BookingRepository) scanBookings(rows *sql.Rows) ([]*domain.Booking, error) {
-	bookings := make([]*domain.Booking, 0)
+func (r *BookingRepository) scanBookings(rows *sql.Rows) ([]*booking.Booking, error) {
+	bookings := make([]*booking.Booking, 0)
 	for rows.Next() {
-		booking := &domain.Booking{}
+		booking := &booking.Booking{}
 		err := rows.Scan(
 			&booking.ID,
 			&booking.TimeSlotID,
@@ -341,7 +342,7 @@ func (r *BookingRepository) scanBookings(rows *sql.Rows) ([]*domain.Booking, err
 }
 
 func (r *BookingRepository) ListConfirmedByTherapistForDateRange(
-	therapistID domain.TherapistID, startDate, endDate time.Time) ([]*domain.Booking, error) {
+	therapistID domain.TherapistID, startDate, endDate time.Time) ([]*booking.Booking, error) {
 	if therapistID == "" {
 		return nil, ErrBookingTherapistIDIsRequired
 	}
@@ -370,8 +371,8 @@ func (r *BookingRepository) ListConfirmedByTherapistForDateRange(
 	rows, err := r.db.Query(
 		query,
 		therapistID,
-		domain.BookingStateConfirmed,
-		startDate, endDate, // For bookings starting within range
+		booking.BookingStateConfirmed, // TODO: refactor this parameter
+		startDate, endDate,            // For bookings starting within range
 		oneHourBefore, startDate, // For bookings starting before range but extending into it
 	)
 	if err != nil {

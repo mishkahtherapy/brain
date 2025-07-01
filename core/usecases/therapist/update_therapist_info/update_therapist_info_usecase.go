@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/therapist"
 	"github.com/mishkahtherapy/brain/core/ports"
 	therapistvalidation "github.com/mishkahtherapy/brain/core/usecases/therapist"
 )
@@ -27,10 +28,10 @@ func NewUsecase(therapistRepo ports.TherapistRepository) *Usecase {
 	}
 }
 
-func (u *Usecase) Execute(input Input) (*domain.Therapist, error) {
+func (u *Usecase) Execute(input Input) (*therapist.Therapist, error) {
 	// Validate therapist ID
 	if input.TherapistID == "" {
-		return nil, domain.ErrTherapistIDRequired
+		return nil, therapist.ErrTherapistIDRequired
 	}
 
 	// Validate required fields
@@ -46,7 +47,7 @@ func (u *Usecase) Execute(input Input) (*domain.Therapist, error) {
 	// Get existing therapist
 	existingTherapist, err := u.therapistRepo.GetByID(input.TherapistID)
 	if err != nil {
-		return nil, domain.ErrTherapistNotFound
+		return nil, therapist.ErrTherapistNotFound
 	}
 
 	// Validate email and WhatsApp uniqueness for update
@@ -55,7 +56,7 @@ func (u *Usecase) Execute(input Input) (*domain.Therapist, error) {
 	}
 
 	// Update therapist with new values
-	updatedTherapist := &domain.Therapist{
+	updatedTherapist := &therapist.Therapist{
 		ID:              input.TherapistID,
 		Name:            input.Name,
 		Email:           input.Email,

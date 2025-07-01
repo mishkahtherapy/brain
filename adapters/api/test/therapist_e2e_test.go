@@ -10,9 +10,11 @@ import (
 
 	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/adapters/db"
-	"github.com/mishkahtherapy/brain/adapters/db/specialization"
-	"github.com/mishkahtherapy/brain/adapters/db/therapist"
+	"github.com/mishkahtherapy/brain/adapters/db/specialization_db"
+	"github.com/mishkahtherapy/brain/adapters/db/therapist_db"
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/specialization"
+	"github.com/mishkahtherapy/brain/core/domain/therapist"
 	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/specialization/get_all_specializations"
 	"github.com/mishkahtherapy/brain/core/usecases/specialization/get_specialization"
@@ -32,8 +34,8 @@ func TestTherapistE2E(t *testing.T) {
 	defer cleanup()
 
 	// Setup repositories
-	specializationRepo := specialization.NewSpecializationRepository(db)
-	therapistRepo := therapist.NewTherapistRepository(db)
+	specializationRepo := specialization_db.NewSpecializationRepository(db)
+	therapistRepo := therapist_db.NewTherapistRepository(db)
 
 	// Setup specialization usecases (needed for therapist specialization management)
 	newSpecializationUsecase := new_specialization.NewUsecase(specializationRepo)
@@ -83,7 +85,7 @@ func TestTherapistE2E(t *testing.T) {
 		}
 
 		// Parse created therapist
-		var createdTherapist domain.Therapist
+		var createdTherapist therapist.Therapist
 		if err := json.Unmarshal(createRec.Body.Bytes(), &createdTherapist); err != nil {
 			t.Fatalf("Failed to parse created therapist: %v", err)
 		}
@@ -126,7 +128,7 @@ func TestTherapistE2E(t *testing.T) {
 		}
 
 		// Parse retrieved therapist
-		var retrievedTherapist domain.Therapist
+		var retrievedTherapist therapist.Therapist
 		if err := json.Unmarshal(getRec.Body.Bytes(), &retrievedTherapist); err != nil {
 			t.Fatalf("Failed to parse retrieved therapist: %v", err)
 		}
@@ -163,7 +165,7 @@ func TestTherapistE2E(t *testing.T) {
 		}
 
 		// Parse updated therapist
-		var updatedTherapist domain.Therapist
+		var updatedTherapist therapist.Therapist
 		if err := json.Unmarshal(updateRec.Body.Bytes(), &updatedTherapist); err != nil {
 			t.Fatalf("Failed to parse updated therapist: %v", err)
 		}
@@ -194,7 +196,7 @@ func TestTherapistE2E(t *testing.T) {
 		}
 
 		// Parse final therapist
-		var finalTherapist domain.Therapist
+		var finalTherapist therapist.Therapist
 		if err := json.Unmarshal(getAgainRec.Body.Bytes(), &finalTherapist); err != nil {
 			t.Fatalf("Failed to parse final therapist: %v", err)
 		}
@@ -221,7 +223,7 @@ func TestTherapistE2E(t *testing.T) {
 		}
 
 		// Parse all therapists
-		var allTherapists []*domain.Therapist
+		var allTherapists []*therapist.Therapist
 		if err := json.Unmarshal(getAllRec.Body.Bytes(), &allTherapists); err != nil {
 			t.Fatalf("Failed to parse all therapists: %v", err)
 		}
@@ -261,7 +263,7 @@ func TestTherapistE2E(t *testing.T) {
 			t.Fatalf("Failed to create test therapist: %d, %s", createRec.Code, createRec.Body.String())
 		}
 
-		var createdTherapist domain.Therapist
+		var createdTherapist therapist.Therapist
 		json.Unmarshal(createRec.Body.Bytes(), &createdTherapist)
 
 		// Test successful update
@@ -284,7 +286,7 @@ func TestTherapistE2E(t *testing.T) {
 				t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusOK, updateRec.Code, updateRec.Body.String())
 			}
 
-			var updatedTherapist domain.Therapist
+			var updatedTherapist therapist.Therapist
 			json.Unmarshal(updateRec.Body.Bytes(), &updatedTherapist)
 
 			// Verify all fields were updated
@@ -518,7 +520,7 @@ func TestTherapistE2E(t *testing.T) {
 }
 
 // Helper function to create test specializations
-func createTestSpecialization(t *testing.T, mux *http.ServeMux, name string) *domain.Specialization {
+func createTestSpecialization(t *testing.T, mux *http.ServeMux, name string) *specialization.Specialization {
 	createPayload := map[string]string{
 		"name": name,
 	}
@@ -534,7 +536,7 @@ func createTestSpecialization(t *testing.T, mux *http.ServeMux, name string) *do
 		t.Fatalf("Failed to create test specialization %s: status %d, body: %s", name, createRec.Code, createRec.Body.String())
 	}
 
-	var spec domain.Specialization
+	var spec specialization.Specialization
 	if err := json.Unmarshal(createRec.Body.Bytes(), &spec); err != nil {
 		t.Fatalf("Failed to parse created specialization %s: %v", name, err)
 	}

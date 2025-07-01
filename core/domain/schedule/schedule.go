@@ -1,12 +1,17 @@
-package domain
+package schedule
 
-import "time"
+import (
+	"time"
+
+	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/specialization"
+)
 
 type TherapistInfo struct {
-	ID              TherapistID      `json:"id"`
-	Name            string           `json:"name"`
-	Specializations []Specialization `json:"specializations"`
-	SpeaksEnglish   bool             `json:"speaksEnglish"`
+	ID              domain.TherapistID              `json:"id"`
+	Name            string                          `json:"name"`
+	Specializations []specialization.Specialization `json:"specializations"`
+	SpeaksEnglish   bool                            `json:"speaksEnglish"`
 }
 
 type AvailableTimeRange struct {
@@ -15,8 +20,4 @@ type AvailableTimeRange struct {
 	EndTime         time.Time       `json:"endTime"`         // End of available range
 	DurationMinutes int             `json:"durationMinutes"` // Duration in minutes
 	Therapists      []TherapistInfo `json:"therapists"`      // List of therapists available in this time range
-}
-
-type ScheduleResponse struct {
-	Availabilities []AvailableTimeRange `json:"availabilities"`
 }

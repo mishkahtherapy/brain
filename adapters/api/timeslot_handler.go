@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/mishkahtherapy/brain/core/domain"
-	timeslotpkg "github.com/mishkahtherapy/brain/core/usecases/timeslot"
+	"github.com/mishkahtherapy/brain/core/domain/timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/create_therapist_timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/delete_therapist_timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/get_therapist_timeslot"
@@ -57,11 +57,11 @@ func (h *TimeslotHandler) handleCreateTimeslot(w http.ResponseWriter, r *http.Re
 
 	// Parse request body
 	var requestBody struct {
-		DayOfWeek         domain.DayOfWeek `json:"dayOfWeek"`
-		StartTime         string           `json:"startTime"`
-		EndTime           string           `json:"endTime"`
-		PreSessionBuffer  int              `json:"preSessionBuffer"`
-		PostSessionBuffer int              `json:"postSessionBuffer"`
+		DayOfWeek         timeslot.DayOfWeek `json:"dayOfWeek"`
+		StartTime         string             `json:"startTime"`
+		EndTime           string             `json:"endTime"`
+		PreSessionBuffer  int                `json:"preSessionBuffer"`
+		PostSessionBuffer int                `json:"postSessionBuffer"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
@@ -79,23 +79,23 @@ func (h *TimeslotHandler) handleCreateTimeslot(w http.ResponseWriter, r *http.Re
 		PostSessionBuffer: requestBody.PostSessionBuffer,
 	}
 
-	timeslot, err := h.createTimeslotUsecase.Execute(input)
+	newTimeslot, err := h.createTimeslotUsecase.Execute(input)
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
-		case timeslotpkg.ErrTherapistIDIsRequired,
-			timeslotpkg.ErrDayOfWeekIsRequired,
-			timeslotpkg.ErrStartTimeIsRequired,
-			timeslotpkg.ErrEndTimeIsRequired,
-			timeslotpkg.ErrInvalidDayOfWeek,
-			timeslotpkg.ErrInvalidTimeFormat,
-			timeslotpkg.ErrInvalidTimeRange,
-			timeslotpkg.ErrPreSessionBufferNegative,
-			timeslotpkg.ErrPostSessionBufferTooLow:
+		case timeslot.ErrTherapistIDRequired,
+			timeslot.ErrDayOfWeekIsRequired,
+			timeslot.ErrStartTimeIsRequired,
+			timeslot.ErrEndTimeIsRequired,
+			timeslot.ErrInvalidTimeFormat,
+			timeslot.ErrInvalidTimeRange,
+			timeslot.ErrInvalidDayOfWeek,
+			timeslot.ErrPreSessionBufferNegative,
+			timeslot.ErrPostSessionBufferTooLow:
 			rw.WriteBadRequest(err.Error())
-		case timeslotpkg.ErrTherapistNotFound:
+		case timeslot.ErrTherapistNotFound:
 			rw.WriteNotFound(err.Error())
-		case timeslotpkg.ErrOverlappingTimeslot:
+		case timeslot.ErrOverlappingTimeslot:
 			rw.WriteError(err, http.StatusConflict)
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
@@ -103,7 +103,7 @@ func (h *TimeslotHandler) handleCreateTimeslot(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if err := rw.WriteJSON(timeslot, http.StatusCreated); err != nil {
+	if err := rw.WriteJSON(newTimeslot, http.StatusCreated); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
 }
@@ -120,9 +120,9 @@ func (h *TimeslotHandler) handleListTimeslots(w http.ResponseWriter, r *http.Req
 
 	// Parse optional day query parameter
 	dayParam := r.URL.Query().Get("day")
-	var dayFilter *domain.DayOfWeek
+	var dayFilter *timeslot.DayOfWeek
 	if dayParam != "" {
-		day := domain.DayOfWeek(dayParam)
+		day := timeslot.DayOfWeek(dayParam)
 		dayFilter = &day
 	}
 
@@ -136,10 +136,10 @@ func (h *TimeslotHandler) handleListTimeslots(w http.ResponseWriter, r *http.Req
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
-		case timeslotpkg.ErrTherapistIDIsRequired,
-			timeslotpkg.ErrInvalidDayOfWeek:
+		case timeslot.ErrTherapistIDRequired,
+			timeslot.ErrInvalidDayOfWeek:
 			rw.WriteBadRequest(err.Error())
-		case timeslotpkg.ErrTherapistNotFound:
+		case timeslot.ErrTherapistNotFound:
 			rw.WriteNotFound(err.Error())
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
@@ -175,16 +175,16 @@ func (h *TimeslotHandler) handleGetTimeslot(w http.ResponseWriter, r *http.Reque
 		TimeslotID:  timeslotID,
 	}
 
-	timeslot, err := h.getTimeslotUsecase.Execute(input)
+	dbTimeslot, err := h.getTimeslotUsecase.Execute(input)
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
-		case timeslotpkg.ErrTherapistIDIsRequired,
-			timeslotpkg.ErrTimeslotIDIsRequired:
+		case timeslot.ErrTherapistIDRequired,
+			timeslot.ErrTimeslotIDIsRequired:
 			rw.WriteBadRequest(err.Error())
-		case timeslotpkg.ErrTherapistNotFound,
-			timeslotpkg.ErrTimeslotNotFound,
-			timeslotpkg.ErrTimeslotNotOwned:
+		case timeslot.ErrTherapistNotFound,
+			timeslot.ErrTimeslotNotFound,
+			timeslot.ErrTimeslotNotOwned:
 			rw.WriteNotFound(err.Error())
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
@@ -192,7 +192,7 @@ func (h *TimeslotHandler) handleGetTimeslot(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if err := rw.WriteJSON(timeslot, http.StatusOK); err != nil {
+	if err := rw.WriteJSON(dbTimeslot, http.StatusOK); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
 }
@@ -216,11 +216,11 @@ func (h *TimeslotHandler) handleUpdateTimeslot(w http.ResponseWriter, r *http.Re
 
 	// Parse request body
 	var requestBody struct {
-		DayOfWeek         domain.DayOfWeek `json:"dayOfWeek"`
-		StartTime         string           `json:"startTime"`
-		EndTime           string           `json:"endTime"`
-		PreSessionBuffer  int              `json:"preSessionBuffer"`
-		PostSessionBuffer int              `json:"postSessionBuffer"`
+		DayOfWeek         timeslot.DayOfWeek `json:"dayOfWeek"`
+		StartTime         string             `json:"startTime"`
+		EndTime           string             `json:"endTime"`
+		PreSessionBuffer  int                `json:"preSessionBuffer"`
+		PostSessionBuffer int                `json:"postSessionBuffer"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
@@ -239,26 +239,26 @@ func (h *TimeslotHandler) handleUpdateTimeslot(w http.ResponseWriter, r *http.Re
 		PostSessionBuffer: requestBody.PostSessionBuffer,
 	}
 
-	timeslot, err := h.updateTimeslotUsecase.Execute(input)
+	updatedTimeslot, err := h.updateTimeslotUsecase.Execute(input)
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
-		case timeslotpkg.ErrTherapistIDIsRequired,
-			timeslotpkg.ErrTimeslotIDIsRequired,
-			timeslotpkg.ErrDayOfWeekIsRequired,
-			timeslotpkg.ErrStartTimeIsRequired,
-			timeslotpkg.ErrEndTimeIsRequired,
-			timeslotpkg.ErrInvalidDayOfWeek,
-			timeslotpkg.ErrInvalidTimeFormat,
-			timeslotpkg.ErrInvalidTimeRange,
-			timeslotpkg.ErrPreSessionBufferNegative,
-			timeslotpkg.ErrPostSessionBufferTooLow:
+		case timeslot.ErrTherapistIDRequired,
+			timeslot.ErrTimeslotIDIsRequired,
+			timeslot.ErrDayOfWeekIsRequired,
+			timeslot.ErrStartTimeIsRequired,
+			timeslot.ErrEndTimeIsRequired,
+			timeslot.ErrInvalidDayOfWeek,
+			timeslot.ErrInvalidTimeFormat,
+			timeslot.ErrInvalidTimeRange,
+			timeslot.ErrPreSessionBufferNegative,
+			timeslot.ErrPostSessionBufferTooLow:
 			rw.WriteBadRequest(err.Error())
-		case timeslotpkg.ErrTherapistNotFound,
-			timeslotpkg.ErrTimeslotNotFound,
-			timeslotpkg.ErrTimeslotNotOwned:
+		case timeslot.ErrTherapistNotFound,
+			timeslot.ErrTimeslotNotFound,
+			timeslot.ErrTimeslotNotOwned:
 			rw.WriteNotFound(err.Error())
-		case timeslotpkg.ErrOverlappingTimeslot:
+		case timeslot.ErrOverlappingTimeslot:
 			rw.WriteError(err, http.StatusConflict)
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
@@ -266,7 +266,7 @@ func (h *TimeslotHandler) handleUpdateTimeslot(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if err := rw.WriteJSON(timeslot, http.StatusOK); err != nil {
+	if err := rw.WriteJSON(updatedTimeslot, http.StatusOK); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
 }
@@ -298,14 +298,14 @@ func (h *TimeslotHandler) handleDeleteTimeslot(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
-		case timeslotpkg.ErrTherapistIDIsRequired,
-			timeslotpkg.ErrTimeslotIDIsRequired:
+		case timeslot.ErrTherapistIDRequired,
+			timeslot.ErrTimeslotIDIsRequired:
 			rw.WriteBadRequest(err.Error())
-		case timeslotpkg.ErrTherapistNotFound,
-			timeslotpkg.ErrTimeslotNotFound,
-			timeslotpkg.ErrTimeslotNotOwned:
+		case timeslot.ErrTherapistNotFound,
+			timeslot.ErrTimeslotNotFound,
+			timeslot.ErrTimeslotNotOwned:
 			rw.WriteNotFound(err.Error())
-		case timeslotpkg.ErrTimeslotHasActiveBookings:
+		case timeslot.ErrTimeslotHasActiveBookings:
 			rw.WriteError(err, http.StatusConflict)
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)

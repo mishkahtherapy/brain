@@ -5,11 +5,12 @@ import "errors"
 // Common error definitions for all timeslot use cases
 var (
 	// Input validation errors
-	ErrTherapistIDIsRequired = errors.New("therapist id is required")
-	ErrTimeslotIDIsRequired  = errors.New("timeslot id is required")
-	ErrDayOfWeekIsRequired   = errors.New("day of week is required")
-	ErrStartTimeIsRequired   = errors.New("start time is required")
-	ErrEndTimeIsRequired     = errors.New("end time is required")
+
+	ErrTimeslotIDIsRequired = errors.New("timeslot id is required")
+	ErrDayOfWeekIsRequired  = errors.New("day of week is required")
+	ErrStartTimeIsRequired  = errors.New("start time is required")
+	ErrEndTimeIsRequired    = errors.New("end time is required")
+	ErrTherapistIDRequired  = errors.New("therapist id is required")
 
 	// Business logic errors
 	ErrTherapistNotFound        = errors.New("therapist not found")

@@ -4,17 +4,18 @@ import (
 	"time"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/booking"
 )
 
 type BookingRepository interface {
-	GetByID(id domain.BookingID) (*domain.Booking, error)
-	Create(booking *domain.Booking) error
-	Update(booking *domain.Booking) error
+	GetByID(id domain.BookingID) (*booking.Booking, error)
+	Create(booking *booking.Booking) error
+	Update(booking *booking.Booking) error
 	Delete(id domain.BookingID) error
-	ListByTherapist(therapistID domain.TherapistID) ([]*domain.Booking, error)
-	ListByClient(clientID domain.ClientID) ([]*domain.Booking, error)
-	ListByState(state domain.BookingState) ([]*domain.Booking, error)
-	ListByTherapistAndState(therapistID domain.TherapistID, state domain.BookingState) ([]*domain.Booking, error)
-	ListByClientAndState(clientID domain.ClientID, state domain.BookingState) ([]*domain.Booking, error)
-	ListConfirmedByTherapistForDateRange(therapistID domain.TherapistID, startDate, endDate time.Time) ([]*domain.Booking, error)
+	ListByTherapist(therapistID domain.TherapistID) ([]*booking.Booking, error)
+	ListByClient(clientID domain.ClientID) ([]*booking.Booking, error)
+	ListByState(state booking.BookingState) ([]*booking.Booking, error)
+	ListByTherapistAndState(therapistID domain.TherapistID, state booking.BookingState) ([]*booking.Booking, error)
+	ListByClientAndState(clientID domain.ClientID, state booking.BookingState) ([]*booking.Booking, error)
+	ListConfirmedByTherapistForDateRange(therapistID domain.TherapistID, startDate, endDate time.Time) ([]*booking.Booking, error)
 }

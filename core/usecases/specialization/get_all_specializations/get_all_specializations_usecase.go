@@ -1,7 +1,7 @@
 package get_all_specializations
 
 import (
-	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/specialization"
 	"github.com/mishkahtherapy/brain/core/ports"
 )
 
@@ -13,6 +13,6 @@ func NewUsecase(specializationRepo ports.SpecializationRepository) *Usecase {
 	return &Usecase{specializationRepo: specializationRepo}
 }
 
-func (u *Usecase) Execute() ([]*domain.Specialization, error) {
+func (u *Usecase) Execute() ([]*specialization.Specialization, error) {
 	return u.specializationRepo.GetAll()
 }

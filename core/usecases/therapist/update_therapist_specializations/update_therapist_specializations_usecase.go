@@ -4,6 +4,8 @@ import (
 	"errors"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/specialization"
+	"github.com/mishkahtherapy/brain/core/domain/therapist"
 	"github.com/mishkahtherapy/brain/core/ports"
 )
 
@@ -28,7 +30,7 @@ func NewUsecase(therapistRepo ports.TherapistRepository, specializationRepo port
 	}
 }
 
-func (u *Usecase) Execute(input Input) (*domain.Therapist, error) {
+func (u *Usecase) Execute(input Input) (*therapist.Therapist, error) {
 	// Get the existing therapist
 	therapist, err := u.therapistRepo.GetByID(input.TherapistID)
 	if err != nil {
@@ -38,7 +40,7 @@ func (u *Usecase) Execute(input Input) (*domain.Therapist, error) {
 		return nil, ErrTherapistNotFound
 	}
 
-	specializations := make([]domain.Specialization, 0)
+	specializations := make([]specialization.Specialization, 0)
 	// Bulk validate that all specializations exist
 	if len(input.SpecializationIDs) > 0 {
 		foundSpecializationMap, err := u.specializationRepo.BulkGetByIds(input.SpecializationIDs)

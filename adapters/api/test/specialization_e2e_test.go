@@ -10,8 +10,9 @@ import (
 
 	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/adapters/db"
-	"github.com/mishkahtherapy/brain/adapters/db/specialization"
+	"github.com/mishkahtherapy/brain/adapters/db/specialization_db"
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/specialization"
 	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/specialization/get_all_specializations"
 	"github.com/mishkahtherapy/brain/core/usecases/specialization/get_specialization"
@@ -26,7 +27,7 @@ func TestSpecializationE2E(t *testing.T) {
 	defer cleanup()
 
 	// Setup repositories
-	specializationRepo := specialization.NewSpecializationRepository(db)
+	specializationRepo := specialization_db.NewSpecializationRepository(db)
 
 	// Setup usecases
 	createUsecase := new_specialization.NewUsecase(specializationRepo)
@@ -62,7 +63,7 @@ func TestSpecializationE2E(t *testing.T) {
 		}
 
 		// Parse created specialization
-		var createdSpec domain.Specialization
+		var createdSpec specialization.Specialization
 		body := createRec.Body.Bytes()
 		fmt.Println("body", string(body))
 		if err := json.Unmarshal(body, &createdSpec); err != nil {
@@ -96,7 +97,7 @@ func TestSpecializationE2E(t *testing.T) {
 		}
 
 		// Parse retrieved specialization
-		var retrievedSpec domain.Specialization
+		var retrievedSpec specialization.Specialization
 		if err := json.Unmarshal(getRec.Body.Bytes(), &retrievedSpec); err != nil {
 			t.Fatalf("Failed to parse retrieved specialization: %v", err)
 		}
@@ -127,7 +128,7 @@ func TestSpecializationE2E(t *testing.T) {
 		}
 
 		// Parse all specializations
-		var allSpecs []*domain.Specialization
+		var allSpecs []*specialization.Specialization
 		if err := json.Unmarshal(getAllRec.Body.Bytes(), &allSpecs); err != nil {
 			t.Fatalf("Failed to parse all specializations: %v", err)
 		}

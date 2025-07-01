@@ -1,4 +1,4 @@
-package timeslot
+package timeslot_db
 
 import (
 	"database/sql"
@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/timeslot"
 	"github.com/mishkahtherapy/brain/core/ports"
 )
 
@@ -32,7 +33,7 @@ func NewTimeSlotRepository(db ports.SQLDatabase) *TimeSlotRepository {
 	return &TimeSlotRepository{db: db}
 }
 
-func (r *TimeSlotRepository) GetByID(id string) (*domain.TimeSlot, error) {
+func (r *TimeSlotRepository) GetByID(id string) (*timeslot.TimeSlot, error) {
 	query := `
 		SELECT id, therapist_id, day_of_week, start_time, end_time,
 		       pre_session_buffer, post_session_buffer, created_at, updated_at
@@ -40,7 +41,7 @@ func (r *TimeSlotRepository) GetByID(id string) (*domain.TimeSlot, error) {
 		WHERE id = ?
 	`
 	row := r.db.QueryRow(query, id)
-	timeslot := &domain.TimeSlot{}
+	timeslot := &timeslot.TimeSlot{}
 	err := row.Scan(
 		&timeslot.ID,
 		&timeslot.TherapistID,
@@ -84,7 +85,7 @@ func (r *TimeSlotRepository) GetByID(id string) (*domain.TimeSlot, error) {
 	return timeslot, nil
 }
 
-func (r *TimeSlotRepository) Create(timeslot *domain.TimeSlot) error {
+func (r *TimeSlotRepository) Create(timeslot *timeslot.TimeSlot) error {
 	// Validate required fields
 	if timeslot.ID == "" {
 		return ErrTimeSlotIDIsRequired
@@ -139,7 +140,7 @@ func (r *TimeSlotRepository) Create(timeslot *domain.TimeSlot) error {
 	return nil
 }
 
-func (r *TimeSlotRepository) Update(timeslot *domain.TimeSlot) error {
+func (r *TimeSlotRepository) Update(timeslot *timeslot.TimeSlot) error {
 	// Validate required fields
 	if timeslot.ID == "" {
 		return ErrTimeSlotIDIsRequired
@@ -225,7 +226,7 @@ func (r *TimeSlotRepository) Delete(id string) error {
 	return nil
 }
 
-func (r *TimeSlotRepository) ListByTherapist(therapistID string) ([]*domain.TimeSlot, error) {
+func (r *TimeSlotRepository) ListByTherapist(therapistID string) ([]*timeslot.TimeSlot, error) {
 	if therapistID == "" {
 		return nil, ErrTimeSlotTherapistIDIsRequired
 	}
@@ -247,7 +248,7 @@ func (r *TimeSlotRepository) ListByTherapist(therapistID string) ([]*domain.Time
 	return r.scanTimeSlotsWithoutBookings(rows)
 }
 
-func (r *TimeSlotRepository) ListByDay(therapistID string, day string) ([]*domain.TimeSlot, error) {
+func (r *TimeSlotRepository) ListByDay(therapistID string, day string) ([]*timeslot.TimeSlot, error) {
 	if therapistID == "" {
 		return nil, ErrTimeSlotTherapistIDIsRequired
 	}
@@ -274,10 +275,10 @@ func (r *TimeSlotRepository) ListByDay(therapistID string, day string) ([]*domai
 }
 
 // Helper method to scan multiple timeslot rows
-func (r *TimeSlotRepository) scanTimeSlots(rows *sql.Rows) ([]*domain.TimeSlot, error) {
-	timeslots := make([]*domain.TimeSlot, 0)
+func (r *TimeSlotRepository) scanTimeSlots(rows *sql.Rows) ([]*timeslot.TimeSlot, error) {
+	timeslots := make([]*timeslot.TimeSlot, 0)
 	for rows.Next() {
-		timeslot := &domain.TimeSlot{}
+		timeslot := &timeslot.TimeSlot{}
 		err := rows.Scan(
 			&timeslot.ID,
 			&timeslot.TherapistID,
@@ -320,10 +321,10 @@ func (r *TimeSlotRepository) scanTimeSlots(rows *sql.Rows) ([]*domain.TimeSlot, 
 }
 
 // scanTimeSlotsWithoutBookings scans timeslots without fetching booking IDs (for performance)
-func (r *TimeSlotRepository) scanTimeSlotsWithoutBookings(rows *sql.Rows) ([]*domain.TimeSlot, error) {
-	timeslots := make([]*domain.TimeSlot, 0)
+func (r *TimeSlotRepository) scanTimeSlotsWithoutBookings(rows *sql.Rows) ([]*timeslot.TimeSlot, error) {
+	timeslots := make([]*timeslot.TimeSlot, 0)
 	for rows.Next() {
-		timeslot := &domain.TimeSlot{}
+		timeslot := &timeslot.TimeSlot{}
 		err := rows.Scan(
 			&timeslot.ID,
 			&timeslot.TherapistID,

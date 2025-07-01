@@ -3,8 +3,8 @@ package test
 import (
 	"testing"
 
-	"github.com/mishkahtherapy/brain/adapters/db/specialization"
-	"github.com/mishkahtherapy/brain/adapters/db/therapist"
+	"github.com/mishkahtherapy/brain/adapters/db/specialization_db"
+	"github.com/mishkahtherapy/brain/adapters/db/therapist_db"
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/get_therapist"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/new_therapist"
@@ -18,8 +18,8 @@ func TestTherapistSpeaksEnglish(t *testing.T) {
 	defer cleanup()
 
 	// Setup repository
-	therapistRepo := therapist.NewTherapistRepository(dbInstance)
-	specializationRepo := specialization.NewSpecializationRepository(dbInstance)
+	therapistRepo := therapist_db.NewTherapistRepository(dbInstance)
+	specializationRepo := specialization_db.NewSpecializationRepository(dbInstance)
 
 	// Setup usecases
 	createTherapistUsecase := new_therapist.NewUsecase(therapistRepo, specializationRepo)

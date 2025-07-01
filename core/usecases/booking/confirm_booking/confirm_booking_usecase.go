@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/booking"
 	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
@@ -29,7 +30,7 @@ func NewUsecase(bookingRepo ports.BookingRepository, sessionRepo ports.SessionRe
 	}
 }
 
-func (u *Usecase) Execute(input Input) (*domain.Booking, error) {
+func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 	// Validate required fields
 	if input.BookingID == "" {
 		return nil, common.ErrBookingIDIsRequired
@@ -42,21 +43,21 @@ func (u *Usecase) Execute(input Input) (*domain.Booking, error) {
 	}
 
 	// Get existing booking
-	booking, err := u.bookingRepo.GetByID(input.BookingID)
-	if err != nil || booking == nil {
+	existingBooking, err := u.bookingRepo.GetByID(input.BookingID)
+	if err != nil || existingBooking == nil {
 		return nil, common.ErrBookingNotFound
 	}
 
 	// Validate booking is in Pending state
-	if booking.State != domain.BookingStatePending {
+	if existingBooking.State != booking.BookingStatePending {
 		return nil, common.ErrInvalidBookingState
 	}
 
 	// Change state to Confirmed
-	booking.State = domain.BookingStateConfirmed
-	booking.UpdatedAt = domain.NewUTCTimestamp()
+	existingBooking.State = booking.BookingStateConfirmed
+	existingBooking.UpdatedAt = domain.NewUTCTimestamp()
 
-	err = u.bookingRepo.Update(booking)
+	err = u.bookingRepo.Update(existingBooking)
 	if err != nil {
 		return nil, common.ErrFailedToConfirmBooking
 	}
@@ -65,11 +66,11 @@ func (u *Usecase) Execute(input Input) (*domain.Booking, error) {
 	now := domain.NewUTCTimestamp()
 	session := &domain.Session{
 		ID:          domain.NewSessionID(),
-		BookingID:   booking.ID,
-		TherapistID: booking.TherapistID,
-		ClientID:    booking.ClientID,
-		TimeSlotID:  booking.TimeSlotID,
-		StartTime:   booking.StartTime,
+		BookingID:   existingBooking.ID,
+		TherapistID: existingBooking.TherapistID,
+		ClientID:    existingBooking.ClientID,
+		TimeSlotID:  existingBooking.TimeSlotID,
+		StartTime:   existingBooking.StartTime,
 		PaidAmount:  input.PaidAmount,
 		Language:    input.Language,
 		State:       domain.SessionStatePlanned,
@@ -85,5 +86,5 @@ func (u *Usecase) Execute(input Input) (*domain.Booking, error) {
 		return nil, ErrFailedToCreateSession
 	}
 
-	return booking, nil
+	return existingBooking, nil
 }

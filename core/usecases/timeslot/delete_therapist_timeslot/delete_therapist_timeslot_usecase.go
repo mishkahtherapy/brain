@@ -2,8 +2,8 @@ package delete_therapist_timeslot
 
 import (
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/timeslot"
 	"github.com/mishkahtherapy/brain/core/ports"
-	"github.com/mishkahtherapy/brain/core/usecases/timeslot"
 )
 
 type Input struct {
@@ -64,7 +64,7 @@ func (u *Usecase) Execute(input Input) error {
 
 func (u *Usecase) validateInput(input Input) error {
 	if input.TherapistID == "" {
-		return timeslot.ErrTherapistIDIsRequired
+		return timeslot.ErrTherapistIDRequired
 	}
 
 	if input.TimeslotID == "" {

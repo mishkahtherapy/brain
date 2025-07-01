@@ -1,4 +1,4 @@
-package therapist
+package therapist_db
 
 import (
 	"database/sql"
@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/specialization"
+	"github.com/mishkahtherapy/brain/core/domain/therapist"
 	"github.com/mishkahtherapy/brain/core/ports"
 )
 
@@ -31,7 +33,7 @@ func NewTherapistRepository(db ports.SQLDatabase) *TherapistRepository {
 	return &TherapistRepository{db: db}
 }
 
-func (r *TherapistRepository) Create(therapist *domain.Therapist) error {
+func (r *TherapistRepository) Create(therapist *therapist.Therapist) error {
 	if therapist.ID == "" {
 		return ErrTherapistIDIsRequired
 	}
@@ -101,7 +103,7 @@ func (r *TherapistRepository) Create(therapist *domain.Therapist) error {
 	return nil
 }
 
-func (r *TherapistRepository) Update(therapist *domain.Therapist) error {
+func (r *TherapistRepository) Update(therapist *therapist.Therapist) error {
 	if therapist.ID == "" {
 		return ErrTherapistIDIsRequired
 	}
@@ -188,14 +190,14 @@ func (r *TherapistRepository) UpdateSpecializations(therapistID domain.Therapist
 	return nil
 }
 
-func (r *TherapistRepository) GetByID(id domain.TherapistID) (*domain.Therapist, error) {
+func (r *TherapistRepository) GetByID(id domain.TherapistID) (*therapist.Therapist, error) {
 	query := `
 		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, created_at, updated_at
 		FROM therapists
 		WHERE id = ?
 	`
 	row := r.db.QueryRow(query, id)
-	therapist := &domain.Therapist{}
+	therapist := &therapist.Therapist{}
 	err := row.Scan(
 		&therapist.ID,
 		&therapist.Name,
@@ -224,14 +226,14 @@ func (r *TherapistRepository) GetByID(id domain.TherapistID) (*domain.Therapist,
 	return therapist, nil
 }
 
-func (r *TherapistRepository) GetByEmail(email domain.Email) (*domain.Therapist, error) {
+func (r *TherapistRepository) GetByEmail(email domain.Email) (*therapist.Therapist, error) {
 	query := `
 		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, created_at, updated_at
 		FROM therapists
 		WHERE email = ?
 	`
 	row := r.db.QueryRow(query, email)
-	therapist := &domain.Therapist{}
+	therapist := &therapist.Therapist{}
 	err := row.Scan(
 		&therapist.ID,
 		&therapist.Name,
@@ -260,14 +262,14 @@ func (r *TherapistRepository) GetByEmail(email domain.Email) (*domain.Therapist,
 	return therapist, nil
 }
 
-func (r *TherapistRepository) GetByWhatsAppNumber(whatsappNumber domain.WhatsAppNumber) (*domain.Therapist, error) {
+func (r *TherapistRepository) GetByWhatsAppNumber(whatsappNumber domain.WhatsAppNumber) (*therapist.Therapist, error) {
 	query := `
 		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, created_at, updated_at
 		FROM therapists
 		WHERE whatsapp_number = ?
 	`
 	row := r.db.QueryRow(query, whatsappNumber)
-	therapist := &domain.Therapist{}
+	therapist := &therapist.Therapist{}
 	err := row.Scan(
 		&therapist.ID,
 		&therapist.Name,
@@ -303,7 +305,7 @@ func (r *TherapistRepository) Delete(id domain.TherapistID) error {
 	return err
 }
 
-func (r *TherapistRepository) List() ([]*domain.Therapist, error) {
+func (r *TherapistRepository) List() ([]*therapist.Therapist, error) {
 	query := `
 		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, created_at, updated_at
 		FROM therapists
@@ -316,9 +318,9 @@ func (r *TherapistRepository) List() ([]*domain.Therapist, error) {
 	}
 	defer rows.Close()
 
-	therapists := make([]*domain.Therapist, 0)
+	therapists := make([]*therapist.Therapist, 0)
 	for rows.Next() {
-		therapist := &domain.Therapist{}
+		therapist := &therapist.Therapist{}
 		err := rows.Scan(
 			&therapist.ID,
 			&therapist.Name,
@@ -347,7 +349,7 @@ func (r *TherapistRepository) List() ([]*domain.Therapist, error) {
 	return therapists, nil
 }
 
-func (r *TherapistRepository) FindBySpecializationAndLanguage(specializationName string, mustSpeakEnglish bool) ([]*domain.Therapist, error) {
+func (r *TherapistRepository) FindBySpecializationAndLanguage(specializationName string, mustSpeakEnglish bool) ([]*therapist.Therapist, error) {
 	query := `
 	       SELECT DISTINCT t.id, t.name, t.email, t.phone_number, t.whatsapp_number, t.speaks_english, t.created_at, t.updated_at
 	       FROM therapists t
@@ -371,11 +373,11 @@ func (r *TherapistRepository) FindBySpecializationAndLanguage(specializationName
 	}
 	defer rows.Close()
 
-	therapists := make([]*domain.Therapist, 0)
+	therapists := make([]*therapist.Therapist, 0)
 	therapistIDs := make([]domain.TherapistID, 0)
 
 	for rows.Next() {
-		therapist := &domain.Therapist{}
+		therapist := &therapist.Therapist{}
 		err := rows.Scan(
 			&therapist.ID,
 			&therapist.Name,
@@ -439,7 +441,7 @@ func (r *TherapistRepository) insertTherapistSpecializations(tx ports.SQLTx, the
 	return err
 }
 
-func (r *TherapistRepository) bulkGetTherapistSpecializations(therapistIDs []domain.TherapistID) (map[domain.TherapistID][]domain.Specialization, error) {
+func (r *TherapistRepository) bulkGetTherapistSpecializations(therapistIDs []domain.TherapistID) (map[domain.TherapistID][]specialization.Specialization, error) {
 	query := `
 		SELECT 
 			therapist_specializations.therapist_id,
@@ -469,10 +471,10 @@ func (r *TherapistRepository) bulkGetTherapistSpecializations(therapistIDs []dom
 	}
 	defer rows.Close()
 
-	specializations := make(map[domain.TherapistID][]domain.Specialization)
+	specializations := make(map[domain.TherapistID][]specialization.Specialization)
 	for rows.Next() {
 		var therapistID domain.TherapistID
-		var specID domain.Specialization
+		var specID specialization.Specialization
 		err := rows.Scan(&therapistID, &specID.ID, &specID.Name, &specID.CreatedAt, &specID.UpdatedAt)
 		if err != nil {
 			slog.Error("error scanning specialization id", "error", err)

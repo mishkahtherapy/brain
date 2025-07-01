@@ -11,9 +11,10 @@ import (
 
 	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/adapters/db"
-	"github.com/mishkahtherapy/brain/adapters/db/therapist"
-	"github.com/mishkahtherapy/brain/adapters/db/timeslot"
+	"github.com/mishkahtherapy/brain/adapters/db/therapist_db"
+	"github.com/mishkahtherapy/brain/adapters/db/timeslot_db"
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/timeslot"
 	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/create_therapist_timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/delete_therapist_timeslot"
@@ -33,8 +34,8 @@ func TestTimeslotE2E(t *testing.T) {
 	testTherapistID := insertTestTherapist(t, database)
 
 	// Setup repositories
-	therapistRepo := therapist.NewTherapistRepository(database)
-	timeslotRepo := timeslot.NewTimeSlotRepository(database)
+	therapistRepo := therapist_db.NewTherapistRepository(database)
+	timeslotRepo := timeslot_db.NewTimeSlotRepository(database)
 
 	// Setup usecases
 	createUsecase := create_therapist_timeslot.NewUsecase(therapistRepo, timeslotRepo)
@@ -79,7 +80,7 @@ func TestTimeslotE2E(t *testing.T) {
 		}
 
 		// Parse created timeslot
-		var createdTimeslot domain.TimeSlot
+		var createdTimeslot timeslot.TimeSlot
 		if err := json.Unmarshal(createRec.Body.Bytes(), &createdTimeslot); err != nil {
 			t.Fatalf("Failed to parse created timeslot: %v", err)
 		}
@@ -88,8 +89,8 @@ func TestTimeslotE2E(t *testing.T) {
 		if createdTimeslot.TherapistID != testTherapistID {
 			t.Errorf("Expected therapist ID %s, got %s", testTherapistID, createdTimeslot.TherapistID)
 		}
-		if createdTimeslot.DayOfWeek != domain.DayOfWeekMonday {
-			t.Errorf("Expected day %s, got %s", domain.DayOfWeekMonday, createdTimeslot.DayOfWeek)
+		if createdTimeslot.DayOfWeek != timeslot.DayOfWeekMonday {
+			t.Errorf("Expected day %s, got %s", timeslot.DayOfWeekMonday, createdTimeslot.DayOfWeek)
 		}
 		if createdTimeslot.StartTime != "09:00" {
 			t.Errorf("Expected start time %s, got %s", "09:00", createdTimeslot.StartTime)
@@ -122,7 +123,7 @@ func TestTimeslotE2E(t *testing.T) {
 		}
 
 		// Parse retrieved timeslot
-		var retrievedTimeslot domain.TimeSlot
+		var retrievedTimeslot timeslot.TimeSlot
 		if err := json.Unmarshal(getRec.Body.Bytes(), &retrievedTimeslot); err != nil {
 			t.Fatalf("Failed to parse retrieved timeslot: %v", err)
 		}
@@ -160,7 +161,7 @@ func TestTimeslotE2E(t *testing.T) {
 		}
 
 		// Parse updated timeslot
-		var updatedTimeslot domain.TimeSlot
+		var updatedTimeslot timeslot.TimeSlot
 		if err := json.Unmarshal(updateRec.Body.Bytes(), &updatedTimeslot); err != nil {
 			t.Fatalf("Failed to parse updated timeslot: %v", err)
 		}
@@ -169,8 +170,8 @@ func TestTimeslotE2E(t *testing.T) {
 		if updatedTimeslot.ID != createdTimeslot.ID {
 			t.Errorf("Expected ID to remain %s, got %s", createdTimeslot.ID, updatedTimeslot.ID)
 		}
-		if updatedTimeslot.DayOfWeek != domain.DayOfWeekTuesday {
-			t.Errorf("Expected updated day %s, got %s", domain.DayOfWeekTuesday, updatedTimeslot.DayOfWeek)
+		if updatedTimeslot.DayOfWeek != timeslot.DayOfWeekTuesday {
+			t.Errorf("Expected updated day %s, got %s", timeslot.DayOfWeekTuesday, updatedTimeslot.DayOfWeek)
 		}
 		if updatedTimeslot.StartTime != "10:00" {
 			t.Errorf("Expected updated start time %s, got %s", "10:00", updatedTimeslot.StartTime)
@@ -195,7 +196,7 @@ func TestTimeslotE2E(t *testing.T) {
 
 		// Parse list response
 		var listResponse struct {
-			Timeslots []domain.TimeSlot `json:"timeslots"`
+			Timeslots []timeslot.TimeSlot `json:"timeslots"`
 		}
 		if err := json.Unmarshal(listAllRec.Body.Bytes(), &listResponse); err != nil {
 			t.Fatalf("Failed to parse list response: %v", err)
@@ -206,8 +207,8 @@ func TestTimeslotE2E(t *testing.T) {
 		for _, ts := range listResponse.Timeslots {
 			if ts.ID == createdTimeslot.ID {
 				found = true
-				if ts.DayOfWeek != domain.DayOfWeekTuesday {
-					t.Errorf("Expected listed timeslot to have updated day %s, got %s", domain.DayOfWeekTuesday, ts.DayOfWeek)
+				if ts.DayOfWeek != timeslot.DayOfWeekTuesday {
+					t.Errorf("Expected listed timeslot to have updated day %s, got %s", timeslot.DayOfWeekTuesday, ts.DayOfWeek)
 				}
 				break
 			}
@@ -247,7 +248,7 @@ func TestTimeslotE2E(t *testing.T) {
 		}
 
 		var tuesdayResponse struct {
-			Timeslots []domain.TimeSlot `json:"timeslots"`
+			Timeslots []timeslot.TimeSlot `json:"timeslots"`
 		}
 		if err := json.Unmarshal(listTuesdayRec.Body.Bytes(), &tuesdayResponse); err != nil {
 			t.Fatalf("Failed to parse Tuesday list response: %v", err)
@@ -255,7 +256,7 @@ func TestTimeslotE2E(t *testing.T) {
 
 		// Verify only Tuesday timeslots are returned
 		for _, ts := range tuesdayResponse.Timeslots {
-			if ts.DayOfWeek != domain.DayOfWeekTuesday {
+			if ts.DayOfWeek != timeslot.DayOfWeekTuesday {
 				t.Errorf("Expected only Tuesday timeslots, found %s", ts.DayOfWeek)
 			}
 		}

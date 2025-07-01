@@ -10,9 +10,12 @@ import (
 
 	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/adapters/db"
-	"github.com/mishkahtherapy/brain/adapters/db/booking"
-	"github.com/mishkahtherapy/brain/adapters/db/therapist"
+	"github.com/mishkahtherapy/brain/adapters/db/booking_db"
+	"github.com/mishkahtherapy/brain/adapters/db/therapist_db"
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/booking"
+	"github.com/mishkahtherapy/brain/core/domain/client"
+	"github.com/mishkahtherapy/brain/core/domain/timeslot"
 	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/cancel_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/confirm_booking"
@@ -67,11 +70,11 @@ type TestClientRepository struct {
 	db ports.SQLDatabase
 }
 
-func (r *TestClientRepository) GetByID(id domain.ClientID) (*domain.Client, error) {
+func (r *TestClientRepository) GetByID(id domain.ClientID) (*client.Client, error) {
 	query := `SELECT id, name, whatsapp_number, created_at, updated_at FROM clients WHERE id = ?`
 	row := r.db.QueryRow(query, id)
 
-	var client domain.Client
+	var client client.Client
 	err := row.Scan(&client.ID, &client.Name, &client.WhatsAppNumber, &client.CreatedAt, &client.UpdatedAt)
 	if err != nil {
 		return nil, err
@@ -79,11 +82,11 @@ func (r *TestClientRepository) GetByID(id domain.ClientID) (*domain.Client, erro
 	return &client, nil
 }
 
-func (r *TestClientRepository) Create(client *domain.Client) error {
+func (r *TestClientRepository) Create(client *client.Client) error {
 	return nil // Not used in test
 }
 
-func (r *TestClientRepository) Update(client *domain.Client) error {
+func (r *TestClientRepository) Update(client *client.Client) error {
 	return nil // Not used in test
 }
 
@@ -91,11 +94,11 @@ func (r *TestClientRepository) Delete(id domain.ClientID) error {
 	return nil // Not used in test
 }
 
-func (r *TestClientRepository) GetByWhatsAppNumber(whatsappNumber domain.WhatsAppNumber) (*domain.Client, error) {
+func (r *TestClientRepository) GetByWhatsAppNumber(whatsappNumber domain.WhatsAppNumber) (*client.Client, error) {
 	return nil, nil // Not used in test
 }
 
-func (r *TestClientRepository) List() ([]*domain.Client, error) {
+func (r *TestClientRepository) List() ([]*client.Client, error) {
 	return nil, nil // Not used in test
 }
 
@@ -103,11 +106,11 @@ type TestTimeSlotRepository struct {
 	db ports.SQLDatabase
 }
 
-func (r *TestTimeSlotRepository) GetByID(id string) (*domain.TimeSlot, error) {
+func (r *TestTimeSlotRepository) GetByID(id string) (*timeslot.TimeSlot, error) {
 	query := `SELECT id, therapist_id, day_of_week, start_time, end_time, pre_session_buffer, post_session_buffer, created_at, updated_at FROM time_slots WHERE id = ?`
 	row := r.db.QueryRow(query, id)
 
-	var timeSlot domain.TimeSlot
+	var timeSlot timeslot.TimeSlot
 	err := row.Scan(&timeSlot.ID, &timeSlot.TherapistID, &timeSlot.DayOfWeek, &timeSlot.StartTime, &timeSlot.EndTime, &timeSlot.PreSessionBuffer, &timeSlot.PostSessionBuffer, &timeSlot.CreatedAt, &timeSlot.UpdatedAt)
 	if err != nil {
 		return nil, err
@@ -115,11 +118,11 @@ func (r *TestTimeSlotRepository) GetByID(id string) (*domain.TimeSlot, error) {
 	return &timeSlot, nil
 }
 
-func (r *TestTimeSlotRepository) Create(timeslot *domain.TimeSlot) error {
+func (r *TestTimeSlotRepository) Create(timeslot *timeslot.TimeSlot) error {
 	return nil // Not used in test
 }
 
-func (r *TestTimeSlotRepository) Update(timeslot *domain.TimeSlot) error {
+func (r *TestTimeSlotRepository) Update(timeslot *timeslot.TimeSlot) error {
 	return nil // Not used in test
 }
 
@@ -127,11 +130,11 @@ func (r *TestTimeSlotRepository) Delete(id string) error {
 	return nil // Not used in test
 }
 
-func (r *TestTimeSlotRepository) ListByTherapist(therapistID string) ([]*domain.TimeSlot, error) {
+func (r *TestTimeSlotRepository) ListByTherapist(therapistID string) ([]*timeslot.TimeSlot, error) {
 	return nil, nil // Not used in test
 }
 
-func (r *TestTimeSlotRepository) ListByDay(therapistID string, day string) ([]*domain.TimeSlot, error) {
+func (r *TestTimeSlotRepository) ListByDay(therapistID string, day string) ([]*timeslot.TimeSlot, error) {
 	return nil, nil // Not used in test
 }
 
@@ -144,8 +147,8 @@ func TestBookingE2E(t *testing.T) {
 	testData := insertBookingTestData(t, database)
 
 	// Setup repositories
-	bookingRepo := booking.NewBookingRepository(database)
-	therapistRepo := therapist.NewTherapistRepository(database)
+	bookingRepo := booking_db.NewBookingRepository(database)
+	therapistRepo := therapist_db.NewTherapistRepository(database)
 	clientRepo := &TestClientRepository{db: database}
 	timeSlotRepo := &TestTimeSlotRepository{db: database}
 	sessionRepo := &TestSessionRepository{db: database}
@@ -194,7 +197,7 @@ func TestBookingE2E(t *testing.T) {
 		}
 
 		// Parse created booking
-		var createdBooking domain.Booking
+		var createdBooking booking.Booking
 		if err := json.Unmarshal(createRec.Body.Bytes(), &createdBooking); err != nil {
 			t.Fatalf("Failed to parse created booking: %v", err)
 		}
@@ -209,8 +212,8 @@ func TestBookingE2E(t *testing.T) {
 		if createdBooking.TimeSlotID != testData.TimeSlotID {
 			t.Errorf("Expected timeslot ID %s, got %s", testData.TimeSlotID, createdBooking.TimeSlotID)
 		}
-		if createdBooking.State != domain.BookingStatePending {
-			t.Errorf("Expected state %s, got %s", domain.BookingStatePending, createdBooking.State)
+		if createdBooking.State != booking.BookingStatePending {
+			t.Errorf("Expected state %s, got %s", booking.BookingStatePending, createdBooking.State)
 		}
 		if createdBooking.ID == "" {
 			t.Error("Expected ID to be set")
@@ -228,7 +231,7 @@ func TestBookingE2E(t *testing.T) {
 		}
 
 		// Parse retrieved booking
-		var retrievedBooking domain.Booking
+		var retrievedBooking booking.Booking
 		if err := json.Unmarshal(getRec.Body.Bytes(), &retrievedBooking); err != nil {
 			t.Fatalf("Failed to parse retrieved booking: %v", err)
 		}
@@ -237,8 +240,8 @@ func TestBookingE2E(t *testing.T) {
 		if retrievedBooking.ID != createdBooking.ID {
 			t.Errorf("Expected ID %s, got %s", createdBooking.ID, retrievedBooking.ID)
 		}
-		if retrievedBooking.State != domain.BookingStatePending {
-			t.Errorf("Expected state %s, got %s", domain.BookingStatePending, retrievedBooking.State)
+		if retrievedBooking.State != booking.BookingStatePending {
+			t.Errorf("Expected state %s, got %s", booking.BookingStatePending, retrievedBooking.State)
 		}
 
 		// Step 3: Confirm the booking
@@ -260,14 +263,14 @@ func TestBookingE2E(t *testing.T) {
 		}
 
 		// Parse confirmed booking
-		var confirmedBooking domain.Booking
+		var confirmedBooking booking.Booking
 		if err := json.Unmarshal(confirmRec.Body.Bytes(), &confirmedBooking); err != nil {
 			t.Fatalf("Failed to parse confirmed booking: %v", err)
 		}
 
 		// Verify booking state changed to confirmed
-		if confirmedBooking.State != domain.BookingStateConfirmed {
-			t.Errorf("Expected state %s, got %s", domain.BookingStateConfirmed, confirmedBooking.State)
+		if confirmedBooking.State != booking.BookingStateConfirmed {
+			t.Errorf("Expected state %s, got %s", booking.BookingStateConfirmed, confirmedBooking.State)
 		}
 
 		// Step 4: List bookings by therapist
@@ -282,18 +285,18 @@ func TestBookingE2E(t *testing.T) {
 		}
 
 		// Parse therapist bookings
-		var therapistBookings []*domain.Booking
+		var therapistBookings []*booking.Booking
 		if err := json.Unmarshal(listByTherapistRec.Body.Bytes(), &therapistBookings); err != nil {
 			t.Fatalf("Failed to parse therapist bookings: %v", err)
 		}
 
 		// Verify our booking is in the list
 		found := false
-		for _, booking := range therapistBookings {
-			if booking.ID == createdBooking.ID {
+		for _, therapistBookings := range therapistBookings {
+			if therapistBookings.ID == createdBooking.ID {
 				found = true
-				if booking.State != domain.BookingStateConfirmed {
-					t.Errorf("Expected booking state %s, got %s", domain.BookingStateConfirmed, booking.State)
+				if therapistBookings.State != booking.BookingStateConfirmed {
+					t.Errorf("Expected booking state %s, got %s", booking.BookingStateConfirmed, therapistBookings.State)
 				}
 				break
 			}
@@ -314,7 +317,7 @@ func TestBookingE2E(t *testing.T) {
 		}
 
 		// Parse client bookings
-		var clientBookings []*domain.Booking
+		var clientBookings []*booking.Booking
 		if err := json.Unmarshal(listByClientRec.Body.Bytes(), &clientBookings); err != nil {
 			t.Fatalf("Failed to parse client bookings: %v", err)
 		}
@@ -341,15 +344,15 @@ func TestBookingE2E(t *testing.T) {
 			t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusOK, listConfirmedRec.Code, listConfirmedRec.Body.String())
 		}
 
-		var confirmedBookings []*domain.Booking
+		var confirmedBookings []*booking.Booking
 		if err := json.Unmarshal(listConfirmedRec.Body.Bytes(), &confirmedBookings); err != nil {
 			t.Fatalf("Failed to parse confirmed bookings: %v", err)
 		}
 
 		// Verify only confirmed bookings are returned
-		for _, booking := range confirmedBookings {
-			if booking.State != domain.BookingStateConfirmed {
-				t.Errorf("Expected only confirmed bookings, got booking with state %s", booking.State)
+		for _, confirmedBooking := range confirmedBookings {
+			if confirmedBooking.State != booking.BookingStateConfirmed {
+				t.Errorf("Expected only confirmed bookings, got booking with state %s", confirmedBooking.State)
 			}
 		}
 
@@ -365,14 +368,14 @@ func TestBookingE2E(t *testing.T) {
 		}
 
 		// Parse cancelled booking
-		var cancelledBooking domain.Booking
+		var cancelledBooking booking.Booking
 		if err := json.Unmarshal(cancelRec.Body.Bytes(), &cancelledBooking); err != nil {
 			t.Fatalf("Failed to parse cancelled booking: %v", err)
 		}
 
 		// Verify booking state changed to cancelled
-		if cancelledBooking.State != domain.BookingStateCancelled {
-			t.Errorf("Expected state %s, got %s", domain.BookingStateCancelled, cancelledBooking.State)
+		if cancelledBooking.State != booking.BookingStateCancelled {
+			t.Errorf("Expected state %s, got %s", booking.BookingStateCancelled, cancelledBooking.State)
 		}
 	})
 

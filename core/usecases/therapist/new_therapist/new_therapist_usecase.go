@@ -4,6 +4,8 @@ import (
 	"errors"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/specialization"
+	"github.com/mishkahtherapy/brain/core/domain/therapist"
 	"github.com/mishkahtherapy/brain/core/ports"
 	therapistvalidation "github.com/mishkahtherapy/brain/core/usecases/therapist"
 )
@@ -31,7 +33,7 @@ func NewUsecase(therapistRepo ports.TherapistRepository, specializationRepo port
 	return &Usecase{therapistRepo: therapistRepo, specializationRepo: specializationRepo}
 }
 
-func (u *Usecase) Execute(input Input) (*domain.Therapist, error) {
+func (u *Usecase) Execute(input Input) (*therapist.Therapist, error) {
 	// Validate required fields
 	if err := therapistvalidation.ValidateRequiredFields(input.Name, input.Email, input.PhoneNumber, input.WhatsAppNumber); err != nil {
 		return nil, err
@@ -53,7 +55,7 @@ func (u *Usecase) Execute(input Input) (*domain.Therapist, error) {
 	}
 
 	// Create therapist entity
-	newTherapist := &domain.Therapist{
+	newTherapist := &therapist.Therapist{
 		ID:             domain.NewTherapistID(),
 		Name:           input.Name,
 		Email:          input.Email,
@@ -63,9 +65,9 @@ func (u *Usecase) Execute(input Input) (*domain.Therapist, error) {
 	}
 
 	// Add specializations
-	specializations := make([]domain.Specialization, 0)
+	specializations := make([]specialization.Specialization, 0)
 	for _, specID := range input.SpecializationIDs {
-		specializations = append(specializations, domain.Specialization{ID: specID})
+		specializations = append(specializations, specialization.Specialization{ID: specID})
 	}
 	newTherapist.Specializations = specializations
 

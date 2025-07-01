@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/cancel_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/confirm_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/create_booking"
@@ -225,13 +226,13 @@ func (h *BookingHandler) handleListBookingsByTherapist(w http.ResponseWriter, r 
 	}
 
 	// Parse optional state query parameter
-	var state *domain.BookingState
+	var state *booking.BookingState
 	if stateParam := r.URL.Query().Get("state"); stateParam != "" {
-		bookingState := domain.BookingState(stateParam)
+		bookingState := booking.BookingState(stateParam)
 		// Validate state value
-		if bookingState != domain.BookingStatePending &&
-			bookingState != domain.BookingStateConfirmed &&
-			bookingState != domain.BookingStateCancelled {
+		if bookingState != booking.BookingStatePending &&
+			bookingState != booking.BookingStateConfirmed &&
+			bookingState != booking.BookingStateCancelled {
 			rw.WriteBadRequest("Invalid state parameter. Must be one of: pending, confirmed, cancelled")
 			return
 		}
@@ -270,13 +271,13 @@ func (h *BookingHandler) handleListBookingsByClient(w http.ResponseWriter, r *ht
 	}
 
 	// Parse optional state query parameter
-	var state *domain.BookingState
+	var state *booking.BookingState
 	if stateParam := r.URL.Query().Get("state"); stateParam != "" {
-		bookingState := domain.BookingState(stateParam)
+		bookingState := booking.BookingState(stateParam)
 		// Validate state value
-		if bookingState != domain.BookingStatePending &&
-			bookingState != domain.BookingStateConfirmed &&
-			bookingState != domain.BookingStateCancelled {
+		if bookingState != booking.BookingStatePending &&
+			bookingState != booking.BookingStateConfirmed &&
+			bookingState != booking.BookingStateCancelled {
 			rw.WriteBadRequest("Invalid state parameter. Must be one of: pending, confirmed, cancelled")
 			return
 		}

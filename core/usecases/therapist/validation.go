@@ -4,25 +4,26 @@ import (
 	"regexp"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/therapist"
 	"github.com/mishkahtherapy/brain/core/ports"
 )
 
 // ValidateRequiredFields validates that all required therapist fields are provided
 func ValidateRequiredFields(name string, email domain.Email, phoneNumber domain.PhoneNumber, whatsAppNumber domain.WhatsAppNumber) error {
 	if name == "" {
-		return domain.ErrTherapistNameRequired
+		return therapist.ErrTherapistNameRequired
 	}
 
 	if email == domain.Email("") {
-		return domain.ErrTherapistEmailRequired
+		return therapist.ErrTherapistEmailRequired
 	}
 
 	if phoneNumber == domain.PhoneNumber("") {
-		return domain.ErrTherapistPhoneRequired
+		return therapist.ErrTherapistPhoneRequired
 	}
 
 	if whatsAppNumber == domain.WhatsAppNumber("") {
-		return domain.ErrTherapistWhatsAppRequired
+		return therapist.ErrTherapistWhatsAppRequired
 	}
 
 	return nil
@@ -31,11 +32,11 @@ func ValidateRequiredFields(name string, email domain.Email, phoneNumber domain.
 // ValidatePhoneNumbers validates the format of phone and WhatsApp numbers
 func ValidatePhoneNumbers(phoneNumber domain.PhoneNumber, whatsAppNumber domain.WhatsAppNumber) error {
 	if !IsValidPhoneNumber(string(phoneNumber)) {
-		return domain.ErrTherapistInvalidPhone
+		return therapist.ErrTherapistInvalidPhone
 	}
 
 	if !IsValidPhoneNumber(string(whatsAppNumber)) {
-		return domain.ErrTherapistInvalidWhatsApp
+		return therapist.ErrTherapistInvalidWhatsApp
 	}
 
 	return nil
@@ -61,7 +62,7 @@ func ValidateEmailUniqueness(repo ports.TherapistRepository, email domain.Email,
 		if skipTherapistID != nil && existingTherapist.ID == *skipTherapistID {
 			return nil
 		}
-		return domain.ErrTherapistEmailExists
+		return therapist.ErrTherapistEmailExists
 	}
 
 	return nil
@@ -81,7 +82,7 @@ func ValidateWhatsAppUniqueness(repo ports.TherapistRepository, whatsAppNumber d
 		if skipTherapistID != nil && existingTherapist.ID == *skipTherapistID {
 			return nil
 		}
-		return domain.ErrTherapistWhatsAppExists
+		return therapist.ErrTherapistWhatsAppExists
 	}
 
 	return nil
@@ -91,16 +92,16 @@ func ValidateWhatsAppUniqueness(repo ports.TherapistRepository, whatsAppNumber d
 func ValidateUniquenessForCreate(repo ports.TherapistRepository, email domain.Email, whatsAppNumber domain.WhatsAppNumber) error {
 	if err := ValidateEmailUniqueness(repo, email, nil); err != nil {
 		// Map the specific error to the general "already exists" for create operations
-		if err == domain.ErrTherapistEmailExists {
-			return domain.ErrTherapistAlreadyExists
+		if err == therapist.ErrTherapistEmailExists {
+			return therapist.ErrTherapistAlreadyExists
 		}
 		return err
 	}
 
 	if err := ValidateWhatsAppUniqueness(repo, whatsAppNumber, nil); err != nil {
 		// Map the specific error to the general "already exists" for create operations
-		if err == domain.ErrTherapistWhatsAppExists {
-			return domain.ErrTherapistAlreadyExists
+		if err == therapist.ErrTherapistWhatsAppExists {
+			return therapist.ErrTherapistAlreadyExists
 		}
 		return err
 	}

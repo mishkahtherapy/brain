@@ -1,15 +1,18 @@
 package ports
 
-import "github.com/mishkahtherapy/brain/core/domain"
+import (
+	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/therapist"
+)
 
 type TherapistRepository interface {
-	GetByID(id domain.TherapistID) (*domain.Therapist, error)
-	GetByEmail(email domain.Email) (*domain.Therapist, error)
-	GetByWhatsAppNumber(whatsappNumber domain.WhatsAppNumber) (*domain.Therapist, error)
-	Create(therapist *domain.Therapist) error
-	Update(therapist *domain.Therapist) error
+	GetByID(id domain.TherapistID) (*therapist.Therapist, error)
+	GetByEmail(email domain.Email) (*therapist.Therapist, error)
+	GetByWhatsAppNumber(whatsappNumber domain.WhatsAppNumber) (*therapist.Therapist, error)
+	Create(therapist *therapist.Therapist) error
+	Update(therapist *therapist.Therapist) error
 	UpdateSpecializations(therapistID domain.TherapistID, specializationIDs []domain.SpecializationID) error
 	Delete(id domain.TherapistID) error
-	List() ([]*domain.Therapist, error)
-	FindBySpecializationAndLanguage(specializationName string, mustSpeakEnglish bool) ([]*domain.Therapist, error)
+	List() ([]*therapist.Therapist, error)
+	FindBySpecializationAndLanguage(specializationName string, mustSpeakEnglish bool) ([]*therapist.Therapist, error)
 }

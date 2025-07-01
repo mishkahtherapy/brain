@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/specialization"
 	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
@@ -24,7 +25,7 @@ func NewUsecase(specializationRepo ports.SpecializationRepository) *Usecase {
 	return &Usecase{specializationRepo: specializationRepo}
 }
 
-func (u *Usecase) Execute(input Input) (*domain.Specialization, error) {
+func (u *Usecase) Execute(input Input) (*specialization.Specialization, error) {
 	if input.Name == "" {
 		return nil, common.ErrNameIsRequired
 	}
@@ -38,7 +39,7 @@ func (u *Usecase) Execute(input Input) (*domain.Specialization, error) {
 	}
 
 	now := domain.NewUTCTimestamp()
-	specialization := &domain.Specialization{
+	specialization := &specialization.Specialization{
 		ID:        domain.NewSpecializationID(),
 		Name:      cleanUpName(input.Name),
 		CreatedAt: now,

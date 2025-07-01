@@ -1,4 +1,4 @@
-package specialization
+package specialization_db
 
 import (
 	"database/sql"
@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/specialization"
 	"github.com/mishkahtherapy/brain/core/ports"
 )
 
@@ -27,7 +28,7 @@ func NewSpecializationRepository(db ports.SQLDatabase) *SpecializationRepository
 	return &SpecializationRepository{db: db}
 }
 
-func (r *SpecializationRepository) Create(specialization *domain.Specialization) error {
+func (r *SpecializationRepository) Create(specialization *specialization.Specialization) error {
 	if specialization.ID == "" {
 		return ErrSpecializationIDIsRequired
 	}
@@ -58,7 +59,7 @@ func (r *SpecializationRepository) Create(specialization *domain.Specialization)
 	return err
 }
 
-func (r *SpecializationRepository) BulkGetByIds(ids []domain.SpecializationID) (map[domain.SpecializationID]*domain.Specialization, error) {
+func (r *SpecializationRepository) BulkGetByIds(ids []domain.SpecializationID) (map[domain.SpecializationID]*specialization.Specialization, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
@@ -82,9 +83,9 @@ func (r *SpecializationRepository) BulkGetByIds(ids []domain.SpecializationID) (
 	}
 	defer rows.Close()
 
-	specializations := make(map[domain.SpecializationID]*domain.Specialization)
+	specializations := make(map[domain.SpecializationID]*specialization.Specialization)
 	for rows.Next() {
-		specialization := &domain.Specialization{}
+		specialization := &specialization.Specialization{}
 		err := rows.Scan(
 			&specialization.ID,
 			&specialization.Name,
@@ -100,14 +101,14 @@ func (r *SpecializationRepository) BulkGetByIds(ids []domain.SpecializationID) (
 	return specializations, nil
 }
 
-func (r *SpecializationRepository) GetByID(id domain.SpecializationID) (*domain.Specialization, error) {
+func (r *SpecializationRepository) GetByID(id domain.SpecializationID) (*specialization.Specialization, error) {
 	query := `
 		SELECT id, name, created_at, updated_at
 		FROM specializations
 		WHERE id = ?
 	`
 	row := r.db.QueryRow(query, id)
-	specialization := &domain.Specialization{}
+	specialization := &specialization.Specialization{}
 	err := row.Scan(
 		&specialization.ID,
 		&specialization.Name,
@@ -124,14 +125,14 @@ func (r *SpecializationRepository) GetByID(id domain.SpecializationID) (*domain.
 	return specialization, nil
 }
 
-func (r *SpecializationRepository) GetByName(name string) (*domain.Specialization, error) {
+func (r *SpecializationRepository) GetByName(name string) (*specialization.Specialization, error) {
 	query := `
 		SELECT id, name, created_at, updated_at
 		FROM specializations
 		WHERE name = ?
 	`
 	row := r.db.QueryRow(query, name)
-	specialization := &domain.Specialization{}
+	specialization := &specialization.Specialization{}
 	err := row.Scan(
 		&specialization.ID,
 		&specialization.Name,
@@ -148,7 +149,7 @@ func (r *SpecializationRepository) GetByName(name string) (*domain.Specializatio
 	return specialization, nil
 }
 
-func (r *SpecializationRepository) GetAll() ([]*domain.Specialization, error) {
+func (r *SpecializationRepository) GetAll() ([]*specialization.Specialization, error) {
 	query := `
 		SELECT id, name, created_at, updated_at
 		FROM specializations
@@ -161,9 +162,9 @@ func (r *SpecializationRepository) GetAll() ([]*domain.Specialization, error) {
 	}
 	defer rows.Close()
 
-	specializations := make([]*domain.Specialization, 0)
+	specializations := make([]*specialization.Specialization, 0)
 	for rows.Next() {
-		specialization := &domain.Specialization{}
+		specialization := &specialization.Specialization{}
 		err := rows.Scan(
 			&specialization.ID,
 			&specialization.Name,

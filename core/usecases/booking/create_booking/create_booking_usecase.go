@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/booking"
 	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
@@ -36,7 +37,7 @@ func NewUsecase(
 	}
 }
 
-func (u *Usecase) Execute(input Input) (*domain.Booking, error) {
+func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 	// Validate required fields
 	if err := validateInput(input); err != nil {
 		return nil, err
@@ -66,32 +67,32 @@ func (u *Usecase) Execute(input Input) (*domain.Booking, error) {
 		return nil, common.ErrFailedToCreateBooking
 	}
 
-	for _, booking := range therapistBookings {
-		if booking.TimeSlotID == input.TimeSlotID &&
-			(booking.State == domain.BookingStateConfirmed || booking.State == domain.BookingStatePending) {
+	for _, existingBooking := range therapistBookings {
+		if existingBooking.TimeSlotID == input.TimeSlotID &&
+			(existingBooking.State == booking.BookingStateConfirmed || existingBooking.State == booking.BookingStatePending) {
 			return nil, common.ErrTimeSlotAlreadyBooked
 		}
 	}
 
 	// Create booking with Pending state
 	now := domain.NewUTCTimestamp()
-	booking := &domain.Booking{
+	createdBooking := &booking.Booking{
 		ID:          domain.NewBookingID(),
 		TherapistID: input.TherapistID,
 		ClientID:    input.ClientID,
 		TimeSlotID:  input.TimeSlotID,
 		StartTime:   input.StartTime,
-		State:       domain.BookingStatePending,
+		State:       booking.BookingStatePending,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
 
-	err = u.bookingRepo.Create(booking)
+	err = u.bookingRepo.Create(createdBooking)
 	if err != nil {
 		return nil, common.ErrFailedToCreateBooking
 	}
 
-	return booking, nil
+	return createdBooking, nil
 }
 
 func validateInput(input Input) error {

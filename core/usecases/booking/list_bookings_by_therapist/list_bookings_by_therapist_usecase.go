@@ -2,13 +2,14 @@ package list_bookings_by_therapist
 
 import (
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/booking"
 	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
 
 type Input struct {
-	TherapistID domain.TherapistID   `json:"therapistId"`
-	State       *domain.BookingState `json:"state,omitempty"` // Optional state filter
+	TherapistID domain.TherapistID    `json:"therapistId"`
+	State       *booking.BookingState `json:"state,omitempty"` // Optional state filter
 }
 
 type Usecase struct {
@@ -19,13 +20,13 @@ func NewUsecase(bookingRepo ports.BookingRepository) *Usecase {
 	return &Usecase{bookingRepo: bookingRepo}
 }
 
-func (u *Usecase) Execute(input Input) ([]*domain.Booking, error) {
+func (u *Usecase) Execute(input Input) ([]*booking.Booking, error) {
 	// Validate required fields
 	if input.TherapistID == "" {
 		return nil, common.ErrTherapistIDIsRequired
 	}
 
-	var bookings []*domain.Booking
+	var bookings []*booking.Booking
 	var err error
 
 	// If state filter is provided, use the specific method

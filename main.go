@@ -8,12 +8,12 @@ import (
 
 	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/adapters/db"
-	"github.com/mishkahtherapy/brain/adapters/db/booking"
-	"github.com/mishkahtherapy/brain/adapters/db/client"
-	"github.com/mishkahtherapy/brain/adapters/db/session"
-	"github.com/mishkahtherapy/brain/adapters/db/specialization"
-	"github.com/mishkahtherapy/brain/adapters/db/therapist"
-	"github.com/mishkahtherapy/brain/adapters/db/timeslot"
+	"github.com/mishkahtherapy/brain/adapters/db/booking_db"
+	"github.com/mishkahtherapy/brain/adapters/db/client_db"
+	"github.com/mishkahtherapy/brain/adapters/db/session_db"
+	"github.com/mishkahtherapy/brain/adapters/db/specialization_db"
+	"github.com/mishkahtherapy/brain/adapters/db/therapist_db"
+	"github.com/mishkahtherapy/brain/adapters/db/timeslot_db"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/cancel_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/confirm_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/create_booking"
@@ -68,12 +68,12 @@ func main() {
 	slog.Info("Database initialized successfully")
 
 	// Initialize repositories
-	specializationRepo := specialization.NewSpecializationRepository(database)
-	therapistRepo := therapist.NewTherapistRepository(database)
-	clientRepo := client.NewClientRepository(database)
-	bookingRepo := booking.NewBookingRepository(database)
-	sessionRepo := session.NewSessionRepository(database)
-	timeSlotRepo := timeslot.NewTimeSlotRepository(database)
+	specializationRepo := specialization_db.NewSpecializationRepository(database)
+	therapistRepo := therapist_db.NewTherapistRepository(database)
+	clientRepo := client_db.NewClientRepository(database)
+	bookingRepo := booking_db.NewBookingRepository(database)
+	sessionRepo := session_db.NewSessionRepository(database)
+	timeSlotRepo := timeslot_db.NewTimeSlotRepository(database)
 
 	// Initialize specialization usecases
 	newSpecializationUsecase := new_specialization.NewUsecase(specializationRepo)

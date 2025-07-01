@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/client"
 	"github.com/mishkahtherapy/brain/core/ports"
 )
 
@@ -29,7 +30,7 @@ func NewUsecase(clientRepo ports.ClientRepository) *Usecase {
 	}
 }
 
-func (u *Usecase) Execute(input Input) (*domain.Client, error) {
+func (u *Usecase) Execute(input Input) (*client.Client, error) {
 	// Validate input
 	if err := u.validateInput(input); err != nil {
 		return nil, err
@@ -45,7 +46,7 @@ func (u *Usecase) Execute(input Input) (*domain.Client, error) {
 	}
 
 	// Create new client
-	client := &domain.Client{
+	client := &client.Client{
 		ID:             domain.NewClientID(),
 		Name:           strings.TrimSpace(input.Name),
 		WhatsAppNumber: input.WhatsAppNumber,

@@ -10,8 +10,9 @@ import (
 
 	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/adapters/db"
-	"github.com/mishkahtherapy/brain/adapters/db/client"
+	"github.com/mishkahtherapy/brain/adapters/db/client_db"
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/client"
 	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/client/create_client"
 	"github.com/mishkahtherapy/brain/core/usecases/client/get_all_clients"
@@ -26,7 +27,7 @@ func TestClientE2E(t *testing.T) {
 	defer cleanup()
 
 	// Setup repositories
-	clientRepo := client.NewClientRepository(database)
+	clientRepo := client_db.NewClientRepository(database)
 
 	// Setup usecases
 	createUsecase := create_client.NewUsecase(clientRepo)
@@ -60,7 +61,7 @@ func TestClientE2E(t *testing.T) {
 		}
 
 		// Parse created client
-		var createdClient domain.Client
+		var createdClient client.Client
 		if err := json.Unmarshal(createRec.Body.Bytes(), &createdClient); err != nil {
 			t.Fatalf("Failed to parse created client: %v", err)
 		}
@@ -97,7 +98,7 @@ func TestClientE2E(t *testing.T) {
 		}
 
 		// Parse retrieved client
-		var retrievedClient domain.Client
+		var retrievedClient client.Client
 		if err := json.Unmarshal(getRec.Body.Bytes(), &retrievedClient); err != nil {
 			t.Fatalf("Failed to parse retrieved client: %v", err)
 		}
@@ -125,7 +126,7 @@ func TestClientE2E(t *testing.T) {
 		}
 
 		// Parse all clients
-		var allClients []*domain.Client
+		var allClients []*client.Client
 		if err := json.Unmarshal(getAllRec.Body.Bytes(), &allClients); err != nil {
 			t.Fatalf("Failed to parse all clients: %v", err)
 		}
