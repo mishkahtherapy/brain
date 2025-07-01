@@ -1,22 +1,12 @@
 package create_booking
 
 import (
-	"errors"
 	"time"
 
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/ports"
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
-
-var ErrFailedToCreateBooking = errors.New("failed to create booking")
-var ErrTherapistIDIsRequired = errors.New("therapist ID is required")
-var ErrClientIDIsRequired = errors.New("client ID is required")
-var ErrTimeSlotIDIsRequired = errors.New("timeslot ID is required")
-var ErrStartTimeIsRequired = errors.New("start time is required")
-var ErrTherapistNotFound = errors.New("therapist not found")
-var ErrClientNotFound = errors.New("client not found")
-var ErrTimeSlotNotFound = errors.New("timeslot not found")
-var ErrTimeSlotAlreadyBooked = errors.New("timeslot is already booked")
 
 type Input struct {
 	TherapistID domain.TherapistID  `json:"therapistId"`
@@ -55,31 +45,31 @@ func (u *Usecase) Execute(input Input) (*domain.Booking, error) {
 	// Check if therapist exists
 	therapist, err := u.therapistRepo.GetByID(input.TherapistID)
 	if err != nil || therapist == nil {
-		return nil, ErrTherapistNotFound
+		return nil, common.ErrTherapistNotFound
 	}
 
 	// Check if client exists
 	client, err := u.clientRepo.GetByID(input.ClientID)
 	if err != nil || client == nil {
-		return nil, ErrClientNotFound
+		return nil, common.ErrClientNotFound
 	}
 
 	// Check if timeslot exists
 	timeSlot, err := u.timeSlotRepo.GetByID(string(input.TimeSlotID))
 	if err != nil || timeSlot == nil {
-		return nil, ErrTimeSlotNotFound
+		return nil, common.ErrTimeSlotNotFound
 	}
 
 	// Check if timeslot is already booked (no existing confirmed/pending bookings)
 	therapistBookings, err := u.bookingRepo.ListByTherapist(input.TherapistID)
 	if err != nil {
-		return nil, ErrFailedToCreateBooking
+		return nil, common.ErrFailedToCreateBooking
 	}
 
 	for _, booking := range therapistBookings {
 		if booking.TimeSlotID == input.TimeSlotID &&
 			(booking.State == domain.BookingStateConfirmed || booking.State == domain.BookingStatePending) {
-			return nil, ErrTimeSlotAlreadyBooked
+			return nil, common.ErrTimeSlotAlreadyBooked
 		}
 	}
 
@@ -98,7 +88,7 @@ func (u *Usecase) Execute(input Input) (*domain.Booking, error) {
 
 	err = u.bookingRepo.Create(booking)
 	if err != nil {
-		return nil, ErrFailedToCreateBooking
+		return nil, common.ErrFailedToCreateBooking
 	}
 
 	return booking, nil
@@ -106,16 +96,16 @@ func (u *Usecase) Execute(input Input) (*domain.Booking, error) {
 
 func validateInput(input Input) error {
 	if input.TherapistID == "" {
-		return ErrTherapistIDIsRequired
+		return common.ErrTherapistIDIsRequired
 	}
 	if input.ClientID == "" {
-		return ErrClientIDIsRequired
+		return common.ErrClientIDIsRequired
 	}
 	if input.TimeSlotID == "" {
-		return ErrTimeSlotIDIsRequired
+		return common.ErrTimeSlotIDIsRequired
 	}
 	if time.Time(input.StartTime).IsZero() {
-		return ErrStartTimeIsRequired
+		return common.ErrStartTimeIsRequired
 	}
 	return nil
 }

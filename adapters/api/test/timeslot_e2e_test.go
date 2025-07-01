@@ -14,6 +14,7 @@ import (
 	"github.com/mishkahtherapy/brain/adapters/db/therapist"
 	"github.com/mishkahtherapy/brain/adapters/db/timeslot"
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/create_therapist_timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/delete_therapist_timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/get_therapist_timeslot"
@@ -429,7 +430,7 @@ func TestTimeslotE2E(t *testing.T) {
 	t.Run("Error cases", func(t *testing.T) {
 		// Test with non-existent therapist
 		nonExistentTherapistID := "therapist_00000000-0000-0000-0000-000000000000"
-		
+
 		timeslotData := map[string]interface{}{
 			"dayOfWeek":         "Monday",
 			"startTime":         "09:00",
@@ -510,7 +511,7 @@ func TestTimeslotE2E(t *testing.T) {
 	})
 }
 
-func insertTestTherapist(t *testing.T, database db.SQLDatabase) domain.TherapistID {
+func insertTestTherapist(t *testing.T, database ports.SQLDatabase) domain.TherapistID {
 	now := time.Now().UTC()
 	therapistID := domain.NewTherapistID()
 
@@ -518,7 +519,7 @@ func insertTestTherapist(t *testing.T, database db.SQLDatabase) domain.Therapist
 		INSERT INTO therapists (id, name, email, phone_number, whatsapp_number, speaks_english, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	`, therapistID, "Dr. Test Therapist", "test@example.com", "+1234567890", "+1234567890", true, now, now)
-	
+
 	if err != nil {
 		t.Fatalf("Failed to insert test therapist: %v", err)
 	}
@@ -526,7 +527,7 @@ func insertTestTherapist(t *testing.T, database db.SQLDatabase) domain.Therapist
 	return therapistID
 }
 
-func setupTimeslotTestDB(t *testing.T) (db.SQLDatabase, func()) {
+func setupTimeslotTestDB(t *testing.T) (ports.SQLDatabase, func()) {
 	// Create temporary database file
 	tmpfile, err := os.CreateTemp("", "timeslot_test_*.db")
 	if err != nil {

@@ -1,16 +1,12 @@
 package list_sessions_admin
 
 import (
-	"errors"
 	"time"
 
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/ports"
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
-
-// Error definitions
-var ErrInvalidDateRange = errors.New("start date must be before end date")
-var ErrFailedToListSessions = errors.New("failed to list sessions")
 
 // Input struct defines parameters for listing sessions with admin privileges
 type Input struct {
@@ -32,7 +28,7 @@ func NewUsecase(sessionRepo ports.SessionRepository) *Usecase {
 func (u *Usecase) Execute(input Input) ([]*domain.Session, error) {
 	// Validate input
 	if input.StartDate.After(input.EndDate) {
-		return nil, ErrInvalidDateRange
+		return nil, common.ErrInvalidDateRange
 	}
 
 	// Set default time range if not provided
@@ -47,7 +43,7 @@ func (u *Usecase) Execute(input Input) ([]*domain.Session, error) {
 	// Retrieve sessions from repository
 	sessions, err := u.sessionRepo.ListSessionsAdmin(input.StartDate, input.EndDate)
 	if err != nil {
-		return nil, ErrFailedToListSessions
+		return nil, common.ErrFailedToListSessions
 	}
 
 	// Return sessions (empty slice if none found)

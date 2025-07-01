@@ -1,18 +1,10 @@
 package update_session_state
 
 import (
-	"errors"
-
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/ports"
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
-
-// Error definitions
-var ErrSessionNotFound = errors.New("session not found")
-var ErrSessionIDIsRequired = errors.New("session ID is required")
-var ErrInvalidStateTransition = errors.New("invalid state transition")
-var ErrStateIsRequired = errors.New("state is required")
-var ErrFailedToUpdateSessionState = errors.New("failed to update session state")
 
 // Input struct defines parameters for updating a session state
 type Input struct {
@@ -34,21 +26,21 @@ func NewUsecase(sessionRepo ports.SessionRepository) *Usecase {
 func (u *Usecase) Execute(input Input) (*domain.Session, error) {
 	// Validate input
 	if input.SessionID == "" {
-		return nil, ErrSessionIDIsRequired
+		return nil, common.ErrSessionIDIsRequired
 	}
 	if input.NewState == "" {
-		return nil, ErrStateIsRequired
+		return nil, common.ErrStateIsRequired
 	}
 
 	// Get the current session
 	session, err := u.sessionRepo.GetSessionByID(input.SessionID)
 	if err != nil {
-		return nil, ErrSessionNotFound
+		return nil, common.ErrSessionNotFound
 	}
 
 	// Validate state transition
 	if !session.IsValidStateTransition(input.NewState) {
-		return nil, ErrInvalidStateTransition
+		return nil, common.ErrInvalidStateTransition
 	}
 
 	// Update the session state
@@ -58,7 +50,7 @@ func (u *Usecase) Execute(input Input) (*domain.Session, error) {
 	// Persist the change
 	err = u.sessionRepo.UpdateSessionState(input.SessionID, input.NewState)
 	if err != nil {
-		return nil, ErrFailedToUpdateSessionState
+		return nil, common.ErrFailedToUpdateSessionState
 	}
 
 	return session, nil

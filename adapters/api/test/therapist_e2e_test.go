@@ -13,6 +13,7 @@ import (
 	"github.com/mishkahtherapy/brain/adapters/db/specialization"
 	"github.com/mishkahtherapy/brain/adapters/db/therapist"
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/specialization/get_all_specializations"
 	"github.com/mishkahtherapy/brain/core/usecases/specialization/get_specialization"
 	"github.com/mishkahtherapy/brain/core/usecases/specialization/new_specialization"
@@ -542,7 +543,7 @@ func createTestSpecialization(t *testing.T, mux *http.ServeMux, name string) *do
 }
 
 // Setup test database with all required tables for therapist testing
-func setupTherapistTestDB(_ *testing.T) (db.SQLDatabase, func()) {
+func setupTherapistTestDB(_ *testing.T) (ports.SQLDatabase, func()) {
 	// Create temporary database file
 	dbFilename := "therapist_test.db" // Use in-memory database for testing
 	// Remove if exists

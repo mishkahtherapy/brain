@@ -7,12 +7,12 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/ports"
 )
 
 type SpecializationRepository struct {
-	db db.SQLDatabase
+	db ports.SQLDatabase
 }
 
 var ErrSpecializationNotFound = errors.New("specialization not found")
@@ -23,7 +23,7 @@ var ErrSpecializationUpdatedAtIsRequired = errors.New("specialization updated at
 var ErrSpecializationIDIsRequired = errors.New("specialization id is required")
 var ErrFailedToGetSpecializations = errors.New("failed to get specializations")
 
-func NewSpecializationRepository(db db.SQLDatabase) *SpecializationRepository {
+func NewSpecializationRepository(db ports.SQLDatabase) *SpecializationRepository {
 	return &SpecializationRepository{db: db}
 }
 

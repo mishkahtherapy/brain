@@ -1,19 +1,12 @@
 package update_meeting_url
 
 import (
-	"errors"
 	"net/url"
 
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/ports"
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
-
-// Error definitions
-var ErrSessionNotFound = errors.New("session not found")
-var ErrSessionIDIsRequired = errors.New("session ID is required")
-var ErrMeetingURLIsRequired = errors.New("meeting URL is required")
-var ErrInvalidMeetingURL = errors.New("invalid meeting URL format")
-var ErrFailedToUpdateMeetingURL = errors.New("failed to update meeting URL")
 
 // Input struct defines parameters for updating a meeting URL
 type Input struct {
@@ -35,21 +28,21 @@ func NewUsecase(sessionRepo ports.SessionRepository) *Usecase {
 func (u *Usecase) Execute(input Input) (*domain.Session, error) {
 	// Validate input
 	if input.SessionID == "" {
-		return nil, ErrSessionIDIsRequired
+		return nil, common.ErrSessionIDIsRequired
 	}
 	if input.MeetingURL == "" {
-		return nil, ErrMeetingURLIsRequired
+		return nil, common.ErrMeetingURLIsRequired
 	}
 
 	// Validate meeting URL format
 	if _, err := url.ParseRequestURI(input.MeetingURL); err != nil {
-		return nil, ErrInvalidMeetingURL
+		return nil, common.ErrInvalidMeetingURL
 	}
 
 	// Get the current session
 	session, err := u.sessionRepo.GetSessionByID(input.SessionID)
 	if err != nil {
-		return nil, ErrSessionNotFound
+		return nil, common.ErrSessionNotFound
 	}
 
 	// Update meeting URL and timestamp
@@ -59,7 +52,7 @@ func (u *Usecase) Execute(input Input) (*domain.Session, error) {
 	// Persist the change
 	err = u.sessionRepo.UpdateMeetingURL(input.SessionID, input.MeetingURL)
 	if err != nil {
-		return nil, ErrFailedToUpdateMeetingURL
+		return nil, common.ErrFailedToUpdateMeetingURL
 	}
 
 	return session, nil

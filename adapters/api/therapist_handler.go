@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/get_all_therapists"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/get_therapist"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/new_therapist"
@@ -13,7 +14,7 @@ import (
 )
 
 type TherapistHandler struct {
-	createTherapistUsecase                new_therapist.Usecase
+	newTherapistUsecase                   new_therapist.Usecase
 	getAllTherapistsUsecase               get_all_therapists.Usecase
 	getTherapistUsecase                   get_therapist.Usecase
 	updateTherapistInfoUsecase            update_therapist_info.Usecase
@@ -21,14 +22,14 @@ type TherapistHandler struct {
 }
 
 func NewTherapistHandler(
-	createUsecase new_therapist.Usecase,
+	newUsecase new_therapist.Usecase,
 	getAllUsecase get_all_therapists.Usecase,
 	getUsecase get_therapist.Usecase,
 	updateInfoUsecase update_therapist_info.Usecase,
 	updateSpecializationsUsecase update_therapist_specializations.Usecase,
 ) *TherapistHandler {
 	return &TherapistHandler{
-		createTherapistUsecase:                createUsecase,
+		newTherapistUsecase:                   newUsecase,
 		getAllTherapistsUsecase:               getAllUsecase,
 		getTherapistUsecase:                   getUsecase,
 		updateTherapistInfoUsecase:            updateInfoUsecase,
@@ -36,15 +37,14 @@ func NewTherapistHandler(
 	}
 }
 
-// SetUsecases sets the usecases for the handler (used for testing)
 func (h *TherapistHandler) SetUsecases(
-	createUsecase new_therapist.Usecase,
+	newUsecase new_therapist.Usecase,
 	getAllUsecase get_all_therapists.Usecase,
 	getUsecase get_therapist.Usecase,
 	updateInfoUsecase update_therapist_info.Usecase,
 	updateSpecializationsUsecase update_therapist_specializations.Usecase,
 ) {
-	h.createTherapistUsecase = createUsecase
+	h.newTherapistUsecase = newUsecase
 	h.getAllTherapistsUsecase = getAllUsecase
 	h.getTherapistUsecase = getUsecase
 	h.updateTherapistInfoUsecase = updateInfoUsecase
@@ -52,14 +52,14 @@ func (h *TherapistHandler) SetUsecases(
 }
 
 func (h *TherapistHandler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("POST /api/v1/therapists", h.handleCreateTherapist)
+	mux.HandleFunc("POST /api/v1/therapists", h.handleNewTherapist)
 	mux.HandleFunc("GET /api/v1/therapists", h.handleGetAllTherapists)
 	mux.HandleFunc("GET /api/v1/therapists/{id}", h.handleGetTherapist)
 	mux.HandleFunc("PUT /api/v1/therapists/{id}", h.handleUpdateTherapistInfo)
 	mux.HandleFunc("PUT /api/v1/therapists/{id}/specializations", h.handleUpdateTherapistSpecializations)
 }
 
-func (h *TherapistHandler) handleCreateTherapist(w http.ResponseWriter, r *http.Request) {
+func (h *TherapistHandler) handleNewTherapist(w http.ResponseWriter, r *http.Request) {
 	rw := NewResponseWriter(w)
 
 	var input new_therapist.Input
@@ -68,19 +68,23 @@ func (h *TherapistHandler) handleCreateTherapist(w http.ResponseWriter, r *http.
 		return
 	}
 
-	therapist, err := h.createTherapistUsecase.Execute(input)
+	therapist, err := h.newTherapistUsecase.Execute(input)
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
-		case domain.ErrTherapistAlreadyExists:
-			rw.WriteError(err, http.StatusConflict)
-		case domain.ErrTherapistEmailRequired,
-			domain.ErrTherapistNameRequired,
+		case domain.ErrTherapistNameRequired,
+			domain.ErrTherapistEmailRequired,
 			domain.ErrTherapistPhoneRequired,
 			domain.ErrTherapistWhatsAppRequired,
 			domain.ErrTherapistInvalidPhone,
 			domain.ErrTherapistInvalidWhatsApp:
 			rw.WriteBadRequest(err.Error())
+		case domain.ErrTherapistAlreadyExists,
+			domain.ErrTherapistEmailExists,
+			domain.ErrTherapistWhatsAppExists:
+			rw.WriteError(err, http.StatusConflict)
+		case new_therapist.ErrSpecializationNotFound:
+			rw.WriteNotFound(err.Error())
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
 		}
@@ -109,7 +113,7 @@ func (h *TherapistHandler) handleGetAllTherapists(w http.ResponseWriter, r *http
 func (h *TherapistHandler) handleGetTherapist(w http.ResponseWriter, r *http.Request) {
 	rw := NewResponseWriter(w)
 
-	// read id from path
+	// Read therapist id from path
 	id := domain.TherapistID(r.PathValue("id"))
 	if id == "" {
 		rw.WriteBadRequest("Missing therapist ID")
@@ -118,59 +122,11 @@ func (h *TherapistHandler) handleGetTherapist(w http.ResponseWriter, r *http.Req
 
 	therapist, err := h.getTherapistUsecase.Execute(id)
 	if err != nil {
-		if err == get_therapist.ErrTherapistNotFound {
+		if err == common.ErrTherapistNotFound {
 			rw.WriteNotFound(err.Error())
 			return
 		}
 		rw.WriteError(err, http.StatusInternalServerError)
-		return
-	}
-	if therapist == nil {
-		rw.WriteNotFound("Therapist not found")
-		return
-	}
-
-	if err := rw.WriteJSON(therapist, http.StatusOK); err != nil {
-		rw.WriteError(err, http.StatusInternalServerError)
-	}
-}
-
-func (h *TherapistHandler) handleUpdateTherapistSpecializations(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
-
-	// read id from path
-	therapistID := domain.TherapistID(r.PathValue("id"))
-	if therapistID == "" {
-		rw.WriteBadRequest("Missing therapist ID")
-		return
-	}
-
-	// Parse request body for specialization IDs
-	var requestBody struct {
-		SpecializationIDs []domain.SpecializationID `json:"specializationIds"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
-		rw.WriteBadRequest(err.Error())
-		return
-	}
-
-	// Create input for usecase
-	input := update_therapist_specializations.Input{
-		TherapistID:       therapistID,
-		SpecializationIDs: requestBody.SpecializationIDs,
-	}
-
-	therapist, err := h.updateTherapistSpecializationsUsecase.Execute(input)
-	if err != nil {
-		// Handle specific business logic errors
-		switch err {
-		case update_therapist_specializations.ErrTherapistNotFound:
-			rw.WriteNotFound(err.Error())
-		case update_therapist_specializations.ErrSpecializationNotFound:
-			rw.WriteBadRequest(err.Error())
-		default:
-			rw.WriteError(err, http.StatusInternalServerError)
-		}
 		return
 	}
 
@@ -182,14 +138,14 @@ func (h *TherapistHandler) handleUpdateTherapistSpecializations(w http.ResponseW
 func (h *TherapistHandler) handleUpdateTherapistInfo(w http.ResponseWriter, r *http.Request) {
 	rw := NewResponseWriter(w)
 
-	// Read therapist ID from path
+	// Read therapist id from path
 	therapistID := domain.TherapistID(r.PathValue("id"))
 	if therapistID == "" {
 		rw.WriteBadRequest("Missing therapist ID")
 		return
 	}
 
-	// Parse request body
+	// Parse request body to get update data
 	var requestBody struct {
 		Name           string                `json:"name"`
 		Email          domain.Email          `json:"email"`
@@ -203,7 +159,6 @@ func (h *TherapistHandler) handleUpdateTherapistInfo(w http.ResponseWriter, r *h
 		return
 	}
 
-	// Create input for usecase
 	input := update_therapist_info.Input{
 		TherapistID:    therapistID,
 		Name:           requestBody.Name,
@@ -217,19 +172,64 @@ func (h *TherapistHandler) handleUpdateTherapistInfo(w http.ResponseWriter, r *h
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
-		case domain.ErrTherapistIDRequired,
-			domain.ErrTherapistNameRequired,
+		case domain.ErrTherapistIDRequired:
+			rw.WriteBadRequest(err.Error())
+		case domain.ErrTherapistNotFound:
+			rw.WriteNotFound(err.Error())
+		case domain.ErrTherapistNameRequired,
 			domain.ErrTherapistEmailRequired,
 			domain.ErrTherapistPhoneRequired,
 			domain.ErrTherapistWhatsAppRequired,
 			domain.ErrTherapistInvalidPhone,
 			domain.ErrTherapistInvalidWhatsApp:
 			rw.WriteBadRequest(err.Error())
-		case domain.ErrTherapistNotFound:
-			rw.WriteNotFound(err.Error())
 		case domain.ErrTherapistEmailExists,
 			domain.ErrTherapistWhatsAppExists:
 			rw.WriteError(err, http.StatusConflict)
+		default:
+			rw.WriteError(err, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	if err := rw.WriteJSON(therapist, http.StatusOK); err != nil {
+		rw.WriteError(err, http.StatusInternalServerError)
+	}
+}
+
+func (h *TherapistHandler) handleUpdateTherapistSpecializations(w http.ResponseWriter, r *http.Request) {
+	rw := NewResponseWriter(w)
+
+	// Read therapist id from path
+	therapistID := domain.TherapistID(r.PathValue("id"))
+	if therapistID == "" {
+		rw.WriteBadRequest("Missing therapist ID")
+		return
+	}
+
+	// Parse request body to get specialization IDs
+	var requestBody struct {
+		SpecializationIDs []domain.SpecializationID `json:"specializationIds"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		rw.WriteBadRequest(err.Error())
+		return
+	}
+
+	input := update_therapist_specializations.Input{
+		TherapistID:       therapistID,
+		SpecializationIDs: requestBody.SpecializationIDs,
+	}
+
+	therapist, err := h.updateTherapistSpecializationsUsecase.Execute(input)
+	if err != nil {
+		// Handle specific business logic errors
+		switch err {
+		case update_therapist_specializations.ErrTherapistNotFound:
+			rw.WriteNotFound(err.Error())
+		case update_therapist_specializations.ErrSpecializationNotFound:
+			rw.WriteNotFound(err.Error())
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
 		}

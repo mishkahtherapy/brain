@@ -1,15 +1,10 @@
 package list_sessions_by_therapist
 
 import (
-	"errors"
-
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/ports"
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
-
-// Error definitions
-var ErrTherapistIDIsRequired = errors.New("therapist ID is required")
-var ErrFailedToListSessions = errors.New("failed to list sessions")
 
 // Input struct defines parameters for listing sessions by therapist
 type Input struct {
@@ -30,13 +25,13 @@ func NewUsecase(sessionRepo ports.SessionRepository) *Usecase {
 func (u *Usecase) Execute(input Input) ([]*domain.Session, error) {
 	// Validate input
 	if input.TherapistID == "" {
-		return nil, ErrTherapistIDIsRequired
+		return nil, common.ErrTherapistIDIsRequired
 	}
 
 	// Retrieve sessions from repository
 	sessions, err := u.sessionRepo.ListSessionsByTherapist(input.TherapistID)
 	if err != nil {
-		return nil, ErrFailedToListSessions
+		return nil, common.ErrFailedToListSessions
 	}
 
 	// Return sessions (empty slice if none found)

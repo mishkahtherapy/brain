@@ -14,6 +14,7 @@ import (
 	"github.com/mishkahtherapy/brain/adapters/db/therapist"
 	"github.com/mishkahtherapy/brain/adapters/db/timeslot"
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/schedule/get_schedule"
 
 	_ "github.com/glebarez/go-sqlite"
@@ -322,7 +323,7 @@ func TestScheduleE2E(t *testing.T) {
 	})
 }
 
-func insertScheduleTestData(t *testing.T, database db.SQLDatabase) *ScheduleTestData {
+func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleTestData {
 	now := time.Now().UTC()
 
 	// Create specializations
@@ -672,7 +673,7 @@ func insertScheduleTestData(t *testing.T, database db.SQLDatabase) *ScheduleTest
 	}
 }
 
-func setupScheduleTestDB(t *testing.T) (db.SQLDatabase, func()) {
+func setupScheduleTestDB(t *testing.T) (ports.SQLDatabase, func()) {
 	// Use in-memory database for testing
 	dbFilename := ":memory:"
 

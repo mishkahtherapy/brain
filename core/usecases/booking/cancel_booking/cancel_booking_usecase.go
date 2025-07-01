@@ -1,16 +1,10 @@
 package cancel_booking
 
 import (
-	"errors"
-
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/ports"
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
-
-var ErrFailedToCancelBooking = errors.New("failed to cancel booking")
-var ErrBookingIDIsRequired = errors.New("booking ID is required")
-var ErrBookingNotFound = errors.New("booking not found")
-var ErrInvalidStateTransition = errors.New("booking cannot be cancelled from current state")
 
 type Input struct {
 	BookingID domain.BookingID `json:"bookingId"`
@@ -27,18 +21,18 @@ func NewUsecase(bookingRepo ports.BookingRepository) *Usecase {
 func (u *Usecase) Execute(input Input) (*domain.Booking, error) {
 	// Validate required fields
 	if input.BookingID == "" {
-		return nil, ErrBookingIDIsRequired
+		return nil, common.ErrBookingIDIsRequired
 	}
 
 	// Get existing booking
 	booking, err := u.bookingRepo.GetByID(input.BookingID)
 	if err != nil || booking == nil {
-		return nil, ErrBookingNotFound
+		return nil, common.ErrBookingNotFound
 	}
 
 	// Validate booking can be cancelled (not already cancelled)
 	if booking.State == domain.BookingStateCancelled {
-		return nil, ErrInvalidStateTransition
+		return nil, common.ErrInvalidStateTransition
 	}
 
 	// Change state to Cancelled
@@ -47,7 +41,7 @@ func (u *Usecase) Execute(input Input) (*domain.Booking, error) {
 
 	err = u.bookingRepo.Update(booking)
 	if err != nil {
-		return nil, ErrFailedToCancelBooking
+		return nil, common.ErrFailedToCancelBooking
 	}
 
 	return booking, nil

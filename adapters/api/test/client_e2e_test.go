@@ -12,6 +12,7 @@ import (
 	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/adapters/db/client"
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/client/create_client"
 	"github.com/mishkahtherapy/brain/core/usecases/client/get_all_clients"
 	"github.com/mishkahtherapy/brain/core/usecases/client/get_client"
@@ -240,7 +241,7 @@ func TestClientE2E(t *testing.T) {
 	})
 }
 
-func setupClientTestDB(t *testing.T) (db.SQLDatabase, func()) {
+func setupClientTestDB(t *testing.T) (ports.SQLDatabase, func()) {
 	// Use temporary file database for testing instead of :memory:
 	tmpfile, err := os.CreateTemp("", "client_test_*.db")
 	if err != nil {

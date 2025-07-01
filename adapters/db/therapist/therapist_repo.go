@@ -7,12 +7,12 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/ports"
 )
 
 type TherapistRepository struct {
-	db db.SQLDatabase
+	db ports.SQLDatabase
 }
 
 var ErrTherapistNotFound = errors.New("therapist not found")
@@ -27,7 +27,7 @@ var ErrFailedToCreateTherapist = errors.New("failed to create therapist")
 var ErrFailedToUpdateTherapist = errors.New("failed to update therapist")
 var ErrFailedToUpdateTherapistSpecializations = errors.New("failed to update therapist specializations")
 
-func NewTherapistRepository(db db.SQLDatabase) *TherapistRepository {
+func NewTherapistRepository(db ports.SQLDatabase) *TherapistRepository {
 	return &TherapistRepository{db: db}
 }
 
@@ -410,7 +410,7 @@ func (r *TherapistRepository) FindBySpecializationAndLanguage(specializationName
 
 // Helper methods for managing therapist specializations
 
-func (r *TherapistRepository) insertTherapistSpecializations(tx db.SQLTx, therapistID domain.TherapistID, specializationIDs []domain.SpecializationID) error {
+func (r *TherapistRepository) insertTherapistSpecializations(tx ports.SQLTx, therapistID domain.TherapistID, specializationIDs []domain.SpecializationID) error {
 	if len(specializationIDs) == 0 {
 		return nil
 	}

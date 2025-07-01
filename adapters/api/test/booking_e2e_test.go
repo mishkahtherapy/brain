@@ -13,6 +13,7 @@ import (
 	"github.com/mishkahtherapy/brain/adapters/db/booking"
 	"github.com/mishkahtherapy/brain/adapters/db/therapist"
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/cancel_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/confirm_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/create_booking"
@@ -27,7 +28,7 @@ import (
 
 // TestSessionRepository is a test implementation of the session repository
 type TestSessionRepository struct {
-	db db.SQLDatabase
+	db ports.SQLDatabase
 }
 
 func (r *TestSessionRepository) CreateSession(session *domain.Session) error {
@@ -63,7 +64,7 @@ func (r *TestSessionRepository) ListSessionsAdmin(startDate, endDate time.Time) 
 }
 
 type TestClientRepository struct {
-	db db.SQLDatabase
+	db ports.SQLDatabase
 }
 
 func (r *TestClientRepository) GetByID(id domain.ClientID) (*domain.Client, error) {
@@ -99,7 +100,7 @@ func (r *TestClientRepository) List() ([]*domain.Client, error) {
 }
 
 type TestTimeSlotRepository struct {
-	db db.SQLDatabase
+	db ports.SQLDatabase
 }
 
 func (r *TestTimeSlotRepository) GetByID(id string) (*domain.TimeSlot, error) {
@@ -441,7 +442,7 @@ type BookingTestData struct {
 	SpecializationID domain.SpecializationID
 }
 
-func insertBookingTestData(t *testing.T, database db.SQLDatabase) *BookingTestData {
+func insertBookingTestData(t *testing.T, database ports.SQLDatabase) *BookingTestData {
 	now := time.Now().UTC()
 
 	// Generate test IDs
@@ -503,7 +504,7 @@ func insertBookingTestData(t *testing.T, database db.SQLDatabase) *BookingTestDa
 	}
 }
 
-func setupBookingTestDB(_ *testing.T) (db.SQLDatabase, func()) {
+func setupBookingTestDB(_ *testing.T) (ports.SQLDatabase, func()) {
 	// Use in-memory database for testing
 	dbFilename := ":memory:"
 

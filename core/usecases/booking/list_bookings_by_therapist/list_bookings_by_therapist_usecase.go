@@ -1,14 +1,10 @@
 package list_bookings_by_therapist
 
 import (
-	"errors"
-
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/ports"
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
-
-var ErrFailedToListBookings = errors.New("failed to list bookings")
-var ErrTherapistIDIsRequired = errors.New("therapist ID is required")
 
 type Input struct {
 	TherapistID domain.TherapistID   `json:"therapistId"`
@@ -26,7 +22,7 @@ func NewUsecase(bookingRepo ports.BookingRepository) *Usecase {
 func (u *Usecase) Execute(input Input) ([]*domain.Booking, error) {
 	// Validate required fields
 	if input.TherapistID == "" {
-		return nil, ErrTherapistIDIsRequired
+		return nil, common.ErrTherapistIDIsRequired
 	}
 
 	var bookings []*domain.Booking
@@ -40,7 +36,7 @@ func (u *Usecase) Execute(input Input) ([]*domain.Booking, error) {
 	}
 
 	if err != nil {
-		return nil, ErrFailedToListBookings
+		return nil, common.ErrFailedToListBookings
 	}
 
 	return bookings, nil

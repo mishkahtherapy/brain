@@ -1,16 +1,10 @@
 package get_meeting_link
 
 import (
-	"errors"
-
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/ports"
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
-
-// Error definitions
-var ErrSessionNotFound = errors.New("session not found")
-var ErrSessionIDIsRequired = errors.New("session ID is required")
-var ErrMeetingURLNotSet = errors.New("meeting URL is not set for this session")
 
 // Input struct defines parameters for getting a meeting link
 type Input struct {
@@ -36,18 +30,18 @@ func NewUsecase(sessionRepo ports.SessionRepository) *Usecase {
 func (u *Usecase) Execute(input Input) (*Output, error) {
 	// Validate input
 	if input.SessionID == "" {
-		return nil, ErrSessionIDIsRequired
+		return nil, common.ErrSessionIDIsRequired
 	}
 
 	// Retrieve session from repository
 	session, err := u.sessionRepo.GetSessionByID(input.SessionID)
 	if err != nil {
-		return nil, ErrSessionNotFound
+		return nil, common.ErrSessionNotFound
 	}
 
 	// Check if meeting URL is set
 	if session.MeetingURL == "" {
-		return nil, ErrMeetingURLNotSet
+		return nil, common.ErrMeetingURLNotSet
 	}
 
 	// Return meeting URL

@@ -5,12 +5,12 @@ import (
 	"errors"
 	"log/slog"
 
-	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/ports"
 )
 
 type TimeSlotRepository struct {
-	db db.SQLDatabase
+	db ports.SQLDatabase
 }
 
 // Error definitions
@@ -28,7 +28,7 @@ var ErrFailedToCreateTimeSlot = errors.New("failed to create timeslot")
 var ErrFailedToUpdateTimeSlot = errors.New("failed to update timeslot")
 var ErrFailedToDeleteTimeSlot = errors.New("failed to delete timeslot")
 
-func NewTimeSlotRepository(db db.SQLDatabase) *TimeSlotRepository {
+func NewTimeSlotRepository(db ports.SQLDatabase) *TimeSlotRepository {
 	return &TimeSlotRepository{db: db}
 }
 

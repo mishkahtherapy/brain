@@ -5,14 +5,10 @@ import (
 
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/ports"
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
 
-var ErrFailedToConfirmBooking = errors.New("failed to confirm booking")
-var ErrBookingIDIsRequired = errors.New("booking ID is required")
-var ErrBookingNotFound = errors.New("booking not found")
-var ErrInvalidBookingState = errors.New("booking must be in pending state to be confirmed")
-var ErrPaidAmountIsRequired = errors.New("paid amount is required")
-var ErrLanguageIsRequired = errors.New("language is required")
+// Domain-specific error (not in common since it's specific to booking confirmation)
 var ErrFailedToCreateSession = errors.New("failed to create session for confirmed booking")
 
 type Input struct {
@@ -36,24 +32,24 @@ func NewUsecase(bookingRepo ports.BookingRepository, sessionRepo ports.SessionRe
 func (u *Usecase) Execute(input Input) (*domain.Booking, error) {
 	// Validate required fields
 	if input.BookingID == "" {
-		return nil, ErrBookingIDIsRequired
+		return nil, common.ErrBookingIDIsRequired
 	}
 	if input.PaidAmount <= 0 {
-		return nil, ErrPaidAmountIsRequired
+		return nil, common.ErrPaidAmountIsRequired
 	}
 	if input.Language == "" {
-		return nil, ErrLanguageIsRequired
+		return nil, common.ErrLanguageIsRequired
 	}
 
 	// Get existing booking
 	booking, err := u.bookingRepo.GetByID(input.BookingID)
 	if err != nil || booking == nil {
-		return nil, ErrBookingNotFound
+		return nil, common.ErrBookingNotFound
 	}
 
 	// Validate booking is in Pending state
 	if booking.State != domain.BookingStatePending {
-		return nil, ErrInvalidBookingState
+		return nil, common.ErrInvalidBookingState
 	}
 
 	// Change state to Confirmed
@@ -62,7 +58,7 @@ func (u *Usecase) Execute(input Input) (*domain.Booking, error) {
 
 	err = u.bookingRepo.Update(booking)
 	if err != nil {
-		return nil, ErrFailedToConfirmBooking
+		return nil, common.ErrFailedToConfirmBooking
 	}
 
 	// Create a new session for the confirmed booking

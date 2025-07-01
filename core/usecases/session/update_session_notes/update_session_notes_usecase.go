@@ -1,17 +1,10 @@
 package update_session_notes
 
 import (
-	"errors"
-
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/ports"
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
-
-// Error definitions
-var ErrSessionNotFound = errors.New("session not found")
-var ErrSessionIDIsRequired = errors.New("session ID is required")
-var ErrNotesIsRequired = errors.New("notes is required")
-var ErrFailedToUpdateSessionNotes = errors.New("failed to update session notes")
 
 // Input struct defines parameters for updating session notes
 type Input struct {
@@ -33,16 +26,16 @@ func NewUsecase(sessionRepo ports.SessionRepository) *Usecase {
 func (u *Usecase) Execute(input Input) (*domain.Session, error) {
 	// Validate input
 	if input.SessionID == "" {
-		return nil, ErrSessionIDIsRequired
+		return nil, common.ErrSessionIDIsRequired
 	}
 	if input.Notes == "" {
-		return nil, ErrNotesIsRequired
+		return nil, common.ErrNotesIsRequired
 	}
 
 	// Get the current session
 	session, err := u.sessionRepo.GetSessionByID(input.SessionID)
 	if err != nil {
-		return nil, ErrSessionNotFound
+		return nil, common.ErrSessionNotFound
 	}
 
 	// Append the new note with timestamp
@@ -51,7 +44,7 @@ func (u *Usecase) Execute(input Input) (*domain.Session, error) {
 	// Persist the change
 	err = u.sessionRepo.UpdateSessionNotes(input.SessionID, session.Notes)
 	if err != nil {
-		return nil, ErrFailedToUpdateSessionNotes
+		return nil, common.ErrFailedToUpdateSessionNotes
 	}
 
 	return session, nil

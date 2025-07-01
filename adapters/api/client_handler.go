@@ -8,12 +8,13 @@ import (
 	"github.com/mishkahtherapy/brain/core/usecases/client/create_client"
 	"github.com/mishkahtherapy/brain/core/usecases/client/get_all_clients"
 	"github.com/mishkahtherapy/brain/core/usecases/client/get_client"
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
 
 type ClientHandler struct {
 	createClientUsecase  create_client.Usecase
-	getAllClientsUsecase get_all_clients.Usecase
 	getClientUsecase     get_client.Usecase
+	getAllClientsUsecase get_all_clients.Usecase
 }
 
 func NewClientHandler(
@@ -23,8 +24,8 @@ func NewClientHandler(
 ) *ClientHandler {
 	return &ClientHandler{
 		createClientUsecase:  createUsecase,
-		getAllClientsUsecase: getAllUsecase,
 		getClientUsecase:     getUsecase,
+		getAllClientsUsecase: getAllUsecase,
 	}
 }
 
@@ -35,8 +36,8 @@ func (h *ClientHandler) SetUsecases(
 	getUsecase get_client.Usecase,
 ) {
 	h.createClientUsecase = createUsecase
-	h.getAllClientsUsecase = getAllUsecase
 	h.getClientUsecase = getUsecase
+	h.getAllClientsUsecase = getAllUsecase
 }
 
 func (h *ClientHandler) RegisterRoutes(mux *http.ServeMux) {
@@ -58,11 +59,11 @@ func (h *ClientHandler) handleCreateClient(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
-		case create_client.ErrClientAlreadyExists:
-			rw.WriteError(err, http.StatusConflict)
 		case create_client.ErrWhatsAppNumberIsRequired,
 			create_client.ErrInvalidWhatsAppNumber:
 			rw.WriteBadRequest(err.Error())
+		case create_client.ErrClientAlreadyExists:
+			rw.WriteError(err, http.StatusConflict)
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
 		}
@@ -91,7 +92,7 @@ func (h *ClientHandler) handleGetAllClients(w http.ResponseWriter, r *http.Reque
 func (h *ClientHandler) handleGetClient(w http.ResponseWriter, r *http.Request) {
 	rw := NewResponseWriter(w)
 
-	// read id from path
+	// Read client id from path
 	id := domain.ClientID(r.PathValue("id"))
 	if id == "" {
 		rw.WriteBadRequest("Missing client ID")
@@ -100,15 +101,11 @@ func (h *ClientHandler) handleGetClient(w http.ResponseWriter, r *http.Request) 
 
 	client, err := h.getClientUsecase.Execute(id)
 	if err != nil {
-		if err == get_client.ErrClientNotFound {
+		if err == common.ErrClientNotFound {
 			rw.WriteNotFound(err.Error())
 			return
 		}
 		rw.WriteError(err, http.StatusInternalServerError)
-		return
-	}
-	if client == nil {
-		rw.WriteNotFound("Client not found")
 		return
 	}
 

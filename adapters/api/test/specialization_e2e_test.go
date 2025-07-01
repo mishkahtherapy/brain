@@ -12,6 +12,7 @@ import (
 	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/adapters/db/specialization"
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/specialization/get_all_specializations"
 	"github.com/mishkahtherapy/brain/core/usecases/specialization/get_specialization"
 	"github.com/mishkahtherapy/brain/core/usecases/specialization/new_specialization"
@@ -175,7 +176,7 @@ func TestSpecializationE2E(t *testing.T) {
 	})
 }
 
-func setupTestDB(_ *testing.T) (db.SQLDatabase, func()) {
+func setupTestDB(_ *testing.T) (ports.SQLDatabase, func()) {
 	// Create temporary database file
 	dbFilename := ":memory:" // Use in-memory database for testing
 

@@ -11,6 +11,7 @@ import (
 	"github.com/mishkahtherapy/brain/core/usecases/booking/get_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/list_bookings_by_client"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/list_bookings_by_therapist"
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
 
 type BookingHandler struct {
@@ -79,16 +80,16 @@ func (h *BookingHandler) handleCreateBooking(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
-		case create_booking.ErrTherapistIDIsRequired,
-			create_booking.ErrClientIDIsRequired,
-			create_booking.ErrTimeSlotIDIsRequired,
-			create_booking.ErrStartTimeIsRequired:
+		case common.ErrTherapistIDIsRequired,
+			common.ErrClientIDIsRequired,
+			common.ErrTimeSlotIDIsRequired,
+			common.ErrStartTimeIsRequired:
 			rw.WriteBadRequest(err.Error())
-		case create_booking.ErrTherapistNotFound,
-			create_booking.ErrClientNotFound,
-			create_booking.ErrTimeSlotNotFound:
+		case common.ErrTherapistNotFound,
+			common.ErrClientNotFound,
+			common.ErrTimeSlotNotFound:
 			rw.WriteNotFound(err.Error())
-		case create_booking.ErrTimeSlotAlreadyBooked:
+		case common.ErrTimeSlotAlreadyBooked:
 			rw.WriteError(err, http.StatusConflict)
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
@@ -113,7 +114,7 @@ func (h *BookingHandler) handleGetBooking(w http.ResponseWriter, r *http.Request
 
 	booking, err := h.getBookingUsecase.Execute(id)
 	if err != nil {
-		if err == get_booking.ErrBookingNotFound {
+		if err == common.ErrBookingNotFound {
 			rw.WriteNotFound(err.Error())
 			return
 		}
@@ -157,13 +158,13 @@ func (h *BookingHandler) handleConfirmBooking(w http.ResponseWriter, r *http.Req
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
-		case confirm_booking.ErrBookingIDIsRequired,
-			confirm_booking.ErrPaidAmountIsRequired,
-			confirm_booking.ErrLanguageIsRequired:
+		case common.ErrBookingIDIsRequired,
+			common.ErrPaidAmountIsRequired,
+			common.ErrLanguageIsRequired:
 			rw.WriteBadRequest(err.Error())
-		case confirm_booking.ErrBookingNotFound:
+		case common.ErrBookingNotFound:
 			rw.WriteNotFound(err.Error())
-		case confirm_booking.ErrInvalidBookingState:
+		case common.ErrInvalidBookingState:
 			rw.WriteBadRequest(err.Error())
 		case confirm_booking.ErrFailedToCreateSession:
 			rw.WriteError(err, http.StatusInternalServerError)
@@ -196,11 +197,11 @@ func (h *BookingHandler) handleCancelBooking(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
-		case cancel_booking.ErrBookingIDIsRequired:
+		case common.ErrBookingIDIsRequired:
 			rw.WriteBadRequest(err.Error())
-		case cancel_booking.ErrBookingNotFound:
+		case common.ErrBookingNotFound:
 			rw.WriteNotFound(err.Error())
-		case cancel_booking.ErrInvalidStateTransition:
+		case common.ErrInvalidStateTransition:
 			rw.WriteBadRequest(err.Error())
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
@@ -245,7 +246,7 @@ func (h *BookingHandler) handleListBookingsByTherapist(w http.ResponseWriter, r 
 	bookings, err := h.listBookingsByTherapistUsecase.Execute(input)
 	if err != nil {
 		switch err {
-		case list_bookings_by_therapist.ErrTherapistIDIsRequired:
+		case common.ErrTherapistIDIsRequired:
 			rw.WriteBadRequest(err.Error())
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
@@ -290,7 +291,7 @@ func (h *BookingHandler) handleListBookingsByClient(w http.ResponseWriter, r *ht
 	bookings, err := h.listBookingsByClientUsecase.Execute(input)
 	if err != nil {
 		switch err {
-		case list_bookings_by_client.ErrClientIDIsRequired:
+		case common.ErrClientIDIsRequired:
 			rw.WriteBadRequest(err.Error())
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)

@@ -3,15 +3,15 @@ package client
 import (
 	"database/sql"
 
-	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/ports"
 )
 
 type ClientRepository struct {
-	db db.SQLDatabase
+	db ports.SQLDatabase
 }
 
-func NewClientRepository(database db.SQLDatabase) *ClientRepository {
+func NewClientRepository(database ports.SQLDatabase) *ClientRepository {
 	return &ClientRepository{
 		db: database,
 	}

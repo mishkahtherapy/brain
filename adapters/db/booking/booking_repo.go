@@ -6,12 +6,12 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/ports"
 )
 
 type BookingRepository struct {
-	db db.SQLDatabase
+	db ports.SQLDatabase
 }
 
 var ErrBookingNotFound = errors.New("booking not found")
@@ -29,7 +29,7 @@ var ErrFailedToCreateBooking = errors.New("failed to create booking")
 var ErrFailedToUpdateBooking = errors.New("failed to update booking")
 var ErrFailedToDeleteBooking = errors.New("failed to delete booking")
 
-func NewBookingRepository(db db.SQLDatabase) *BookingRepository {
+func NewBookingRepository(db ports.SQLDatabase) *BookingRepository {
 	return &BookingRepository{db: db}
 }
 

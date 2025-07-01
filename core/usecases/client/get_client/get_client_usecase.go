@@ -1,14 +1,9 @@
 package get_client
 
 import (
-	"errors"
-
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/ports"
-)
-
-var (
-	ErrClientNotFound = errors.New("client not found")
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
 
 type Usecase struct {
@@ -28,7 +23,7 @@ func (u *Usecase) Execute(id domain.ClientID) (*domain.Client, error) {
 	}
 
 	if client == nil {
-		return nil, ErrClientNotFound
+		return nil, common.ErrClientNotFound
 	}
 
 	return client, nil

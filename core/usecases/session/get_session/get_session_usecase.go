@@ -1,15 +1,10 @@
 package get_session
 
 import (
-	"errors"
-
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/ports"
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
-
-// Error definitions
-var ErrSessionNotFound = errors.New("session not found")
-var ErrSessionIDIsRequired = errors.New("session ID is required")
 
 // Usecase struct with required dependencies
 type Usecase struct {
@@ -24,12 +19,12 @@ func NewUsecase(sessionRepo ports.SessionRepository) *Usecase {
 // Execute retrieves a session by its ID
 func (u *Usecase) Execute(id domain.SessionID) (*domain.Session, error) {
 	if id == "" {
-		return nil, ErrSessionIDIsRequired
+		return nil, common.ErrSessionIDIsRequired
 	}
 
 	session, err := u.sessionRepo.GetSessionByID(id)
 	if err != nil {
-		return nil, ErrSessionNotFound
+		return nil, common.ErrSessionNotFound
 	}
 
 	return session, nil

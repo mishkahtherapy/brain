@@ -6,12 +6,12 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/ports"
 )
 
 type SessionRepository struct {
-	db db.SQLDatabase
+	db ports.SQLDatabase
 }
 
 // Error definitions
@@ -34,7 +34,7 @@ var ErrFailedToUpdateSession = errors.New("failed to update session")
 var ErrInvalidDateRange = errors.New("invalid date range")
 
 // NewSessionRepository creates a new session repository
-func NewSessionRepository(db db.SQLDatabase) *SessionRepository {
+func NewSessionRepository(db ports.SQLDatabase) *SessionRepository {
 	return &SessionRepository{db: db}
 }
 

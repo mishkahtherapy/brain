@@ -4,24 +4,9 @@ import (
 	"database/sql"
 	"log/slog"
 	"os"
+
+	"github.com/mishkahtherapy/brain/core/ports"
 )
-
-type SQLTx interface {
-	Query(query string, args ...any) (*sql.Rows, error)
-	QueryRow(query string, args ...any) *sql.Row
-	Exec(query string, args ...any) (sql.Result, error)
-
-	Commit() error
-	Rollback() error
-}
-
-type SQLDatabase interface {
-	Query(query string, args ...any) (*sql.Rows, error)
-	QueryRow(query string, args ...any) *sql.Row
-	Exec(query string, args ...any) (sql.Result, error)
-	Begin() (SQLTx, error)
-	Close() error
-}
 
 type Database struct {
 	db *sql.DB
@@ -36,7 +21,7 @@ type DatabaseConfig struct {
 	SchemaFile string
 }
 
-func NewDatabase(config DatabaseConfig) SQLDatabase {
+func NewDatabase(config DatabaseConfig) ports.SQLDatabase {
 	if config.SchemaFile == "" {
 		panic("schema file is required")
 	}
@@ -64,7 +49,7 @@ func (d *Database) Exec(query string, args ...any) (sql.Result, error) {
 	return d.db.Exec(query, args...)
 }
 
-func (d *Database) Begin() (SQLTx, error) {
+func (d *Database) Begin() (ports.SQLTx, error) {
 	return d.db.Begin()
 }
 

@@ -6,11 +6,10 @@ import (
 
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/ports"
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
 
-var ErrFailedToCreateSpecialization = errors.New("failed to create specialization")
-var ErrFailedToGetSpecialization = errors.New("failed to get specialization")
-var ErrNameIsRequired = errors.New("name is required")
+// Domain-specific errors that are not common across usecases
 var ErrSpecializationAlreadyExists = errors.New("specialization already exists")
 
 type Input struct {
@@ -27,12 +26,12 @@ func NewUsecase(specializationRepo ports.SpecializationRepository) *Usecase {
 
 func (u *Usecase) Execute(input Input) (*domain.Specialization, error) {
 	if input.Name == "" {
-		return nil, ErrNameIsRequired
+		return nil, common.ErrNameIsRequired
 	}
 
 	existingSpecialization, err := u.specializationRepo.GetByName(input.Name)
 	if err != nil {
-		return nil, ErrFailedToGetSpecialization
+		return nil, common.ErrFailedToGetSpecializations
 	}
 	if existingSpecialization != nil {
 		return nil, ErrSpecializationAlreadyExists
@@ -48,7 +47,7 @@ func (u *Usecase) Execute(input Input) (*domain.Specialization, error) {
 
 	err = u.specializationRepo.Create(specialization)
 	if err != nil {
-		return nil, ErrFailedToCreateSpecialization
+		return nil, common.ErrFailedToCreateSpecialization
 	}
 
 	return specialization, nil

@@ -1,13 +1,10 @@
 package get_therapist
 
 import (
-	"errors"
-
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/ports"
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
-
-var ErrTherapistNotFound = errors.New("therapist not found")
 
 type Usecase struct {
 	therapistRepo ports.TherapistRepository
@@ -20,7 +17,7 @@ func NewUsecase(therapistRepo ports.TherapistRepository) *Usecase {
 func (u *Usecase) Execute(id domain.TherapistID) (*domain.Therapist, error) {
 	therapist, err := u.therapistRepo.GetByID(id)
 	if err != nil {
-		return nil, ErrTherapistNotFound
+		return nil, common.ErrTherapistNotFound
 	}
 	return therapist, nil
 }

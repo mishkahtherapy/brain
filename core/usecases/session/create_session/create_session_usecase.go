@@ -1,26 +1,12 @@
 package create_session
 
 import (
-	"errors"
 	"time"
 
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/ports"
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
-
-// Error definitions
-var ErrFailedToCreateSession = errors.New("failed to create session")
-var ErrBookingIDIsRequired = errors.New("booking ID is required")
-var ErrTherapistIDIsRequired = errors.New("therapist ID is required")
-var ErrClientIDIsRequired = errors.New("client ID is required")
-var ErrTimeSlotIDIsRequired = errors.New("timeslot ID is required")
-var ErrStartTimeIsRequired = errors.New("start time is required")
-var ErrPaidAmountIsRequired = errors.New("paid amount is required")
-var ErrLanguageIsRequired = errors.New("language is required")
-var ErrBookingNotFound = errors.New("booking not found")
-var ErrTherapistNotFound = errors.New("therapist not found")
-var ErrClientNotFound = errors.New("client not found")
-var ErrTimeSlotNotFound = errors.New("timeslot not found")
 
 // Input struct defines all required parameters for creating a session
 type Input struct {
@@ -69,25 +55,25 @@ func (u *Usecase) Execute(input Input) (*domain.Session, error) {
 	// Verify the booking exists
 	booking, err := u.bookingRepo.GetByID(input.BookingID)
 	if err != nil || booking == nil {
-		return nil, ErrBookingNotFound
+		return nil, common.ErrBookingNotFound
 	}
 
 	// Verify the therapist exists
 	therapist, err := u.therapistRepo.GetByID(input.TherapistID)
 	if err != nil || therapist == nil {
-		return nil, ErrTherapistNotFound
+		return nil, common.ErrTherapistNotFound
 	}
 
 	// Verify the client exists
 	client, err := u.clientRepo.GetByID(input.ClientID)
 	if err != nil || client == nil {
-		return nil, ErrClientNotFound
+		return nil, common.ErrClientNotFound
 	}
 
 	// Verify the timeslot exists
 	timeSlot, err := u.timeSlotRepo.GetByID(string(input.TimeSlotID))
 	if err != nil || timeSlot == nil {
-		return nil, ErrTimeSlotNotFound
+		return nil, common.ErrTimeSlotNotFound
 	}
 
 	// Create a new session with PLANNED state
@@ -111,7 +97,7 @@ func (u *Usecase) Execute(input Input) (*domain.Session, error) {
 	// Persist the session
 	err = u.sessionRepo.CreateSession(session)
 	if err != nil {
-		return nil, ErrFailedToCreateSession
+		return nil, common.ErrFailedToCreateSession
 	}
 
 	return session, nil
@@ -120,25 +106,25 @@ func (u *Usecase) Execute(input Input) (*domain.Session, error) {
 // validateInput ensures all required fields are provided
 func validateInput(input Input) error {
 	if input.BookingID == "" {
-		return ErrBookingIDIsRequired
+		return common.ErrBookingIDIsRequired
 	}
 	if input.TherapistID == "" {
-		return ErrTherapistIDIsRequired
+		return common.ErrTherapistIDIsRequired
 	}
 	if input.ClientID == "" {
-		return ErrClientIDIsRequired
+		return common.ErrClientIDIsRequired
 	}
 	if input.TimeSlotID == "" {
-		return ErrTimeSlotIDIsRequired
+		return common.ErrTimeSlotIDIsRequired
 	}
 	if time.Time(input.StartTime).IsZero() {
-		return ErrStartTimeIsRequired
+		return common.ErrStartTimeIsRequired
 	}
 	if input.PaidAmount <= 0 {
-		return ErrPaidAmountIsRequired
+		return common.ErrPaidAmountIsRequired
 	}
 	if input.Language == "" {
-		return ErrLanguageIsRequired
+		return common.ErrLanguageIsRequired
 	}
 	return nil
 }

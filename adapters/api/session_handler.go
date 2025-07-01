@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/usecases/common"
 	"github.com/mishkahtherapy/brain/core/usecases/session/create_session"
 	"github.com/mishkahtherapy/brain/core/usecases/session/get_session"
 	"github.com/mishkahtherapy/brain/core/usecases/session/list_sessions_admin"
@@ -97,18 +98,18 @@ func (h *SessionHandler) handleCreateSession(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
-		case create_session.ErrBookingIDIsRequired,
-			create_session.ErrTherapistIDIsRequired,
-			create_session.ErrClientIDIsRequired,
-			create_session.ErrTimeSlotIDIsRequired,
-			create_session.ErrStartTimeIsRequired,
-			create_session.ErrPaidAmountIsRequired,
-			create_session.ErrLanguageIsRequired:
+		case common.ErrBookingIDIsRequired,
+			common.ErrTherapistIDIsRequired,
+			common.ErrClientIDIsRequired,
+			common.ErrTimeSlotIDIsRequired,
+			common.ErrStartTimeIsRequired,
+			common.ErrPaidAmountIsRequired,
+			common.ErrLanguageIsRequired:
 			rw.WriteBadRequest(err.Error())
-		case create_session.ErrBookingNotFound,
-			create_session.ErrTherapistNotFound,
-			create_session.ErrClientNotFound,
-			create_session.ErrTimeSlotNotFound:
+		case common.ErrBookingNotFound,
+			common.ErrTherapistNotFound,
+			common.ErrClientNotFound,
+			common.ErrTimeSlotNotFound:
 			rw.WriteNotFound(err.Error())
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
@@ -134,7 +135,7 @@ func (h *SessionHandler) handleGetSession(w http.ResponseWriter, r *http.Request
 
 	session, err := h.getSessionUsecase.Execute(id)
 	if err != nil {
-		if err == get_session.ErrSessionNotFound {
+		if err == common.ErrSessionNotFound {
 			rw.WriteNotFound(err.Error())
 			return
 		}
@@ -176,12 +177,12 @@ func (h *SessionHandler) handleUpdateSessionState(w http.ResponseWriter, r *http
 	session, err := h.updateSessionStateUsecase.Execute(input)
 	if err != nil {
 		switch err {
-		case update_session_state.ErrSessionIDIsRequired,
-			update_session_state.ErrStateIsRequired:
+		case common.ErrSessionIDIsRequired,
+			common.ErrStateIsRequired:
 			rw.WriteBadRequest(err.Error())
-		case update_session_state.ErrSessionNotFound:
+		case common.ErrSessionNotFound:
 			rw.WriteNotFound(err.Error())
-		case update_session_state.ErrInvalidStateTransition:
+		case common.ErrInvalidStateTransition:
 			rw.WriteBadRequest(err.Error())
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
@@ -223,10 +224,10 @@ func (h *SessionHandler) handleUpdateSessionNotes(w http.ResponseWriter, r *http
 	session, err := h.updateSessionNotesUsecase.Execute(input)
 	if err != nil {
 		switch err {
-		case update_session_notes.ErrSessionIDIsRequired,
-			update_session_notes.ErrNotesIsRequired:
+		case common.ErrSessionIDIsRequired,
+			common.ErrNotesIsRequired:
 			rw.WriteBadRequest(err.Error())
-		case update_session_notes.ErrSessionNotFound:
+		case common.ErrSessionNotFound:
 			rw.WriteNotFound(err.Error())
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
@@ -268,12 +269,13 @@ func (h *SessionHandler) handleUpdateMeetingURL(w http.ResponseWriter, r *http.R
 	session, err := h.updateMeetingURLUsecase.Execute(input)
 	if err != nil {
 		switch err {
-		case update_meeting_url.ErrSessionIDIsRequired,
-			update_meeting_url.ErrMeetingURLIsRequired,
-			update_meeting_url.ErrInvalidMeetingURL:
+		case common.ErrSessionIDIsRequired,
+			common.ErrMeetingURLIsRequired:
 			rw.WriteBadRequest(err.Error())
-		case update_meeting_url.ErrSessionNotFound:
+		case common.ErrSessionNotFound:
 			rw.WriteNotFound(err.Error())
+		case common.ErrInvalidMeetingURL:
+			rw.WriteBadRequest(err.Error())
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
 		}
@@ -303,7 +305,7 @@ func (h *SessionHandler) handleListSessionsByTherapist(w http.ResponseWriter, r 
 	sessions, err := h.listSessionsByTherapistUsecase.Execute(input)
 	if err != nil {
 		switch err {
-		case list_sessions_by_therapist.ErrTherapistIDIsRequired:
+		case common.ErrTherapistIDIsRequired:
 			rw.WriteBadRequest(err.Error())
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
@@ -334,7 +336,7 @@ func (h *SessionHandler) handleListSessionsByClient(w http.ResponseWriter, r *ht
 	sessions, err := h.listSessionsByClientUsecase.Execute(input)
 	if err != nil {
 		switch err {
-		case list_sessions_by_client.ErrClientIDIsRequired:
+		case common.ErrClientIDIsRequired:
 			rw.WriteBadRequest(err.Error())
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
@@ -351,39 +353,31 @@ func (h *SessionHandler) handleListSessionsByClient(w http.ResponseWriter, r *ht
 func (h *SessionHandler) handleListSessionsAdmin(w http.ResponseWriter, r *http.Request) {
 	rw := NewResponseWriter(w)
 
-	// Parse start and end date query parameters
-	startDateParam := r.URL.Query().Get("startDate")
-	endDateParam := r.URL.Query().Get("endDate")
+	// Parse query parameters for date range
+	var input list_sessions_admin.Input
 
-	var startDate, endDate time.Time
-	var err error
-
-	// Parse dates if provided
-	if startDateParam != "" {
-		startDate, err = time.Parse(time.RFC3339, startDateParam)
-		if err != nil {
-			rw.WriteBadRequest("Invalid startDate format. Use RFC3339 format (e.g., 2025-06-30T00:00:00Z)")
+	if startDateParam := r.URL.Query().Get("startDate"); startDateParam != "" {
+		if startDate, err := time.Parse("2006-01-02", startDateParam); err != nil {
+			rw.WriteBadRequest("Invalid startDate format. Use YYYY-MM-DD")
 			return
+		} else {
+			input.StartDate = startDate
 		}
 	}
 
-	if endDateParam != "" {
-		endDate, err = time.Parse(time.RFC3339, endDateParam)
-		if err != nil {
-			rw.WriteBadRequest("Invalid endDate format. Use RFC3339 format (e.g., 2025-06-30T00:00:00Z)")
+	if endDateParam := r.URL.Query().Get("endDate"); endDateParam != "" {
+		if endDate, err := time.Parse("2006-01-02", endDateParam); err != nil {
+			rw.WriteBadRequest("Invalid endDate format. Use YYYY-MM-DD")
 			return
+		} else {
+			input.EndDate = endDate
 		}
-	}
-
-	input := list_sessions_admin.Input{
-		StartDate: startDate,
-		EndDate:   endDate,
 	}
 
 	sessions, err := h.listSessionsAdminUsecase.Execute(input)
 	if err != nil {
 		switch err {
-		case list_sessions_admin.ErrInvalidDateRange:
+		case common.ErrInvalidDateRange:
 			rw.WriteBadRequest(err.Error())
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
