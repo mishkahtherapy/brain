@@ -24,6 +24,7 @@ var ErrTherapistUpdatedAtIsRequired = errors.New("therapist updated at is requir
 var ErrTherapistIDIsRequired = errors.New("therapist id is required")
 var ErrFailedToGetTherapists = errors.New("failed to get therapists")
 var ErrFailedToCreateTherapist = errors.New("failed to create therapist")
+var ErrFailedToUpdateTherapist = errors.New("failed to update therapist")
 var ErrFailedToUpdateTherapistSpecializations = errors.New("failed to update therapist specializations")
 
 func NewTherapistRepository(db db.SQLDatabase) *TherapistRepository {
@@ -95,6 +96,56 @@ func (r *TherapistRepository) Create(therapist *domain.Therapist) error {
 	if err := tx.Commit(); err != nil {
 		slog.Error("error committing create therapist transaction", "error", err)
 		return ErrFailedToCreateTherapist
+	}
+
+	return nil
+}
+
+func (r *TherapistRepository) Update(therapist *domain.Therapist) error {
+	if therapist.ID == "" {
+		return ErrTherapistIDIsRequired
+	}
+
+	if therapist.Name == "" {
+		return ErrTherapistNameIsRequired
+	}
+
+	if therapist.Email == "" {
+		return ErrTherapistEmailIsRequired
+	}
+
+	if therapist.UpdatedAt == (domain.UTCTimestamp{}) {
+		return ErrTherapistUpdatedAtIsRequired
+	}
+
+	query := `
+		UPDATE therapists 
+		SET name = ?, email = ?, phone_number = ?, whatsapp_number = ?, speaks_english = ?, updated_at = ?
+		WHERE id = ?
+	`
+	result, err := r.db.Exec(
+		query,
+		therapist.Name,
+		therapist.Email,
+		therapist.PhoneNumber,
+		therapist.WhatsAppNumber,
+		therapist.SpeaksEnglish,
+		therapist.UpdatedAt,
+		therapist.ID,
+	)
+	if err != nil {
+		slog.Error("error updating therapist", "error", err)
+		return ErrFailedToUpdateTherapist
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		slog.Error("error getting rows affected after update", "error", err)
+		return ErrFailedToUpdateTherapist
+	}
+
+	if rowsAffected == 0 {
+		return ErrTherapistNotFound
 	}
 
 	return nil

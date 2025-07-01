@@ -19,6 +19,7 @@ import (
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/get_all_therapists"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/get_therapist"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/new_therapist"
+	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_info"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_specializations"
 
 	_ "github.com/glebarez/go-sqlite"
@@ -39,14 +40,15 @@ func TestTherapistE2E(t *testing.T) {
 	getSpecializationUsecase := get_specialization.NewUsecase(specializationRepo)
 
 	// Setup therapist usecases
-	newTherapistUsecase := new_therapist.NewUsecase(therapistRepo)
+	newTherapistUsecase := new_therapist.NewUsecase(therapistRepo, specializationRepo)
 	getAllTherapistsUsecase := get_all_therapists.NewUsecase(therapistRepo)
 	getTherapistUsecase := get_therapist.NewUsecase(therapistRepo)
+	updateTherapistInfoUsecase := update_therapist_info.NewUsecase(therapistRepo)
 	updateTherapistSpecializationsUsecase := update_therapist_specializations.NewUsecase(therapistRepo, specializationRepo)
 
 	// Setup handlers
 	specializationHandler := api.NewSpecializationHandler(*newSpecializationUsecase, *getAllSpecializationsUsecase, *getSpecializationUsecase)
-	therapistHandler := api.NewTherapistHandler(*newTherapistUsecase, *getAllTherapistsUsecase, *getTherapistUsecase, *updateTherapistSpecializationsUsecase)
+	therapistHandler := api.NewTherapistHandler(*newTherapistUsecase, *getAllTherapistsUsecase, *getTherapistUsecase, *updateTherapistInfoUsecase, *updateTherapistSpecializationsUsecase)
 
 	// Setup router
 	mux := http.NewServeMux()
@@ -234,6 +236,236 @@ func TestTherapistE2E(t *testing.T) {
 		if !found {
 			t.Error("Created therapist not found in list of all therapists")
 		}
+	})
+
+	t.Run("Update therapist info", func(t *testing.T) {
+		// Create a test therapist first
+		anxietySpecialization := createTestSpecialization(t, mux, "Update Test Specialization")
+		therapistData := map[string]interface{}{
+			"name":              "Dr. Original Name",
+			"email":             "original@therapy.com",
+			"phoneNumber":       "+1111111111",
+			"whatsAppNumber":    "+2222222222",
+			"speaksEnglish":     false,
+			"specializationIds": []string{string(anxietySpecialization.ID)},
+		}
+		therapistBody, _ := json.Marshal(therapistData)
+
+		createReq := httptest.NewRequest("POST", "/api/v1/therapists", bytes.NewBuffer(therapistBody))
+		createReq.Header.Set("Content-Type", "application/json")
+		createRec := httptest.NewRecorder()
+		mux.ServeHTTP(createRec, createReq)
+
+		if createRec.Code != http.StatusCreated {
+			t.Fatalf("Failed to create test therapist: %d, %s", createRec.Code, createRec.Body.String())
+		}
+
+		var createdTherapist domain.Therapist
+		json.Unmarshal(createRec.Body.Bytes(), &createdTherapist)
+
+		// Test successful update
+		t.Run("successful update", func(t *testing.T) {
+			updateData := map[string]interface{}{
+				"name":           "Dr. Updated Name",
+				"email":          "updated@therapy.com",
+				"phoneNumber":    "+3333333333",
+				"whatsAppNumber": "+4444444444",
+				"speaksEnglish":  true,
+			}
+			updateBody, _ := json.Marshal(updateData)
+
+			updateReq := httptest.NewRequest("PUT", "/api/v1/therapists/"+string(createdTherapist.ID), bytes.NewBuffer(updateBody))
+			updateReq.Header.Set("Content-Type", "application/json")
+			updateRec := httptest.NewRecorder()
+			mux.ServeHTTP(updateRec, updateReq)
+
+			if updateRec.Code != http.StatusOK {
+				t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusOK, updateRec.Code, updateRec.Body.String())
+			}
+
+			var updatedTherapist domain.Therapist
+			json.Unmarshal(updateRec.Body.Bytes(), &updatedTherapist)
+
+			// Verify all fields were updated
+			if updatedTherapist.Name != "Dr. Updated Name" {
+				t.Errorf("Expected name %s, got %s", "Dr. Updated Name", updatedTherapist.Name)
+			}
+			if updatedTherapist.Email != "updated@therapy.com" {
+				t.Errorf("Expected email %s, got %s", "updated@therapy.com", updatedTherapist.Email)
+			}
+			if updatedTherapist.PhoneNumber != "+3333333333" {
+				t.Errorf("Expected phone %s, got %s", "+3333333333", updatedTherapist.PhoneNumber)
+			}
+			if updatedTherapist.WhatsAppNumber != "+4444444444" {
+				t.Errorf("Expected WhatsApp %s, got %s", "+4444444444", updatedTherapist.WhatsAppNumber)
+			}
+			if !updatedTherapist.SpeaksEnglish {
+				t.Error("Expected SpeaksEnglish to be true")
+			}
+
+			// Verify immutable fields weren't changed
+			if updatedTherapist.ID != createdTherapist.ID {
+				t.Error("ID should not change")
+			}
+			if updatedTherapist.CreatedAt != createdTherapist.CreatedAt {
+				t.Error("CreatedAt should not change")
+			}
+			if len(updatedTherapist.Specializations) != 1 || updatedTherapist.Specializations[0].ID != anxietySpecialization.ID {
+				t.Error("Specializations should be preserved")
+			}
+		})
+
+		// Test validation errors
+		t.Run("validation errors", func(t *testing.T) {
+			testCases := []struct {
+				name         string
+				updateData   map[string]interface{}
+				expectedCode int
+			}{
+				{
+					name: "missing name",
+					updateData: map[string]interface{}{
+						"email":          "test@therapy.com",
+						"phoneNumber":    "+1111111111",
+						"whatsAppNumber": "+2222222222",
+						"speaksEnglish":  true,
+					},
+					expectedCode: http.StatusBadRequest,
+				},
+				{
+					name: "missing email",
+					updateData: map[string]interface{}{
+						"name":           "Dr. Test",
+						"phoneNumber":    "+1111111111",
+						"whatsAppNumber": "+2222222222",
+						"speaksEnglish":  true,
+					},
+					expectedCode: http.StatusBadRequest,
+				},
+				{
+					name: "invalid phone number",
+					updateData: map[string]interface{}{
+						"name":           "Dr. Test",
+						"email":          "test@therapy.com",
+						"phoneNumber":    "invalid-phone",
+						"whatsAppNumber": "+2222222222",
+						"speaksEnglish":  true,
+					},
+					expectedCode: http.StatusBadRequest,
+				},
+				{
+					name: "invalid WhatsApp number",
+					updateData: map[string]interface{}{
+						"name":           "Dr. Test",
+						"email":          "test@therapy.com",
+						"phoneNumber":    "+1111111111",
+						"whatsAppNumber": "invalid-whatsapp",
+						"speaksEnglish":  true,
+					},
+					expectedCode: http.StatusBadRequest,
+				},
+			}
+
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					updateBody, _ := json.Marshal(tc.updateData)
+					updateReq := httptest.NewRequest("PUT", "/api/v1/therapists/"+string(createdTherapist.ID), bytes.NewBuffer(updateBody))
+					updateReq.Header.Set("Content-Type", "application/json")
+					updateRec := httptest.NewRecorder()
+					mux.ServeHTTP(updateRec, updateReq)
+
+					if updateRec.Code != tc.expectedCode {
+						t.Errorf("Expected status %d, got %d. Body: %s", tc.expectedCode, updateRec.Code, updateRec.Body.String())
+					}
+				})
+			}
+		})
+
+		// Test conflict scenarios
+		t.Run("conflict scenarios", func(t *testing.T) {
+			// Create another therapist to test conflicts
+			otherTherapistData := map[string]interface{}{
+				"name":              "Dr. Other",
+				"email":             "other@therapy.com",
+				"phoneNumber":       "+5555555555",
+				"whatsAppNumber":    "+6666666666",
+				"speaksEnglish":     true,
+				"specializationIds": []string{string(anxietySpecialization.ID)},
+			}
+			otherBody, _ := json.Marshal(otherTherapistData)
+
+			otherReq := httptest.NewRequest("POST", "/api/v1/therapists", bytes.NewBuffer(otherBody))
+			otherReq.Header.Set("Content-Type", "application/json")
+			otherRec := httptest.NewRecorder()
+			mux.ServeHTTP(otherRec, otherReq)
+
+			if otherRec.Code != http.StatusCreated {
+				t.Fatalf("Failed to create other therapist: %d", otherRec.Code)
+			}
+
+			// Test email conflict
+			t.Run("email already exists", func(t *testing.T) {
+				updateData := map[string]interface{}{
+					"name":           "Dr. Updated Name",
+					"email":          "other@therapy.com", // This email already exists
+					"phoneNumber":    "+3333333333",
+					"whatsAppNumber": "+4444444444",
+					"speaksEnglish":  true,
+				}
+				updateBody, _ := json.Marshal(updateData)
+
+				updateReq := httptest.NewRequest("PUT", "/api/v1/therapists/"+string(createdTherapist.ID), bytes.NewBuffer(updateBody))
+				updateReq.Header.Set("Content-Type", "application/json")
+				updateRec := httptest.NewRecorder()
+				mux.ServeHTTP(updateRec, updateReq)
+
+				if updateRec.Code != http.StatusConflict {
+					t.Errorf("Expected status %d for email conflict, got %d. Body: %s", http.StatusConflict, updateRec.Code, updateRec.Body.String())
+				}
+			})
+
+			// Test WhatsApp conflict
+			t.Run("whatsApp already exists", func(t *testing.T) {
+				updateData := map[string]interface{}{
+					"name":           "Dr. Updated Name",
+					"email":          "updated2@therapy.com",
+					"phoneNumber":    "+3333333333",
+					"whatsAppNumber": "+6666666666", // This WhatsApp already exists
+					"speaksEnglish":  true,
+				}
+				updateBody, _ := json.Marshal(updateData)
+
+				updateReq := httptest.NewRequest("PUT", "/api/v1/therapists/"+string(createdTherapist.ID), bytes.NewBuffer(updateBody))
+				updateReq.Header.Set("Content-Type", "application/json")
+				updateRec := httptest.NewRecorder()
+				mux.ServeHTTP(updateRec, updateReq)
+
+				if updateRec.Code != http.StatusConflict {
+					t.Errorf("Expected status %d for WhatsApp conflict, got %d. Body: %s", http.StatusConflict, updateRec.Code, updateRec.Body.String())
+				}
+			})
+		})
+
+		// Test non-existent therapist
+		t.Run("therapist not found", func(t *testing.T) {
+			updateData := map[string]interface{}{
+				"name":           "Dr. Test",
+				"email":          "test@therapy.com",
+				"phoneNumber":    "+1111111111",
+				"whatsAppNumber": "+2222222222",
+				"speaksEnglish":  true,
+			}
+			updateBody, _ := json.Marshal(updateData)
+
+			updateReq := httptest.NewRequest("PUT", "/api/v1/therapists/nonexistent", bytes.NewBuffer(updateBody))
+			updateReq.Header.Set("Content-Type", "application/json")
+			updateRec := httptest.NewRecorder()
+			mux.ServeHTTP(updateRec, updateReq)
+
+			if updateRec.Code != http.StatusNotFound {
+				t.Errorf("Expected status %d for non-existent therapist, got %d. Body: %s", http.StatusNotFound, updateRec.Code, updateRec.Body.String())
+			}
+		})
 	})
 
 	t.Run("Error cases", func(t *testing.T) {

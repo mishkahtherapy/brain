@@ -1,0 +1,25 @@
+meta {
+  name: Update Therapist Info
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{API_URL}}/therapists/:therapistId
+  body: json
+  auth: inherit
+}
+
+params:path {
+  therapistId: 123123
+}
+
+body:json {
+  {
+    "name": "Dr. Jane Updated",
+    "email": "jane.updated@example.com",
+    "phoneNumber": "+1555999888",
+    "whatsAppNumber": "+1999888777",
+    "speaksEnglish": true
+  }
+} 

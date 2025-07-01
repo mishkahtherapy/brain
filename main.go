@@ -39,6 +39,7 @@ import (
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/get_all_therapists"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/get_therapist"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/new_therapist"
+	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_info"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_specializations"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/create_therapist_timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/delete_therapist_timeslot"
@@ -83,6 +84,7 @@ func main() {
 	newTherapistUsecase := new_therapist.NewUsecase(therapistRepo, specializationRepo)
 	getAllTherapistsUsecase := get_all_therapists.NewUsecase(therapistRepo)
 	getTherapistUsecase := get_therapist.NewUsecase(therapistRepo)
+	updateTherapistInfoUsecase := update_therapist_info.NewUsecase(therapistRepo)
 	updateTherapistSpecializationsUsecase := update_therapist_specializations.NewUsecase(therapistRepo, specializationRepo)
 
 	// Initialize timeslot usecases
@@ -130,6 +132,7 @@ func main() {
 		*newTherapistUsecase,
 		*getAllTherapistsUsecase,
 		*getTherapistUsecase,
+		*updateTherapistInfoUsecase,
 		*updateTherapistSpecializationsUsecase,
 	)
 

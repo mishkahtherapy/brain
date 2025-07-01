@@ -3,6 +3,7 @@ package test
 import (
 	"testing"
 
+	"github.com/mishkahtherapy/brain/adapters/db/specialization"
 	"github.com/mishkahtherapy/brain/adapters/db/therapist"
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/get_therapist"
@@ -18,9 +19,10 @@ func TestTherapistSpeaksEnglish(t *testing.T) {
 
 	// Setup repository
 	therapistRepo := therapist.NewTherapistRepository(dbInstance)
+	specializationRepo := specialization.NewSpecializationRepository(dbInstance)
 
 	// Setup usecases
-	createTherapistUsecase := new_therapist.NewUsecase(therapistRepo)
+	createTherapistUsecase := new_therapist.NewUsecase(therapistRepo, specializationRepo)
 	getTherapistUsecase := get_therapist.NewUsecase(therapistRepo)
 
 	t.Run("Create therapist with speaksEnglish=true", func(t *testing.T) {
