@@ -1,0 +1,19 @@
+meta {
+  name: List Therapist Timeslots by Day
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{API_URL}}/therapists/:therapistId/timeslots?day=Monday
+  body: none
+  auth: inherit
+}
+
+params:path {
+  therapistId: 123123
+}
+
+params:query {
+  day: Monday
+} 

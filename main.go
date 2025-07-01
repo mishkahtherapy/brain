@@ -40,6 +40,11 @@ import (
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/get_therapist"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/new_therapist"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_specializations"
+	"github.com/mishkahtherapy/brain/core/usecases/timeslot/create_therapist_timeslot"
+	"github.com/mishkahtherapy/brain/core/usecases/timeslot/delete_therapist_timeslot"
+	"github.com/mishkahtherapy/brain/core/usecases/timeslot/get_therapist_timeslot"
+	"github.com/mishkahtherapy/brain/core/usecases/timeslot/list_therapist_timeslots"
+	"github.com/mishkahtherapy/brain/core/usecases/timeslot/update_therapist_timeslot"
 
 	_ "github.com/glebarez/go-sqlite" // SQLite driver
 )
@@ -75,10 +80,17 @@ func main() {
 	getSpecializationUsecase := get_specialization.NewUsecase(specializationRepo)
 
 	// Initialize therapist usecases
-	newTherapistUsecase := new_therapist.NewUsecase(therapistRepo)
+	newTherapistUsecase := new_therapist.NewUsecase(therapistRepo, specializationRepo)
 	getAllTherapistsUsecase := get_all_therapists.NewUsecase(therapistRepo)
 	getTherapistUsecase := get_therapist.NewUsecase(therapistRepo)
 	updateTherapistSpecializationsUsecase := update_therapist_specializations.NewUsecase(therapistRepo, specializationRepo)
+
+	// Initialize timeslot usecases
+	createTherapistTimeslotUsecase := create_therapist_timeslot.NewUsecase(therapistRepo, timeSlotRepo)
+	getTherapistTimeslotUsecase := get_therapist_timeslot.NewUsecase(therapistRepo, timeSlotRepo)
+	updateTherapistTimeslotUsecase := update_therapist_timeslot.NewUsecase(therapistRepo, timeSlotRepo)
+	deleteTherapistTimeslotUsecase := delete_therapist_timeslot.NewUsecase(therapistRepo, timeSlotRepo)
+	listTherapistTimeslotsUsecase := list_therapist_timeslots.NewUsecase(therapistRepo, timeSlotRepo)
 
 	// Initialize client usecases
 	createClientUsecase := create_client.NewUsecase(clientRepo)
@@ -155,6 +167,14 @@ func main() {
 		*getScheduleUsecase,
 	)
 
+	timeslotHandler := api.NewTimeslotHandler(
+		*createTherapistTimeslotUsecase,
+		*getTherapistTimeslotUsecase,
+		*updateTherapistTimeslotUsecase,
+		*deleteTherapistTimeslotUsecase,
+		*listTherapistTimeslotsUsecase,
+	)
+
 	// Setup HTTP routes
 	mux := http.NewServeMux()
 
@@ -178,6 +198,9 @@ func main() {
 
 	// Register schedule routes
 	scheduleHandler.RegisterRoutes(mux)
+
+	// Register timeslot routes
+	timeslotHandler.RegisterRoutes(mux)
 
 	// Add health check endpoint
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {

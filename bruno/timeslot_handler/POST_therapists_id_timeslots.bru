@@ -1,0 +1,25 @@
+meta {
+  name: Create Therapist Timeslot
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{API_URL}}/therapists/:therapistId/timeslots
+  body: json
+  auth: inherit
+}
+
+params:path {
+  therapistId: 123123
+}
+
+body:json {
+  {
+    "dayOfWeek": "Monday",
+    "startTime": "09:00",
+    "endTime": "10:00",
+    "postSessionBuffer": 30,
+    "preSessionBuffer": 15
+  }
+} 

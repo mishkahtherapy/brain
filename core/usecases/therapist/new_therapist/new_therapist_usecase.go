@@ -17,6 +17,8 @@ var ErrPhoneNumberIsRequired = errors.New("phone number is required")
 var ErrWhatsAppNumberIsRequired = errors.New("whatsapp number is required")
 var ErrInvalidPhoneNumber = errors.New("invalid phone number: must be in the format +1234567890")
 var ErrInvalidWhatsAppNumber = errors.New("invalid whatsapp number: must be in the format +1234567890")
+var ErrSpecializationNotFound = errors.New("specialization not found")
+var ErrFailedToGetSpecializations = errors.New("failed to get specializations")
 
 type Input struct {
 	Name              string                    `json:"name"`
@@ -28,11 +30,12 @@ type Input struct {
 }
 
 type Usecase struct {
-	therapistRepo ports.TherapistRepository
+	therapistRepo      ports.TherapistRepository
+	specializationRepo ports.SpecializationRepository
 }
 
-func NewUsecase(therapistRepo ports.TherapistRepository) *Usecase {
-	return &Usecase{therapistRepo: therapistRepo}
+func NewUsecase(therapistRepo ports.TherapistRepository, specializationRepo ports.SpecializationRepository) *Usecase {
+	return &Usecase{therapistRepo: therapistRepo, specializationRepo: specializationRepo}
 }
 
 func (u *Usecase) Execute(input Input) (*domain.Therapist, error) {
@@ -55,7 +58,20 @@ func (u *Usecase) Execute(input Input) (*domain.Therapist, error) {
 		return nil, err
 	}
 
+	err = validateSpecializations(u.specializationRepo, input.SpecializationIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	existingTherapist, err := u.therapistRepo.GetByEmail(therapist.Email)
+	if err != nil {
+		return nil, err
+	}
+	if existingTherapist != nil {
+		return nil, ErrTherapistAlreadyExists
+	}
+
+	existingTherapist, err = u.therapistRepo.GetByWhatsAppNumber(therapist.WhatsAppNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -72,6 +88,19 @@ func (u *Usecase) Execute(input Input) (*domain.Therapist, error) {
 		return nil, ErrFailedToCreateTherapist
 	}
 	return therapist, nil
+}
+
+func validateSpecializations(specializationRepo ports.SpecializationRepository, specializationIDs []domain.SpecializationID) error {
+	dbSpecializations, err := specializationRepo.BulkGetByIds(specializationIDs)
+	if err != nil {
+		return ErrFailedToGetSpecializations
+	}
+	for _, specializationID := range specializationIDs {
+		if _, ok := dbSpecializations[specializationID]; !ok {
+			return ErrSpecializationNotFound
+		}
+	}
+	return nil
 }
 
 func validateTherapist(therapist *domain.Therapist) error {

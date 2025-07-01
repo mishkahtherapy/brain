@@ -2,6 +2,7 @@ package domain
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -38,5 +39,5 @@ func NewTimeSlotID() TimeSlotID {
 }
 
 func generatePrefixedUUID(prefix string) string {
-	return fmt.Sprintf("%s_%s", prefix, uuid.NewString())
+	return fmt.Sprintf("%s_%s", prefix, strings.ReplaceAll(uuid.NewString(), "-", ""))
 }

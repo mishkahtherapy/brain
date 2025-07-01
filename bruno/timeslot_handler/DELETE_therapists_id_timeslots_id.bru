@@ -1,0 +1,16 @@
+meta {
+  name: Delete Therapist Timeslot
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{API_URL}}/therapists/:therapistId/timeslots/:timeslotId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  therapistId: 123123
+  timeslotId: 456456
+} 

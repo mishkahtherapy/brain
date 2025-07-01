@@ -209,6 +209,42 @@ func (r *TherapistRepository) GetByEmail(email domain.Email) (*domain.Therapist,
 	return therapist, nil
 }
 
+func (r *TherapistRepository) GetByWhatsAppNumber(whatsappNumber domain.WhatsAppNumber) (*domain.Therapist, error) {
+	query := `
+		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, created_at, updated_at
+		FROM therapists
+		WHERE whatsapp_number = ?
+	`
+	row := r.db.QueryRow(query, whatsappNumber)
+	therapist := &domain.Therapist{}
+	err := row.Scan(
+		&therapist.ID,
+		&therapist.Name,
+		&therapist.Email,
+		&therapist.PhoneNumber,
+		&therapist.WhatsAppNumber,
+		&therapist.SpeaksEnglish,
+		&therapist.CreatedAt,
+		&therapist.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		slog.Error("error getting therapist by whatsapp number", "error", err)
+		return nil, ErrFailedToGetTherapists
+	}
+
+	// Load specializations
+	specializations, err := r.bulkGetTherapistSpecializations([]domain.TherapistID{therapist.ID})
+	if err != nil {
+		return nil, ErrFailedToGetTherapists
+	}
+
+	therapist.Specializations = specializations[therapist.ID]
+	return therapist, nil
+}
+
 func (r *TherapistRepository) Delete(id domain.TherapistID) error {
 	// Due to foreign key constraints, this will cascade delete specializations, time slots, and bookings
 	query := `DELETE FROM therapists WHERE id = ?`

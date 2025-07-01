@@ -1,0 +1,15 @@
+meta {
+  name: List Therapist Timeslots
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{API_URL}}/therapists/:therapistId/timeslots
+  body: none
+  auth: inherit
+}
+
+params:path {
+  therapistId: 123123
+} 
