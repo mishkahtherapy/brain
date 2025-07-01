@@ -72,14 +72,14 @@ func (h *TherapistHandler) handleCreateTherapist(w http.ResponseWriter, r *http.
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
-		case new_therapist.ErrTherapistAlreadyExists:
+		case domain.ErrTherapistAlreadyExists:
 			rw.WriteError(err, http.StatusConflict)
-		case new_therapist.ErrEmailIsRequired,
-			new_therapist.ErrNameIsRequired,
-			new_therapist.ErrPhoneNumberIsRequired,
-			new_therapist.ErrWhatsAppNumberIsRequired,
-			new_therapist.ErrInvalidPhoneNumber,
-			new_therapist.ErrInvalidWhatsAppNumber:
+		case domain.ErrTherapistEmailRequired,
+			domain.ErrTherapistNameRequired,
+			domain.ErrTherapistPhoneRequired,
+			domain.ErrTherapistWhatsAppRequired,
+			domain.ErrTherapistInvalidPhone,
+			domain.ErrTherapistInvalidWhatsApp:
 			rw.WriteBadRequest(err.Error())
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
@@ -217,19 +217,18 @@ func (h *TherapistHandler) handleUpdateTherapistInfo(w http.ResponseWriter, r *h
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
-		case update_therapist_info.ErrTherapistIDIsRequired,
-			update_therapist_info.ErrNameIsRequired,
-			update_therapist_info.ErrEmailIsRequired,
-			update_therapist_info.ErrPhoneNumberIsRequired,
-			update_therapist_info.ErrWhatsAppNumberIsRequired,
-			update_therapist_info.ErrInvalidEmail,
-			update_therapist_info.ErrInvalidPhoneNumber,
-			update_therapist_info.ErrInvalidWhatsAppNumber:
+		case domain.ErrTherapistIDRequired,
+			domain.ErrTherapistNameRequired,
+			domain.ErrTherapistEmailRequired,
+			domain.ErrTherapistPhoneRequired,
+			domain.ErrTherapistWhatsAppRequired,
+			domain.ErrTherapistInvalidPhone,
+			domain.ErrTherapistInvalidWhatsApp:
 			rw.WriteBadRequest(err.Error())
-		case update_therapist_info.ErrTherapistNotFound:
+		case domain.ErrTherapistNotFound:
 			rw.WriteNotFound(err.Error())
-		case update_therapist_info.ErrEmailAlreadyExists,
-			update_therapist_info.ErrWhatsAppNumberAlreadyExists:
+		case domain.ErrTherapistEmailExists,
+			domain.ErrTherapistWhatsAppExists:
 			rw.WriteError(err, http.StatusConflict)
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)

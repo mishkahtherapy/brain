@@ -1,27 +1,11 @@
 package update_therapist_info
 
 import (
-	"errors"
-	"regexp"
 	"time"
 
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/ports"
-)
-
-// Business logic errors
-var (
-	ErrTherapistNotFound           = errors.New("therapist not found")
-	ErrTherapistIDIsRequired       = errors.New("therapist ID is required")
-	ErrNameIsRequired              = errors.New("name is required")
-	ErrEmailIsRequired             = errors.New("email is required")
-	ErrPhoneNumberIsRequired       = errors.New("phone number is required")
-	ErrWhatsAppNumberIsRequired    = errors.New("whatsapp number is required")
-	ErrInvalidEmail                = errors.New("invalid email format")
-	ErrInvalidPhoneNumber          = errors.New("invalid phone number: must be in the format +1234567890")
-	ErrInvalidWhatsAppNumber       = errors.New("invalid whatsapp number: must be in the format +1234567890")
-	ErrEmailAlreadyExists          = errors.New("email already exists")
-	ErrWhatsAppNumberAlreadyExists = errors.New("whatsapp number already exists")
+	therapistvalidation "github.com/mishkahtherapy/brain/core/usecases/therapist"
 )
 
 type Input struct {
@@ -44,31 +28,30 @@ func NewUsecase(therapistRepo ports.TherapistRepository) *Usecase {
 }
 
 func (u *Usecase) Execute(input Input) (*domain.Therapist, error) {
-	// Validate input
-	if err := u.validateInput(input); err != nil {
+	// Validate therapist ID
+	if input.TherapistID == "" {
+		return nil, domain.ErrTherapistIDRequired
+	}
+
+	// Validate required fields
+	if err := therapistvalidation.ValidateRequiredFields(input.Name, input.Email, input.PhoneNumber, input.WhatsAppNumber); err != nil {
+		return nil, err
+	}
+
+	// Validate phone number formats
+	if err := therapistvalidation.ValidatePhoneNumbers(input.PhoneNumber, input.WhatsAppNumber); err != nil {
 		return nil, err
 	}
 
 	// Get existing therapist
 	existingTherapist, err := u.therapistRepo.GetByID(input.TherapistID)
 	if err != nil {
-		return nil, ErrTherapistNotFound
+		return nil, domain.ErrTherapistNotFound
 	}
 
-	// Validate email uniqueness (if changed)
-	if input.Email != existingTherapist.Email {
-		emailTherapist, err := u.therapistRepo.GetByEmail(input.Email)
-		if err == nil && emailTherapist != nil {
-			return nil, ErrEmailAlreadyExists
-		}
-	}
-
-	// Validate WhatsApp uniqueness (if changed)
-	if input.WhatsAppNumber != existingTherapist.WhatsAppNumber {
-		whatsappTherapist, err := u.therapistRepo.GetByWhatsAppNumber(input.WhatsAppNumber)
-		if err == nil && whatsappTherapist != nil {
-			return nil, ErrWhatsAppNumberAlreadyExists
-		}
+	// Validate email and WhatsApp uniqueness for update
+	if err := therapistvalidation.ValidateUniquenessForUpdate(u.therapistRepo, input.TherapistID, input.Email, input.WhatsAppNumber); err != nil {
+		return nil, err
 	}
 
 	// Update therapist with new values
@@ -91,44 +74,4 @@ func (u *Usecase) Execute(input Input) (*domain.Therapist, error) {
 
 	// Return updated therapist (fetch fresh from DB to ensure consistency)
 	return u.therapistRepo.GetByID(input.TherapistID)
-}
-
-func (u *Usecase) validateInput(input Input) error {
-	// Validate required fields
-	if input.TherapistID == "" {
-		return ErrTherapistIDIsRequired
-	}
-
-	if input.Name == "" {
-		return ErrNameIsRequired
-	}
-
-	if input.Email == domain.Email("") {
-		return ErrEmailIsRequired
-	}
-
-	if input.PhoneNumber == domain.PhoneNumber("") {
-		return ErrPhoneNumberIsRequired
-	}
-
-	if input.WhatsAppNumber == domain.WhatsAppNumber("") {
-		return ErrWhatsAppNumberIsRequired
-	}
-
-	// Validate phone number format
-	if !isValidPhoneNumber(string(input.PhoneNumber)) {
-		return ErrInvalidPhoneNumber
-	}
-
-	// Validate WhatsApp number format
-	if !isValidPhoneNumber(string(input.WhatsAppNumber)) {
-		return ErrInvalidWhatsAppNumber
-	}
-
-	return nil
-}
-
-func isValidPhoneNumber(phoneNumber string) bool {
-	re := regexp.MustCompile(`^\+?[1-9]\d{1,14}$`)
-	return re.MatchString(phoneNumber)
 }
