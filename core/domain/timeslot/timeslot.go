@@ -17,11 +17,12 @@ const (
 type TimeSlot struct {
 	ID                domain.TimeSlotID   `json:"id"`
 	TherapistID       domain.TherapistID  `json:"therapistId"`
-	DayOfWeek         DayOfWeek           `json:"dayOfWeek"`
-	StartTime         string              `json:"startTime"`         // e.g. "15:00"
-	EndTime           string              `json:"endTime"`           // e.g. "16:00"
-	PreSessionBuffer  int                 `json:"preSessionBuffer"`  // minutes
-	PostSessionBuffer int                 `json:"postSessionBuffer"` // minutes
+	IsActive          bool                `json:"isActive"`
+	DayOfWeek         DayOfWeek           `json:"dayOfWeek"`         // UTC day
+	StartTime         string              `json:"startTime"`         // UTC time e.g. "22:30"
+	DurationMinutes   int                 `json:"durationMinutes"`   // Duration in minutes e.g. 60
+	PreSessionBuffer  int                 `json:"preSessionBuffer"`  // minutes (advance notice)
+	PostSessionBuffer int                 `json:"postSessionBuffer"` // minutes (break after session)
 	BookingIDs        []domain.BookingID  `json:"bookingIds"`
 	CreatedAt         domain.UTCTimestamp `json:"createdAt"`
 	UpdatedAt         domain.UTCTimestamp `json:"updatedAt"`

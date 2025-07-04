@@ -15,9 +15,10 @@ type Input struct {
 	TimeslotID        domain.TimeSlotID  `json:"timeslotId"`
 	DayOfWeek         timeslot.DayOfWeek `json:"dayOfWeek"`
 	StartTime         string             `json:"startTime"`         // "09:00"
-	EndTime           string             `json:"endTime"`           // "17:00"
+	DurationMinutes   int                `json:"durationMinutes"`   // Duration in minutes
 	PreSessionBuffer  int                `json:"preSessionBuffer"`  // minutes
 	PostSessionBuffer int                `json:"postSessionBuffer"` // minutes
+	IsActive          bool               `json:"isActive"`
 }
 
 type Usecase struct {
@@ -69,9 +70,10 @@ func (u *Usecase) Execute(input Input) (*timeslot.TimeSlot, error) {
 		TherapistID:       input.TherapistID,
 		DayOfWeek:         input.DayOfWeek,
 		StartTime:         input.StartTime,
-		EndTime:           input.EndTime,
+		DurationMinutes:   input.DurationMinutes,
 		PreSessionBuffer:  input.PreSessionBuffer,
 		PostSessionBuffer: input.PostSessionBuffer,
+		IsActive:          input.IsActive,
 		BookingIDs:        existingTimeslot.BookingIDs, // Preserve existing bookings
 		CreatedAt:         existingTimeslot.CreatedAt,  // Preserve creation time
 		UpdatedAt:         domain.UTCTimestamp(time.Now().UTC()),
@@ -103,8 +105,8 @@ func (u *Usecase) validateInput(input Input) error {
 		return timeslot.ErrStartTimeIsRequired
 	}
 
-	if input.EndTime == "" {
-		return timeslot.ErrEndTimeIsRequired
+	if input.DurationMinutes == 0 {
+		return timeslot.ErrDurationIsRequired
 	}
 
 	// Validate day of week
@@ -112,8 +114,13 @@ func (u *Usecase) validateInput(input Input) error {
 		return timeslot.ErrInvalidDayOfWeek
 	}
 
-	// Validate time format and range
-	if err := timeslot_usecase.ValidateTimeRange(input.StartTime, input.EndTime); err != nil {
+	// Validate time format
+	if _, err := timeslot_usecase.ParseTimeString(input.StartTime); err != nil {
+		return err
+	}
+
+	// Validate duration
+	if err := timeslot_usecase.ValidateDuration(input.DurationMinutes); err != nil {
 		return err
 	}
 
@@ -126,29 +133,38 @@ func (u *Usecase) validateInput(input Input) error {
 }
 
 func (u *Usecase) checkForOverlaps(input Input) error {
-	// Get existing timeslots for this therapist on this day
-	existingSlots, err := u.timeslotRepo.ListByDay(string(input.TherapistID), string(input.DayOfWeek))
+	// Get all existing timeslots for this therapist
+	existingSlots, err := u.timeslotRepo.ListByTherapist(string(input.TherapistID))
 	if err != nil {
 		return err
 	}
 
-	// Parse new timeslot times
-	newStart, _ := timeslot_usecase.ParseTimeString(input.StartTime)
-	newEnd, _ := timeslot_usecase.ParseTimeString(input.EndTime)
+	// Create a temporary timeslot for the update
+	newSlot := timeslot.TimeSlot{
+		ID:                input.TimeslotID,
+		TherapistID:       input.TherapistID,
+		DayOfWeek:         input.DayOfWeek,
+		StartTime:         input.StartTime,
+		DurationMinutes:   input.DurationMinutes,
+		PreSessionBuffer:  input.PreSessionBuffer,
+		PostSessionBuffer: input.PostSessionBuffer,
+	}
 
-	// Check for overlaps with existing timeslots (excluding the one being updated)
+	// Check for conflicts and insufficient gaps
 	for _, existing := range existingSlots {
 		// Skip the timeslot we're updating
 		if existing.ID == input.TimeslotID {
 			continue
 		}
 
-		existingStart, _ := timeslot_usecase.ParseTimeString(existing.StartTime)
-		existingEnd, _ := timeslot_usecase.ParseTimeString(existing.EndTime)
-
-		// Check if time ranges overlap
-		if timeslot_usecase.TimesOverlap(newStart, newEnd, existingStart, existingEnd) {
+		// Check for overlapping effective time ranges (including buffers)
+		if timeslot_usecase.HasEffectiveTimeSlotConflict(newSlot, *existing) {
 			return timeslot.ErrOverlappingTimeslot
+		}
+
+		// Check for sufficient gap between slots (at least 30 minutes)
+		if !timeslot_usecase.HasSufficientGapBetweenSlots(newSlot, *existing) {
+			return timeslot.ErrInsufficientGapBetweenSlots
 		}
 	}
 

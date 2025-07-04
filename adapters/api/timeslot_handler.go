@@ -2,16 +2,63 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/domain/timeslot"
+	timeslot_usecase "github.com/mishkahtherapy/brain/core/usecases/timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/create_therapist_timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/delete_therapist_timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/get_therapist_timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/list_therapist_timeslots"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/update_therapist_timeslot"
 )
+
+// Response structure for API clients (in local timezone)
+type TimeslotResponse struct {
+	ID                string `json:"id"`
+	TherapistID       string `json:"therapistId"`
+	IsActive          bool   `json:"isActive"`
+	DayOfWeek         string `json:"dayOfWeek"`         // Local day
+	StartTime         string `json:"startTime"`         // Local time
+	EndTime           string `json:"endTime"`           // Calculated local end time
+	DurationMinutes   int    `json:"durationMinutes"`   // Duration in minutes
+	PreSessionBuffer  int    `json:"preSessionBuffer"`  // minutes
+	PostSessionBuffer int    `json:"postSessionBuffer"` // minutes
+	CreatedAt         string `json:"createdAt"`
+	UpdatedAt         string `json:"updatedAt"`
+}
+
+// Convert UTC timeslot to local timezone response
+func transformTimeslotToLocalResponse(utcSlot *timeslot.TimeSlot, timezoneOffset int) (*TimeslotResponse, error) {
+	// Convert UTC to local time
+	localDay, localStart, err := timeslot_usecase.ConvertUTCToLocal(
+		string(utcSlot.DayOfWeek),
+		utcSlot.StartTime,
+		timezoneOffset,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate local end time
+	localEnd, _ := timeslot_usecase.CalculateEndTime(localStart, utcSlot.DurationMinutes)
+
+	return &TimeslotResponse{
+		ID:                string(utcSlot.ID),
+		TherapistID:       string(utcSlot.TherapistID),
+		IsActive:          utcSlot.IsActive,
+		DayOfWeek:         localDay,
+		StartTime:         localStart,
+		EndTime:           localEnd,
+		DurationMinutes:   utcSlot.DurationMinutes,
+		PreSessionBuffer:  utcSlot.PreSessionBuffer,
+		PostSessionBuffer: utcSlot.PostSessionBuffer,
+		CreatedAt:         utcSlot.CreatedAt.String(),
+		UpdatedAt:         utcSlot.UpdatedAt.String(),
+	}, nil
+}
 
 type TimeslotHandler struct {
 	createTimeslotUsecase create_therapist_timeslot.Usecase
@@ -57,11 +104,12 @@ func (h *TimeslotHandler) handleCreateTimeslot(w http.ResponseWriter, r *http.Re
 
 	// Parse request body
 	var requestBody struct {
-		DayOfWeek         timeslot.DayOfWeek `json:"dayOfWeek"`
-		StartTime         string             `json:"startTime"`
-		EndTime           string             `json:"endTime"`
-		PreSessionBuffer  int                `json:"preSessionBuffer"`
-		PostSessionBuffer int                `json:"postSessionBuffer"`
+		DayOfWeek         string `json:"dayOfWeek"`         // Local day
+		StartTime         string `json:"startTime"`         // Local time
+		DurationMinutes   int    `json:"durationMinutes"`   // Duration in minutes
+		TimezoneOffset    int    `json:"timezoneOffset"`    // Minutes from UTC
+		PreSessionBuffer  int    `json:"preSessionBuffer"`  // minutes
+		PostSessionBuffer int    `json:"postSessionBuffer"` // minutes
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
@@ -72,9 +120,10 @@ func (h *TimeslotHandler) handleCreateTimeslot(w http.ResponseWriter, r *http.Re
 	// Create input for usecase
 	input := create_therapist_timeslot.Input{
 		TherapistID:       therapistID,
-		DayOfWeek:         requestBody.DayOfWeek,
-		StartTime:         requestBody.StartTime,
-		EndTime:           requestBody.EndTime,
+		LocalDayOfWeek:    requestBody.DayOfWeek,
+		LocalStartTime:    requestBody.StartTime,
+		DurationMinutes:   requestBody.DurationMinutes,
+		TimezoneOffset:    requestBody.TimezoneOffset,
 		PreSessionBuffer:  requestBody.PreSessionBuffer,
 		PostSessionBuffer: requestBody.PostSessionBuffer,
 	}
@@ -86,9 +135,11 @@ func (h *TimeslotHandler) handleCreateTimeslot(w http.ResponseWriter, r *http.Re
 		case timeslot.ErrTherapistIDRequired,
 			timeslot.ErrDayOfWeekIsRequired,
 			timeslot.ErrStartTimeIsRequired,
-			timeslot.ErrEndTimeIsRequired,
+			timeslot.ErrDurationIsRequired,
+			timeslot.ErrTimezoneOffsetRequired,
 			timeslot.ErrInvalidTimeFormat,
-			timeslot.ErrInvalidTimeRange,
+			timeslot.ErrInvalidDuration,
+			timeslot.ErrInvalidTimezoneOffset,
 			timeslot.ErrInvalidDayOfWeek,
 			timeslot.ErrPreSessionBufferNegative,
 			timeslot.ErrPostSessionBufferTooLow:
@@ -103,7 +154,14 @@ func (h *TimeslotHandler) handleCreateTimeslot(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if err := rw.WriteJSON(newTimeslot, http.StatusCreated); err != nil {
+	// Convert UTC timeslot back to local timezone for response
+	localResponse, err := transformTimeslotToLocalResponse(newTimeslot, requestBody.TimezoneOffset)
+	if err != nil {
+		rw.WriteError(err, http.StatusInternalServerError)
+		return
+	}
+
+	if err := rw.WriteJSON(localResponse, http.StatusCreated); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
 }
@@ -118,7 +176,26 @@ func (h *TimeslotHandler) handleListTimeslots(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Parse optional day query parameter
+	// Parse timezone offset from query parameter (required for response conversion)
+	timezoneOffsetParam := r.URL.Query().Get("timezoneOffset")
+	if timezoneOffsetParam == "" {
+		rw.WriteBadRequest("Missing timezoneOffset query parameter")
+		return
+	}
+
+	var timezoneOffset int
+	if _, err := fmt.Sscanf(timezoneOffsetParam, "%d", &timezoneOffset); err != nil {
+		rw.WriteBadRequest("Invalid timezoneOffset format")
+		return
+	}
+
+	// Validate timezone offset
+	if err := timeslot_usecase.ValidateTimezoneOffset(timezoneOffset); err != nil {
+		rw.WriteBadRequest(err.Error())
+		return
+	}
+
+	// Parse optional day query parameter (in local timezone)
 	dayParam := r.URL.Query().Get("day")
 	var dayFilter *timeslot.DayOfWeek
 	if dayParam != "" {
@@ -147,7 +224,18 @@ func (h *TimeslotHandler) handleListTimeslots(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if err := rw.WriteJSON(output, http.StatusOK); err != nil {
+	// Convert UTC timeslots to local timezone responses
+	localResponses := make([]*TimeslotResponse, 0, len(output.Timeslots))
+	for _, utcSlot := range output.Timeslots {
+		localResponse, err := transformTimeslotToLocalResponse(&utcSlot, timezoneOffset)
+		if err != nil {
+			rw.WriteError(err, http.StatusInternalServerError)
+			return
+		}
+		localResponses = append(localResponses, localResponse)
+	}
+
+	if err := rw.WriteJSON(localResponses, http.StatusOK); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
 }
@@ -166,6 +254,25 @@ func (h *TimeslotHandler) handleGetTimeslot(w http.ResponseWriter, r *http.Reque
 	timeslotID := domain.TimeSlotID(r.PathValue("timeslotId"))
 	if timeslotID == "" {
 		rw.WriteBadRequest("Missing timeslot ID")
+		return
+	}
+
+	// Parse timezone offset from query parameter (required for response conversion)
+	timezoneOffsetParam := r.URL.Query().Get("timezoneOffset")
+	if timezoneOffsetParam == "" {
+		rw.WriteBadRequest("Missing timezoneOffset query parameter")
+		return
+	}
+
+	var timezoneOffset int
+	if _, err := fmt.Sscanf(timezoneOffsetParam, "%d", &timezoneOffset); err != nil {
+		rw.WriteBadRequest("Invalid timezoneOffset format")
+		return
+	}
+
+	// Validate timezone offset
+	if err := timeslot_usecase.ValidateTimezoneOffset(timezoneOffset); err != nil {
+		rw.WriteBadRequest(err.Error())
 		return
 	}
 
@@ -192,7 +299,14 @@ func (h *TimeslotHandler) handleGetTimeslot(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if err := rw.WriteJSON(dbTimeslot, http.StatusOK); err != nil {
+	// Convert UTC timeslot to local timezone response
+	localResponse, err := transformTimeslotToLocalResponse(dbTimeslot, timezoneOffset)
+	if err != nil {
+		rw.WriteError(err, http.StatusInternalServerError)
+		return
+	}
+
+	if err := rw.WriteJSON(localResponse, http.StatusOK); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
 }
@@ -214,13 +328,33 @@ func (h *TimeslotHandler) handleUpdateTimeslot(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Parse request body
+	// Parse timezone offset from query parameter (required for input conversion)
+	timezoneOffsetParam := r.URL.Query().Get("timezoneOffset")
+	if timezoneOffsetParam == "" {
+		rw.WriteBadRequest("Missing timezoneOffset query parameter")
+		return
+	}
+
+	var timezoneOffset int
+	if _, err := fmt.Sscanf(timezoneOffsetParam, "%d", &timezoneOffset); err != nil {
+		rw.WriteBadRequest("Invalid timezoneOffset format")
+		return
+	}
+
+	// Validate timezone offset
+	if err := timeslot_usecase.ValidateTimezoneOffset(timezoneOffset); err != nil {
+		rw.WriteBadRequest(err.Error())
+		return
+	}
+
+	// Parse request body (contains local timezone data)
 	var requestBody struct {
 		DayOfWeek         timeslot.DayOfWeek `json:"dayOfWeek"`
-		StartTime         string             `json:"startTime"`
-		EndTime           string             `json:"endTime"`
+		StartTime         string             `json:"startTime"` // Local time
+		DurationMinutes   int                `json:"durationMinutes"`
 		PreSessionBuffer  int                `json:"preSessionBuffer"`
 		PostSessionBuffer int                `json:"postSessionBuffer"`
+		IsActive          bool               `json:"isActive"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
@@ -228,15 +362,24 @@ func (h *TimeslotHandler) handleUpdateTimeslot(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Create input for usecase
+	// Convert local input to UTC for storage
+	utcDayOfWeek, utcStartTime, err := timeslot_usecase.ConvertLocalToUTC(
+		string(requestBody.DayOfWeek), requestBody.StartTime, timezoneOffset)
+	if err != nil {
+		rw.WriteBadRequest(err.Error())
+		return
+	}
+
+	// Create input for usecase (with UTC data)
 	input := update_therapist_timeslot.Input{
 		TherapistID:       therapistID,
 		TimeslotID:        timeslotID,
-		DayOfWeek:         requestBody.DayOfWeek,
-		StartTime:         requestBody.StartTime,
-		EndTime:           requestBody.EndTime,
+		DayOfWeek:         timeslot.DayOfWeek(utcDayOfWeek),
+		StartTime:         utcStartTime,
+		DurationMinutes:   requestBody.DurationMinutes,
 		PreSessionBuffer:  requestBody.PreSessionBuffer,
 		PostSessionBuffer: requestBody.PostSessionBuffer,
+		IsActive:          requestBody.IsActive,
 	}
 
 	updatedTimeslot, err := h.updateTimeslotUsecase.Execute(input)
@@ -247,10 +390,10 @@ func (h *TimeslotHandler) handleUpdateTimeslot(w http.ResponseWriter, r *http.Re
 			timeslot.ErrTimeslotIDIsRequired,
 			timeslot.ErrDayOfWeekIsRequired,
 			timeslot.ErrStartTimeIsRequired,
-			timeslot.ErrEndTimeIsRequired,
+			timeslot.ErrDurationIsRequired,
 			timeslot.ErrInvalidDayOfWeek,
 			timeslot.ErrInvalidTimeFormat,
-			timeslot.ErrInvalidTimeRange,
+			timeslot.ErrInvalidDuration,
 			timeslot.ErrPreSessionBufferNegative,
 			timeslot.ErrPostSessionBufferTooLow:
 			rw.WriteBadRequest(err.Error())
@@ -266,7 +409,14 @@ func (h *TimeslotHandler) handleUpdateTimeslot(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if err := rw.WriteJSON(updatedTimeslot, http.StatusOK); err != nil {
+	// Convert UTC timeslot back to local timezone response
+	localResponse, err := transformTimeslotToLocalResponse(updatedTimeslot, timezoneOffset)
+	if err != nil {
+		rw.WriteError(err, http.StatusInternalServerError)
+		return
+	}
+
+	if err := rw.WriteJSON(localResponse, http.StatusOK); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
 }

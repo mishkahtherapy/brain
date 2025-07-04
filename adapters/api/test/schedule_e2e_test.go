@@ -429,7 +429,7 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 		}
 	}
 
-	// Create complex time slot patterns for overlap testing
+	// Create complex time slot patterns for overlap testing using duration-based format
 	timeSlots := []timeslot.TimeSlot{
 		// Monday - Complex 3-therapist overlap scenario
 		// Alice: 9:00-11:00, Bob: 9:15-10:45, Carol: 9:15-10:00
@@ -438,7 +438,7 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			TherapistID:       therapists[0].ID, // Alice
 			DayOfWeek:         timeslot.DayOfWeekMonday,
 			StartTime:         "09:00",
-			EndTime:           "11:00",
+			DurationMinutes:   120, // 2 hours (9:00-11:00)
 			PreSessionBuffer:  5,
 			PostSessionBuffer: 5,
 			CreatedAt:         domain.UTCTimestamp(now),
@@ -449,7 +449,7 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			TherapistID:       therapists[1].ID, // Bob
 			DayOfWeek:         timeslot.DayOfWeekMonday,
 			StartTime:         "09:15",
-			EndTime:           "10:45",
+			DurationMinutes:   90, // 1.5 hours (9:15-10:45)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
 			CreatedAt:         domain.UTCTimestamp(now),
@@ -460,7 +460,7 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			TherapistID:       therapists[2].ID, // Carol
 			DayOfWeek:         timeslot.DayOfWeekMonday,
 			StartTime:         "09:15",
-			EndTime:           "10:00",
+			DurationMinutes:   45, // 45 minutes (9:15-10:00)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
 			CreatedAt:         domain.UTCTimestamp(now),
@@ -474,7 +474,7 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			TherapistID:       therapists[0].ID, // Alice
 			DayOfWeek:         timeslot.DayOfWeekTuesday,
 			StartTime:         "14:30",
-			EndTime:           "16:00",
+			DurationMinutes:   90, // 1.5 hours (14:30-16:00)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
 			CreatedAt:         domain.UTCTimestamp(now),
@@ -485,7 +485,7 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			TherapistID:       therapists[1].ID, // Bob
 			DayOfWeek:         timeslot.DayOfWeekTuesday,
 			StartTime:         "15:00",
-			EndTime:           "17:00",
+			DurationMinutes:   120, // 2 hours (15:00-17:00)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
 			CreatedAt:         domain.UTCTimestamp(now),
@@ -499,7 +499,7 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			TherapistID:       therapists[1].ID, // Bob
 			DayOfWeek:         timeslot.DayOfWeekWednesday,
 			StartTime:         "10:00",
-			EndTime:           "12:00",
+			DurationMinutes:   120, // 2 hours (10:00-12:00)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
 			CreatedAt:         domain.UTCTimestamp(now),
@@ -510,7 +510,7 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			TherapistID:       therapists[3].ID, // David
 			DayOfWeek:         timeslot.DayOfWeekWednesday,
 			StartTime:         "11:00",
-			EndTime:           "14:00",
+			DurationMinutes:   180, // 3 hours (11:00-14:00)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
 			CreatedAt:         domain.UTCTimestamp(now),
@@ -521,7 +521,7 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			TherapistID:       therapists[2].ID, // Carol
 			DayOfWeek:         timeslot.DayOfWeekWednesday,
 			StartTime:         "13:00",
-			EndTime:           "15:00",
+			DurationMinutes:   120, // 2 hours (13:00-15:00)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
 			CreatedAt:         domain.UTCTimestamp(now),
@@ -535,7 +535,7 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			TherapistID:       therapists[0].ID, // Alice
 			DayOfWeek:         timeslot.DayOfWeekThursday,
 			StartTime:         "09:00",
-			EndTime:           "12:00",
+			DurationMinutes:   180, // 3 hours (9:00-12:00)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
 			CreatedAt:         domain.UTCTimestamp(now),
@@ -546,7 +546,7 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			TherapistID:       therapists[1].ID, // Bob
 			DayOfWeek:         timeslot.DayOfWeekThursday,
 			StartTime:         "10:00",
-			EndTime:           "16:00",
+			DurationMinutes:   360, // 6 hours (10:00-16:00)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
 			CreatedAt:         domain.UTCTimestamp(now),
@@ -557,7 +557,7 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			TherapistID:       therapists[2].ID, // Carol
 			DayOfWeek:         timeslot.DayOfWeekThursday,
 			StartTime:         "14:00",
-			EndTime:           "18:00",
+			DurationMinutes:   240, // 4 hours (14:00-18:00)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
 			CreatedAt:         domain.UTCTimestamp(now),
@@ -571,8 +571,8 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			TherapistID:       therapists[0].ID, // Alice
 			DayOfWeek:         timeslot.DayOfWeekFriday,
 			StartTime:         "09:00",
-			EndTime:           "17:00",
-			PreSessionBuffer:  15, // With buffers to test complex availability
+			DurationMinutes:   480, // 8 hours (9:00-17:00)
+			PreSessionBuffer:  15,  // With buffers to test complex availability
 			PostSessionBuffer: 15,
 			CreatedAt:         domain.UTCTimestamp(now),
 			UpdatedAt:         domain.UTCTimestamp(now),
@@ -582,7 +582,7 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			TherapistID:       therapists[1].ID, // Bob
 			DayOfWeek:         timeslot.DayOfWeekFriday,
 			StartTime:         "09:00",
-			EndTime:           "17:00",
+			DurationMinutes:   480, // 8 hours (9:00-17:00)
 			PreSessionBuffer:  15,
 			PostSessionBuffer: 15,
 			CreatedAt:         domain.UTCTimestamp(now),
@@ -590,12 +590,12 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 		},
 	}
 
-	// Insert time slots
+	// Insert time slots using new duration-based schema
 	for _, slot := range timeSlots {
 		_, err = database.Exec(`
-			INSERT INTO time_slots (id, therapist_id, day_of_week, start_time, end_time, pre_session_buffer, post_session_buffer, created_at, updated_at)
+			INSERT INTO time_slots (id, therapist_id, day_of_week, start_time, duration_minutes, pre_session_buffer, post_session_buffer, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-		`, slot.ID, slot.TherapistID, slot.DayOfWeek, slot.StartTime, slot.EndTime,
+		`, slot.ID, slot.TherapistID, slot.DayOfWeek, slot.StartTime, slot.DurationMinutes,
 			slot.PreSessionBuffer, slot.PostSessionBuffer, slot.CreatedAt, slot.UpdatedAt)
 		if err != nil {
 			t.Fatalf("Failed to insert time slot: %v", err)

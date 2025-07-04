@@ -21,7 +21,7 @@ var ErrTimeSlotIDIsRequired = errors.New("timeslot id is required")
 var ErrTimeSlotTherapistIDIsRequired = errors.New("timeslot therapist id is required")
 var ErrTimeSlotDayOfWeekIsRequired = errors.New("timeslot day of week is required")
 var ErrTimeSlotStartTimeIsRequired = errors.New("timeslot start time is required")
-var ErrTimeSlotEndTimeIsRequired = errors.New("timeslot end time is required")
+var ErrTimeSlotDurationIsRequired = errors.New("timeslot duration is required")
 var ErrTimeSlotCreatedAtIsRequired = errors.New("timeslot created at is required")
 var ErrTimeSlotUpdatedAtIsRequired = errors.New("timeslot updated at is required")
 var ErrFailedToGetTimeSlots = errors.New("failed to get timeslots")
@@ -35,7 +35,7 @@ func NewTimeSlotRepository(db ports.SQLDatabase) *TimeSlotRepository {
 
 func (r *TimeSlotRepository) GetByID(id string) (*timeslot.TimeSlot, error) {
 	query := `
-		SELECT id, therapist_id, day_of_week, start_time, end_time,
+		SELECT id, therapist_id, is_active, day_of_week, start_time, duration_minutes,
 		       pre_session_buffer, post_session_buffer, created_at, updated_at
 		FROM time_slots
 		WHERE id = ?
@@ -45,9 +45,10 @@ func (r *TimeSlotRepository) GetByID(id string) (*timeslot.TimeSlot, error) {
 	err := row.Scan(
 		&timeslot.ID,
 		&timeslot.TherapistID,
+		&timeslot.IsActive,
 		&timeslot.DayOfWeek,
 		&timeslot.StartTime,
-		&timeslot.EndTime,
+		&timeslot.DurationMinutes,
 		&timeslot.PreSessionBuffer,
 		&timeslot.PostSessionBuffer,
 		&timeslot.CreatedAt,
@@ -103,8 +104,8 @@ func (r *TimeSlotRepository) Create(timeslot *timeslot.TimeSlot) error {
 		return ErrTimeSlotStartTimeIsRequired
 	}
 
-	if timeslot.EndTime == "" {
-		return ErrTimeSlotEndTimeIsRequired
+	if timeslot.DurationMinutes <= 0 {
+		return ErrTimeSlotDurationIsRequired
 	}
 
 	if timeslot.CreatedAt == (domain.UTCTimestamp{}) {
@@ -117,17 +118,18 @@ func (r *TimeSlotRepository) Create(timeslot *timeslot.TimeSlot) error {
 
 	query := `
 		INSERT INTO time_slots (
-			id, therapist_id, day_of_week, start_time, end_time,
+			id, therapist_id, is_active, day_of_week, start_time, duration_minutes,
 			pre_session_buffer, post_session_buffer, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	_, err := r.db.Exec(
 		query,
 		timeslot.ID,
 		timeslot.TherapistID,
+		timeslot.IsActive,
 		timeslot.DayOfWeek,
 		timeslot.StartTime,
-		timeslot.EndTime,
+		timeslot.DurationMinutes,
 		timeslot.PreSessionBuffer,
 		timeslot.PostSessionBuffer,
 		timeslot.CreatedAt,
@@ -158,8 +160,8 @@ func (r *TimeSlotRepository) Update(timeslot *timeslot.TimeSlot) error {
 		return ErrTimeSlotStartTimeIsRequired
 	}
 
-	if timeslot.EndTime == "" {
-		return ErrTimeSlotEndTimeIsRequired
+	if timeslot.DurationMinutes <= 0 {
+		return ErrTimeSlotDurationIsRequired
 	}
 
 	if timeslot.UpdatedAt == (domain.UTCTimestamp{}) {
@@ -168,16 +170,17 @@ func (r *TimeSlotRepository) Update(timeslot *timeslot.TimeSlot) error {
 
 	query := `
 		UPDATE time_slots
-		SET therapist_id = ?, day_of_week = ?, start_time = ?, end_time = ?,
+		SET therapist_id = ?, is_active = ?, day_of_week = ?, start_time = ?, duration_minutes = ?,
 		    pre_session_buffer = ?, post_session_buffer = ?, updated_at = ?
 		WHERE id = ?
 	`
 	result, err := r.db.Exec(
 		query,
 		timeslot.TherapistID,
+		timeslot.IsActive,
 		timeslot.DayOfWeek,
 		timeslot.StartTime,
-		timeslot.EndTime,
+		timeslot.DurationMinutes,
 		timeslot.PreSessionBuffer,
 		timeslot.PostSessionBuffer,
 		timeslot.UpdatedAt,
@@ -232,7 +235,7 @@ func (r *TimeSlotRepository) ListByTherapist(therapistID string) ([]*timeslot.Ti
 	}
 
 	query := `
-		SELECT id, therapist_id, day_of_week, start_time, end_time,
+		SELECT id, therapist_id, is_active, day_of_week, start_time, duration_minutes,
 		       pre_session_buffer, post_session_buffer, created_at, updated_at
 		FROM time_slots
 		WHERE therapist_id = ?
@@ -258,7 +261,7 @@ func (r *TimeSlotRepository) ListByDay(therapistID string, day string) ([]*times
 	}
 
 	query := `
-		SELECT id, therapist_id, day_of_week, start_time, end_time,
+		SELECT id, therapist_id, is_active, day_of_week, start_time, duration_minutes,
 		       pre_session_buffer, post_session_buffer, created_at, updated_at
 		FROM time_slots
 		WHERE therapist_id = ? AND day_of_week = ?
@@ -271,7 +274,7 @@ func (r *TimeSlotRepository) ListByDay(therapistID string, day string) ([]*times
 	}
 	defer rows.Close()
 
-	return r.scanTimeSlots(rows)
+	return r.scanTimeSlotsWithoutBookings(rows)
 }
 
 // Helper method to scan multiple timeslot rows
@@ -282,9 +285,10 @@ func (r *TimeSlotRepository) scanTimeSlots(rows *sql.Rows) ([]*timeslot.TimeSlot
 		err := rows.Scan(
 			&timeslot.ID,
 			&timeslot.TherapistID,
+			&timeslot.IsActive,
 			&timeslot.DayOfWeek,
 			&timeslot.StartTime,
-			&timeslot.EndTime,
+			&timeslot.DurationMinutes,
 			&timeslot.PreSessionBuffer,
 			&timeslot.PostSessionBuffer,
 			&timeslot.CreatedAt,
@@ -322,15 +326,17 @@ func (r *TimeSlotRepository) scanTimeSlots(rows *sql.Rows) ([]*timeslot.TimeSlot
 
 // scanTimeSlotsWithoutBookings scans timeslots without fetching booking IDs (for performance)
 func (r *TimeSlotRepository) scanTimeSlotsWithoutBookings(rows *sql.Rows) ([]*timeslot.TimeSlot, error) {
-	timeslots := make([]*timeslot.TimeSlot, 0)
+	var timeslots []*timeslot.TimeSlot
+
 	for rows.Next() {
 		timeslot := &timeslot.TimeSlot{}
 		err := rows.Scan(
 			&timeslot.ID,
 			&timeslot.TherapistID,
+			&timeslot.IsActive,
 			&timeslot.DayOfWeek,
 			&timeslot.StartTime,
-			&timeslot.EndTime,
+			&timeslot.DurationMinutes,
 			&timeslot.PreSessionBuffer,
 			&timeslot.PostSessionBuffer,
 			&timeslot.CreatedAt,
@@ -341,9 +347,15 @@ func (r *TimeSlotRepository) scanTimeSlotsWithoutBookings(rows *sql.Rows) ([]*ti
 			return nil, ErrFailedToGetTimeSlots
 		}
 
-		// Initialize empty BookingIDs instead of querying
+		// Initialize empty slice for booking IDs
 		timeslot.BookingIDs = make([]domain.BookingID, 0)
 		timeslots = append(timeslots, timeslot)
 	}
+
+	if err := rows.Err(); err != nil {
+		slog.Error("error iterating through timeslot rows", "error", err)
+		return nil, ErrFailedToGetTimeSlots
+	}
+
 	return timeslots, nil
 }

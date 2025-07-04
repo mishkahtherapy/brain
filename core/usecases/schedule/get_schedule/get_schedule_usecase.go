@@ -200,10 +200,9 @@ func makeBookingMap(bookings []*booking.Booking) map[string]map[domain.TimeSlotI
 
 func getSlotTimes(date time.Time, slot *timeslot.TimeSlot) (time.Time, time.Time) {
 	slotStartTime, _ := time.Parse("15:04", slot.StartTime)
-	slotEndTime, _ := time.Parse("15:04", slot.EndTime)
 
 	start := time.Date(date.Year(), date.Month(), date.Day(), slotStartTime.Hour(), slotStartTime.Minute(), 0, 0, time.UTC)
-	end := time.Date(date.Year(), date.Month(), date.Day(), slotEndTime.Hour(), slotEndTime.Minute(), 0, 0, time.UTC)
+	end := start.Add(time.Duration(slot.DurationMinutes) * time.Minute)
 	return start, end
 }
 

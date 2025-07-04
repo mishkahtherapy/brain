@@ -50,19 +50,21 @@ CREATE TABLE clients (
 );
 
 -- Time slots table (therapist availability)
+-- Note: Times are stored in UTC timezone, duration-based approach
 CREATE TABLE time_slots (
     id VARCHAR(128) PRIMARY KEY,
     therapist_id VARCHAR(128) NOT NULL,
-    day_of_week VARCHAR(10) NOT NULL CHECK (day_of_week IN ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')),
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
-    pre_session_buffer INTEGER NOT NULL DEFAULT 0, -- minutes
-    post_session_buffer INTEGER NOT NULL DEFAULT 0, -- minutes
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    day_of_week VARCHAR(10) NOT NULL CHECK (day_of_week IN ('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')), -- UTC day
+    start_time TIME NOT NULL, -- UTC time (e.g., '22:30' for 1:30 AM Cairo time)
+    duration_minutes INTEGER NOT NULL, -- Duration in minutes (e.g., 60, 120, 480)
+    pre_session_buffer INTEGER NOT NULL DEFAULT 0, -- minutes (advance notice requirement)
+    post_session_buffer INTEGER NOT NULL DEFAULT 0, -- minutes (break time after session)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     
     CONSTRAINT fk_time_slots_therapist FOREIGN KEY (therapist_id) REFERENCES therapists(id) ON DELETE CASCADE,
-    CONSTRAINT check_time_order CHECK (end_time > start_time),
+    CONSTRAINT check_positive_duration CHECK (duration_minutes > 0 AND duration_minutes <= 1440), -- Max 24 hours
     CONSTRAINT check_positive_buffers CHECK (pre_session_buffer >= 0 AND post_session_buffer >= 0)
 );
 
@@ -118,7 +120,7 @@ CREATE INDEX idx_therapists_email ON therapists(email);
 CREATE INDEX idx_time_slots_therapist ON time_slots(therapist_id);
 CREATE INDEX idx_time_slots_day ON time_slots(day_of_week);
 CREATE INDEX idx_time_slots_therapist_day ON time_slots(therapist_id, day_of_week);
-CREATE INDEX idx_time_slots_time_range ON time_slots(start_time, end_time);
+CREATE INDEX idx_time_slots_time_range ON time_slots(start_time, duration_minutes);
 
 -- Booking queries
 CREATE INDEX idx_bookings_therapist ON bookings(therapist_id);
@@ -139,7 +141,7 @@ CREATE INDEX idx_sessions_therapist_start_time ON sessions(therapist_id, start_t
 CREATE UNIQUE INDEX idx_no_overlapping_bookings ON bookings(therapist_id, start_time) WHERE state = 'confirmed';
 
 -- Combined index for finding available slots
-CREATE INDEX idx_availability_search ON time_slots(therapist_id, day_of_week, start_time, end_time);
+CREATE INDEX idx_availability_search ON time_slots(therapist_id, day_of_week, start_time, duration_minutes);
 
 -- =============================================================================
 -- VIEWS FOR COMMON QUERIES

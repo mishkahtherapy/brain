@@ -11,9 +11,10 @@ import (
 
 type Input struct {
 	TherapistID       domain.TherapistID `json:"therapistId"`
-	DayOfWeek         timeslot.DayOfWeek `json:"dayOfWeek"`
-	StartTime         string             `json:"startTime"`         // "09:00"
-	EndTime           string             `json:"endTime"`           // "17:00"
+	LocalDayOfWeek    string             `json:"dayOfWeek"`         // Local day "Monday"
+	LocalStartTime    string             `json:"startTime"`         // Local time "01:30"
+	DurationMinutes   int                `json:"durationMinutes"`   // Duration in minutes
+	TimezoneOffset    int                `json:"timezoneOffset"`    // Minutes from UTC (+180 for GMT+3)
 	PreSessionBuffer  int                `json:"preSessionBuffer"`  // minutes
 	PostSessionBuffer int                `json:"postSessionBuffer"` // minutes
 }
@@ -41,35 +42,47 @@ func (u *Usecase) Execute(input Input) (*timeslot.TimeSlot, error) {
 		return nil, timeslot.ErrTherapistNotFound
 	}
 
-	// Check for overlapping timeslots
-	if err := u.checkForOverlaps(input); err != nil {
+	// Convert local time to UTC
+	utcDay, utcStart, err := timeslot_usecase.ConvertLocalToUTC(
+		input.LocalDayOfWeek,
+		input.LocalStartTime,
+		input.TimezoneOffset,
+	)
+	if err != nil {
 		return nil, err
 	}
 
-	// Generate unique ID for the timeslot
-	timeslotID := domain.NewTimeSlotID()
-
-	// Create timeslot
-	now := domain.UTCTimestamp(time.Now().UTC())
-	newTimeslot := &timeslot.TimeSlot{
-		ID:                timeslotID,
+	// Create UTC timeslot for storage
+	utcTimeslot := &timeslot.TimeSlot{
 		TherapistID:       input.TherapistID,
-		DayOfWeek:         input.DayOfWeek,
-		StartTime:         input.StartTime,
-		EndTime:           input.EndTime,
+		DayOfWeek:         timeslot.DayOfWeek(utcDay),
+		StartTime:         utcStart,
+		DurationMinutes:   input.DurationMinutes,
 		PreSessionBuffer:  input.PreSessionBuffer,
 		PostSessionBuffer: input.PostSessionBuffer,
-		BookingIDs:        make([]domain.BookingID, 0),
-		CreatedAt:         now,
-		UpdatedAt:         now,
+		IsActive:          true,
 	}
 
-	// Save to repository
-	if err := u.timeslotRepo.Create(newTimeslot); err != nil {
+	// Check for overlapping timeslots (using UTC times)
+	if err := u.checkForOverlaps(*utcTimeslot); err != nil {
 		return nil, err
 	}
 
-	return newTimeslot, nil
+	// Generate unique ID and timestamps
+	timeslotID := domain.NewTimeSlotID()
+	now := domain.UTCTimestamp(time.Now().UTC())
+
+	utcTimeslot.ID = timeslotID
+	utcTimeslot.BookingIDs = make([]domain.BookingID, 0)
+	utcTimeslot.CreatedAt = now
+	utcTimeslot.UpdatedAt = now
+
+	// Save to repository
+	if err := u.timeslotRepo.Create(utcTimeslot); err != nil {
+		return nil, err
+	}
+
+	return utcTimeslot, nil
 }
 
 func (u *Usecase) validateInput(input Input) error {
@@ -78,25 +91,36 @@ func (u *Usecase) validateInput(input Input) error {
 		return timeslot.ErrTherapistIDRequired
 	}
 
-	if input.DayOfWeek == "" {
+	if input.LocalDayOfWeek == "" {
 		return timeslot.ErrDayOfWeekIsRequired
 	}
 
-	if input.StartTime == "" {
+	if input.LocalStartTime == "" {
 		return timeslot.ErrStartTimeIsRequired
 	}
 
-	if input.EndTime == "" {
-		return timeslot.ErrEndTimeIsRequired
+	if input.DurationMinutes == 0 {
+		return timeslot.ErrDurationIsRequired
 	}
 
 	// Validate day of week
-	if !timeslot_usecase.IsValidDayOfWeek(input.DayOfWeek) {
+	dayOfWeek := timeslot.DayOfWeek(input.LocalDayOfWeek)
+	if !timeslot_usecase.IsValidDayOfWeek(dayOfWeek) {
 		return timeslot.ErrInvalidDayOfWeek
 	}
 
-	// Validate time format and range
-	if err := timeslot_usecase.ValidateTimeRange(input.StartTime, input.EndTime); err != nil {
+	// Validate local start time format
+	if _, err := timeslot_usecase.ParseTimeString(input.LocalStartTime); err != nil {
+		return err
+	}
+
+	// Validate duration
+	if err := timeslot_usecase.ValidateDuration(input.DurationMinutes); err != nil {
+		return err
+	}
+
+	// Validate timezone offset
+	if err := timeslot_usecase.ValidateTimezoneOffset(input.TimezoneOffset); err != nil {
 		return err
 	}
 
@@ -108,25 +132,23 @@ func (u *Usecase) validateInput(input Input) error {
 	return nil
 }
 
-func (u *Usecase) checkForOverlaps(input Input) error {
-	// Get existing timeslots for this therapist on this day
-	existingSlots, err := u.timeslotRepo.ListByDay(string(input.TherapistID), string(input.DayOfWeek))
+func (u *Usecase) checkForOverlaps(newSlot timeslot.TimeSlot) error {
+	// Get all existing timeslots for this therapist
+	existingSlots, err := u.timeslotRepo.ListByTherapist(string(newSlot.TherapistID))
 	if err != nil {
 		return err
 	}
 
-	// Parse new timeslot times
-	newStart, _ := timeslot_usecase.ParseTimeString(input.StartTime)
-	newEnd, _ := timeslot_usecase.ParseTimeString(input.EndTime)
-
-	// Check for overlaps with existing timeslots
+	// Check for conflicts and insufficient gaps
 	for _, existing := range existingSlots {
-		existingStart, _ := timeslot_usecase.ParseTimeString(existing.StartTime)
-		existingEnd, _ := timeslot_usecase.ParseTimeString(existing.EndTime)
-
-		// Check if time ranges overlap
-		if timeslot_usecase.TimesOverlap(newStart, newEnd, existingStart, existingEnd) {
+		// Check for overlapping effective time ranges (including buffers)
+		if timeslot_usecase.HasEffectiveTimeSlotConflict(newSlot, *existing) {
 			return timeslot.ErrOverlappingTimeslot
+		}
+
+		// Check for sufficient gap between slots (at least 30 minutes)
+		if !timeslot_usecase.HasSufficientGapBetweenSlots(newSlot, *existing) {
+			return timeslot.ErrInsufficientGapBetweenSlots
 		}
 	}
 

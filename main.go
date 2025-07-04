@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/adapters/db"
@@ -213,15 +214,42 @@ func main() {
 	})
 
 	// Add CORS middleware
-	handler := corsMiddleware(mux)
+	handler := loggingMiddleware(corsMiddleware(mux))
 
 	// Start server
-	port := getEnvOrDefault("PORT", "8080")
+	port := getEnvOrDefault("PORT", "8090")
 	slog.Info("Starting server", "port", port)
 
 	if err := http.ListenAndServe(":"+port, handler); err != nil {
 		log.Fatal("Server failed to start:", err)
 	}
+}
+
+// loggingMiddleware logs the HTTP method, path, status code, and response time for each request.
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+
+		// Wrap ResponseWriter to capture status
+		rw := &statusCapturingResponseWriter{ResponseWriter: w, status: http.StatusOK}
+
+		next.ServeHTTP(rw, r)
+
+		duration := time.Since(start)
+		slog.Info("HTTP", "method", r.Method, "path", r.URL.Path, "status", rw.status, "duration", duration.String())
+	})
+}
+
+// statusCapturingResponseWriter wraps http.ResponseWriter to capture the status code
+// so it can be logged after the handler completes.
+type statusCapturingResponseWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *statusCapturingResponseWriter) WriteHeader(code int) {
+	w.status = code
+	w.ResponseWriter.WriteHeader(code)
 }
 
 // corsMiddleware adds CORS headers to allow cross-origin requests

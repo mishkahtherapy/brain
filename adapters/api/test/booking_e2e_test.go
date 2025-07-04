@@ -39,31 +39,31 @@ func (r *TestSessionRepository) CreateSession(session *domain.Session) error {
 }
 
 func (r *TestSessionRepository) GetSessionByID(id domain.SessionID) (*domain.Session, error) {
-	return nil, nil // Not used in test
+	return nil, nil
 }
 
 func (r *TestSessionRepository) UpdateSessionState(id domain.SessionID, state domain.SessionState) error {
-	return nil // Not used in test
+	return nil
 }
 
 func (r *TestSessionRepository) UpdateSessionNotes(id domain.SessionID, notes string) error {
-	return nil // Not used in test
+	return nil
 }
 
 func (r *TestSessionRepository) UpdateMeetingURL(id domain.SessionID, meetingURL string) error {
-	return nil // Not used in test
+	return nil
 }
 
 func (r *TestSessionRepository) ListSessionsByTherapist(therapistID domain.TherapistID) ([]*domain.Session, error) {
-	return nil, nil // Not used in test
+	return nil, nil
 }
 
 func (r *TestSessionRepository) ListSessionsByClient(clientID domain.ClientID) ([]*domain.Session, error) {
-	return nil, nil // Not used in test
+	return nil, nil
 }
 
 func (r *TestSessionRepository) ListSessionsAdmin(startDate, endDate time.Time) ([]*domain.Session, error) {
-	return nil, nil // Not used in test
+	return nil, nil
 }
 
 type TestClientRepository struct {
@@ -82,60 +82,38 @@ func (r *TestClientRepository) GetByID(id domain.ClientID) (*client.Client, erro
 	return &client, nil
 }
 
-func (r *TestClientRepository) Create(client *client.Client) error {
-	return nil // Not used in test
-}
-
-func (r *TestClientRepository) Update(client *client.Client) error {
-	return nil // Not used in test
-}
-
-func (r *TestClientRepository) Delete(id domain.ClientID) error {
-	return nil // Not used in test
-}
-
+func (r *TestClientRepository) Create(client *client.Client) error { return nil }
+func (r *TestClientRepository) Update(client *client.Client) error { return nil }
+func (r *TestClientRepository) Delete(id domain.ClientID) error    { return nil }
 func (r *TestClientRepository) GetByWhatsAppNumber(whatsappNumber domain.WhatsAppNumber) (*client.Client, error) {
-	return nil, nil // Not used in test
+	return nil, nil
 }
-
-func (r *TestClientRepository) List() ([]*client.Client, error) {
-	return nil, nil // Not used in test
-}
+func (r *TestClientRepository) List() ([]*client.Client, error) { return nil, nil }
 
 type TestTimeSlotRepository struct {
 	db ports.SQLDatabase
 }
 
 func (r *TestTimeSlotRepository) GetByID(id string) (*timeslot.TimeSlot, error) {
-	query := `SELECT id, therapist_id, day_of_week, start_time, end_time, pre_session_buffer, post_session_buffer, created_at, updated_at FROM time_slots WHERE id = ?`
+	query := `SELECT id, therapist_id, day_of_week, start_time, duration_minutes, pre_session_buffer, post_session_buffer, created_at, updated_at FROM time_slots WHERE id = ?`
 	row := r.db.QueryRow(query, id)
 
 	var timeSlot timeslot.TimeSlot
-	err := row.Scan(&timeSlot.ID, &timeSlot.TherapistID, &timeSlot.DayOfWeek, &timeSlot.StartTime, &timeSlot.EndTime, &timeSlot.PreSessionBuffer, &timeSlot.PostSessionBuffer, &timeSlot.CreatedAt, &timeSlot.UpdatedAt)
+	err := row.Scan(&timeSlot.ID, &timeSlot.TherapistID, &timeSlot.DayOfWeek, &timeSlot.StartTime, &timeSlot.DurationMinutes, &timeSlot.PreSessionBuffer, &timeSlot.PostSessionBuffer, &timeSlot.CreatedAt, &timeSlot.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
 	return &timeSlot, nil
 }
 
-func (r *TestTimeSlotRepository) Create(timeslot *timeslot.TimeSlot) error {
-	return nil // Not used in test
-}
-
-func (r *TestTimeSlotRepository) Update(timeslot *timeslot.TimeSlot) error {
-	return nil // Not used in test
-}
-
-func (r *TestTimeSlotRepository) Delete(id string) error {
-	return nil // Not used in test
-}
-
+func (r *TestTimeSlotRepository) Create(timeslot *timeslot.TimeSlot) error { return nil }
+func (r *TestTimeSlotRepository) Update(timeslot *timeslot.TimeSlot) error { return nil }
+func (r *TestTimeSlotRepository) Delete(id string) error                   { return nil }
 func (r *TestTimeSlotRepository) ListByTherapist(therapistID string) ([]*timeslot.TimeSlot, error) {
-	return nil, nil // Not used in test
+	return nil, nil
 }
-
 func (r *TestTimeSlotRepository) ListByDay(therapistID string, day string) ([]*timeslot.TimeSlot, error) {
-	return nil, nil // Not used in test
+	return nil, nil
 }
 
 func TestBookingE2E(t *testing.T) {
@@ -490,11 +468,11 @@ func insertBookingTestData(t *testing.T, database ports.SQLDatabase) *BookingTes
 		t.Fatalf("Failed to insert test client: %v", err)
 	}
 
-	// Insert time slot
+	// Insert time slot using new duration-based schema
 	_, err = database.Exec(`
-		INSERT INTO time_slots (id, therapist_id, day_of_week, start_time, end_time, pre_session_buffer, post_session_buffer, created_at, updated_at)
+		INSERT INTO time_slots (id, therapist_id, day_of_week, start_time, duration_minutes, pre_session_buffer, post_session_buffer, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, timeSlotID, therapistID, "Monday", "10:00:00", "11:00:00", 0, 0, now, now)
+	`, timeSlotID, therapistID, "Monday", "10:00", 60, 0, 0, now, now) // 60 minutes duration (10:00-11:00)
 	if err != nil {
 		t.Fatalf("Failed to insert test time slot: %v", err)
 	}
