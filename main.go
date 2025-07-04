@@ -8,6 +8,12 @@ import (
 	"time"
 
 	"github.com/mishkahtherapy/brain/adapters/api"
+	bookingHandler "github.com/mishkahtherapy/brain/adapters/api/booking"
+	clientHandler "github.com/mishkahtherapy/brain/adapters/api/client"
+	scheduleHandler "github.com/mishkahtherapy/brain/adapters/api/schedule"
+	specializationHandler "github.com/mishkahtherapy/brain/adapters/api/specialization"
+	therapistHandler "github.com/mishkahtherapy/brain/adapters/api/therapist"
+	timeslotHandler "github.com/mishkahtherapy/brain/adapters/api/timeslot"
 	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/adapters/db/booking_db"
 	"github.com/mishkahtherapy/brain/adapters/db/client_db"
@@ -42,6 +48,7 @@ import (
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/new_therapist"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_info"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_specializations"
+	"github.com/mishkahtherapy/brain/core/usecases/timeslot/bulk_toggle_therapist_timeslots"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/create_therapist_timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/delete_therapist_timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/get_therapist_timeslot"
@@ -94,6 +101,7 @@ func main() {
 	updateTherapistTimeslotUsecase := update_therapist_timeslot.NewUsecase(therapistRepo, timeSlotRepo)
 	deleteTherapistTimeslotUsecase := delete_therapist_timeslot.NewUsecase(therapistRepo, timeSlotRepo)
 	listTherapistTimeslotsUsecase := list_therapist_timeslots.NewUsecase(therapistRepo, timeSlotRepo)
+	bulkToggleTherapistTimeslotsUsecase := bulk_toggle_therapist_timeslots.NewUsecase(therapistRepo, timeSlotRepo)
 
 	// Initialize client usecases
 	createClientUsecase := create_client.NewUsecase(clientRepo)
@@ -123,13 +131,13 @@ func main() {
 	getScheduleUsecase := get_schedule.NewUsecase(therapistRepo, timeSlotRepo, bookingRepo)
 
 	// Initialize handlers
-	specializationHandler := api.NewSpecializationHandler(
+	specializationHandler := specializationHandler.NewSpecializationHandler(
 		*newSpecializationUsecase,
 		*getAllSpecializationsUsecase,
 		*getSpecializationUsecase,
 	)
 
-	therapistHandler := api.NewTherapistHandler(
+	therapistHandler := therapistHandler.NewTherapistHandler(
 		*newTherapistUsecase,
 		*getAllTherapistsUsecase,
 		*getTherapistUsecase,
@@ -137,13 +145,13 @@ func main() {
 		*updateTherapistSpecializationsUsecase,
 	)
 
-	clientHandler := api.NewClientHandler(
+	clientHandler := clientHandler.NewClientHandler(
 		*createClientUsecase,
 		*getAllClientsUsecase,
 		*getClientUsecase,
 	)
 
-	bookingHandler := api.NewBookingHandler(
+	bookingHandler := bookingHandler.NewBookingHandler(
 		*createBookingUsecase,
 		*getBookingUsecase,
 		*confirmBookingUsecase,
@@ -167,11 +175,12 @@ func main() {
 		*getMeetingLinkUsecase,
 	)
 
-	scheduleHandler := api.NewScheduleHandler(
+	scheduleHandler := scheduleHandler.NewScheduleHandler(
 		*getScheduleUsecase,
 	)
 
-	timeslotHandler := api.NewTimeslotHandler(
+	timeslotHandler := timeslotHandler.NewTimeslotHandler(
+		bulkToggleTherapistTimeslotsUsecase,
 		*createTherapistTimeslotUsecase,
 		*getTherapistTimeslotUsecase,
 		*updateTherapistTimeslotUsecase,

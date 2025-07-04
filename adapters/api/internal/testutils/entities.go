@@ -1,6 +1,7 @@
 package testutils
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -18,10 +19,13 @@ func CreateTestTherapistWithName(t *testing.T, database ports.SQLDatabase, name 
 	now := time.Now().UTC()
 	therapistID := domain.NewTherapistID()
 
+	// Generate unique email based on therapist name and ID
+	email := fmt.Sprintf("test_%s@example.com", string(therapistID))
+
 	_, err := database.Exec(`
 		INSERT INTO therapists (id, name, email, phone_number, whatsapp_number, speaks_english, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`, therapistID, name, "test@example.com", "+1234567890", "+1234567890", true, now, now)
+	`, therapistID, name, email, "+1234567890", "+1234567890", true, now, now)
 
 	if err != nil {
 		t.Fatalf("Failed to insert test therapist: %v", err)
