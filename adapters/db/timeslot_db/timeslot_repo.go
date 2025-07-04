@@ -359,3 +359,18 @@ func (r *TimeSlotRepository) scanTimeSlotsWithoutBookings(rows *sql.Rows) ([]*ti
 
 	return timeslots, nil
 }
+
+func (r *TimeSlotRepository) BulkToggleByTherapistID(therapistID string, isActive bool) error {
+	if therapistID == "" {
+		return ErrTimeSlotTherapistIDIsRequired
+	}
+
+	query := `UPDATE time_slots SET is_active = ? WHERE therapist_id = ?`
+	_, err := r.db.Exec(query, isActive, therapistID)
+	if err != nil {
+		slog.Error("error bulk toggling timeslots", "error", err, "therapistID", therapistID, "isActive", isActive)
+		return ErrFailedToUpdateTimeSlot
+	}
+
+	return nil
+}

@@ -1,9 +1,10 @@
-package api
+package client_handler
 
 import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/usecases/client/create_client"
 	"github.com/mishkahtherapy/brain/core/usecases/client/get_all_clients"
@@ -47,7 +48,7 @@ func (h *ClientHandler) RegisterRoutes(mux *http.ServeMux) {
 }
 
 func (h *ClientHandler) handleCreateClient(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	var input create_client.Input
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -76,7 +77,7 @@ func (h *ClientHandler) handleCreateClient(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *ClientHandler) handleGetAllClients(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	clients, err := h.getAllClientsUsecase.Execute()
 	if err != nil {
@@ -90,7 +91,7 @@ func (h *ClientHandler) handleGetAllClients(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *ClientHandler) handleGetClient(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	// Read client id from path
 	id := domain.ClientID(r.PathValue("id"))

@@ -1,4 +1,4 @@
-package test
+package therapist_handler
 
 import (
 	"testing"

@@ -1,4 +1,4 @@
-package test
+package specialization_handler
 
 import (
 	"bytes"
@@ -8,7 +8,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/adapters/db/specialization_db"
 	"github.com/mishkahtherapy/brain/core/domain"
@@ -35,7 +34,7 @@ func TestSpecializationE2E(t *testing.T) {
 	getUsecase := get_specialization.NewUsecase(specializationRepo)
 
 	// Setup handler with usecases
-	handler := api.NewSpecializationHandler(*createUsecase, *getAllUsecase, *getUsecase)
+	handler := NewSpecializationHandler(*createUsecase, *getAllUsecase, *getUsecase)
 
 	// Setup router
 	mux := http.NewServeMux()

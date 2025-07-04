@@ -1,4 +1,4 @@
-package test
+package client_handler
 
 import (
 	"bytes"
@@ -8,7 +8,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/adapters/db/client_db"
 	"github.com/mishkahtherapy/brain/core/domain"
@@ -35,7 +34,7 @@ func TestClientE2E(t *testing.T) {
 	getUsecase := get_client.NewUsecase(clientRepo)
 
 	// Setup handler
-	clientHandler := api.NewClientHandler(*createUsecase, *getAllUsecase, *getUsecase)
+	clientHandler := NewClientHandler(*createUsecase, *getAllUsecase, *getUsecase)
 
 	// Setup router
 	mux := http.NewServeMux()

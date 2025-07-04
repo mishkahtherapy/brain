@@ -1,9 +1,10 @@
-package api
+package booking_handler
 
 import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/domain/booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/cancel_booking"
@@ -69,7 +70,7 @@ func (h *BookingHandler) RegisterRoutes(mux *http.ServeMux) {
 }
 
 func (h *BookingHandler) handleCreateBooking(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	var input create_booking.Input
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -104,7 +105,7 @@ func (h *BookingHandler) handleCreateBooking(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *BookingHandler) handleGetBooking(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	// Read id from path
 	id := domain.BookingID(r.PathValue("id"))
@@ -129,7 +130,7 @@ func (h *BookingHandler) handleGetBooking(w http.ResponseWriter, r *http.Request
 }
 
 func (h *BookingHandler) handleConfirmBooking(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	// Read id from path
 	id := domain.BookingID(r.PathValue("id"))
@@ -181,7 +182,7 @@ func (h *BookingHandler) handleConfirmBooking(w http.ResponseWriter, r *http.Req
 }
 
 func (h *BookingHandler) handleCancelBooking(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	// Read id from path
 	id := domain.BookingID(r.PathValue("id"))
@@ -216,7 +217,7 @@ func (h *BookingHandler) handleCancelBooking(w http.ResponseWriter, r *http.Requ
 }
 
 func (h *BookingHandler) handleListBookingsByTherapist(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	// Read therapist id from path
 	therapistID := domain.TherapistID(r.PathValue("id"))
@@ -261,7 +262,7 @@ func (h *BookingHandler) handleListBookingsByTherapist(w http.ResponseWriter, r 
 }
 
 func (h *BookingHandler) handleListBookingsByClient(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	// Read client id from path
 	clientID := domain.ClientID(r.PathValue("id"))

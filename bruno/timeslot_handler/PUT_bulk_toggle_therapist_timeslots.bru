@@ -1,0 +1,35 @@
+meta {
+  name: PUT bulk toggle therapist timeslots
+  type: http
+  seq: 8
+}
+
+put {
+  url: {{base_url}}/api/v1/therapists/{{therapist_id}}/timeslots/bulk-toggle
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "isActive": false
+  }
+}
+
+vars:pre-request {
+  therapist_id: therapist-1
+}
+
+assert {
+  res.status: eq 200
+  res.body: isJson
+  res.body.message: eq "Bulk toggle completed successfully"
+}
+
+tests {
+  test("should bulk toggle timeslots successfully", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body).to.have.property('message');
+    expect(res.body.message).to.equal('Bulk toggle completed successfully');
+  });
+} 

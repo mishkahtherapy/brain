@@ -1,9 +1,10 @@
-package api
+package specialization_handler
 
 import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/usecases/specialization/get_all_specializations"
 	"github.com/mishkahtherapy/brain/core/usecases/specialization/get_specialization"
@@ -46,7 +47,7 @@ func (h *SpecializationHandler) RegisterRoutes(mux *http.ServeMux) {
 }
 
 func (h *SpecializationHandler) handleCreateSpecialization(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	var input new_specialization.Input
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -66,7 +67,7 @@ func (h *SpecializationHandler) handleCreateSpecialization(w http.ResponseWriter
 }
 
 func (h *SpecializationHandler) handleGetAllSpecializations(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	specializations, err := h.getAllSpecializationsUsecase.Execute()
 	if err != nil {
@@ -80,7 +81,7 @@ func (h *SpecializationHandler) handleGetAllSpecializations(w http.ResponseWrite
 }
 
 func (h *SpecializationHandler) handleGetSpecialization(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	// read id from path
 	id := domain.SpecializationID(r.PathValue("id"))

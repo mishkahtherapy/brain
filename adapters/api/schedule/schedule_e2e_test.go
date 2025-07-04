@@ -1,4 +1,4 @@
-package test
+package schedule_handler
 
 import (
 	"encoding/json"
@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/adapters/db/booking_db"
 	"github.com/mishkahtherapy/brain/adapters/db/therapist_db"
@@ -54,7 +53,7 @@ func TestScheduleE2E(t *testing.T) {
 	getScheduleUsecase := get_schedule.NewUsecase(therapistRepo, timeSlotRepo, bookingRepo)
 
 	// Setup handler
-	scheduleHandler := api.NewScheduleHandler(*getScheduleUsecase)
+	scheduleHandler := NewScheduleHandler(*getScheduleUsecase)
 
 	// Setup router
 	mux := http.NewServeMux()

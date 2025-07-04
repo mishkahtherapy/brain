@@ -1,13 +1,15 @@
-package api
+package timeslot_handler
 
 import (
 	"encoding/json"
 	"fmt"
 	"net/http"
 
+	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/domain/timeslot"
 	timeslot_usecase "github.com/mishkahtherapy/brain/core/usecases/timeslot"
+	"github.com/mishkahtherapy/brain/core/usecases/timeslot/bulk_toggle_therapist_timeslots"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/create_therapist_timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/delete_therapist_timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/get_therapist_timeslot"
@@ -61,6 +63,7 @@ func transformTimeslotToLocalResponse(utcSlot *timeslot.TimeSlot, timezoneOffset
 }
 
 type TimeslotHandler struct {
+	bulkToggleUsecase     bulk_toggle_therapist_timeslots.Usecase
 	createTimeslotUsecase create_therapist_timeslot.Usecase
 	getTimeslotUsecase    get_therapist_timeslot.Usecase
 	updateTimeslotUsecase update_therapist_timeslot.Usecase
@@ -69,6 +72,7 @@ type TimeslotHandler struct {
 }
 
 func NewTimeslotHandler(
+	bulkToggleUsecase bulk_toggle_therapist_timeslots.Usecase,
 	createUsecase create_therapist_timeslot.Usecase,
 	getUsecase get_therapist_timeslot.Usecase,
 	updateUsecase update_therapist_timeslot.Usecase,
@@ -76,6 +80,7 @@ func NewTimeslotHandler(
 	listUsecase list_therapist_timeslots.Usecase,
 ) *TimeslotHandler {
 	return &TimeslotHandler{
+		bulkToggleUsecase:     bulkToggleUsecase,
 		createTimeslotUsecase: createUsecase,
 		getTimeslotUsecase:    getUsecase,
 		updateTimeslotUsecase: updateUsecase,
@@ -85,6 +90,7 @@ func NewTimeslotHandler(
 }
 
 func (h *TimeslotHandler) RegisterRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("PUT /api/v1/therapists/{therapistId}/timeslots/bulk-toggle", h.handleBulkToggleTimeslots)
 	mux.HandleFunc("POST /api/v1/therapists/{therapistId}/timeslots", h.handleCreateTimeslot)
 	mux.HandleFunc("GET /api/v1/therapists/{therapistId}/timeslots", h.handleListTimeslots)
 	mux.HandleFunc("GET /api/v1/therapists/{therapistId}/timeslots/{timeslotId}", h.handleGetTimeslot)
@@ -92,8 +98,58 @@ func (h *TimeslotHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("DELETE /api/v1/therapists/{therapistId}/timeslots/{timeslotId}", h.handleDeleteTimeslot)
 }
 
+func (h *TimeslotHandler) handleBulkToggleTimeslots(w http.ResponseWriter, r *http.Request) {
+	rw := api.NewResponseWriter(w)
+
+	// Read therapist ID from path
+	therapistID := domain.TherapistID(r.PathValue("therapistId"))
+	if therapistID == "" {
+		rw.WriteBadRequest("Missing therapist ID")
+		return
+	}
+
+	// Parse request body
+	var requestBody struct {
+		IsActive bool `json:"isActive"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		rw.WriteBadRequest("Invalid request body: " + err.Error())
+		return
+	}
+
+	// Create input for usecase
+	input := bulk_toggle_therapist_timeslots.Input{
+		TherapistID: therapistID,
+		IsActive:    requestBody.IsActive,
+	}
+
+	err := h.bulkToggleUsecase.Execute(input)
+	if err != nil {
+		// Handle specific business logic errors
+		switch err {
+		case timeslot.ErrTherapistIDRequired:
+			rw.WriteBadRequest(err.Error())
+		case timeslot.ErrTherapistNotFound:
+			rw.WriteNotFound(err.Error())
+		default:
+			rw.WriteError(err, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Return simple success response
+	response := map[string]string{
+		"message": "Bulk toggle completed successfully",
+	}
+
+	if err := rw.WriteJSON(response, http.StatusOK); err != nil {
+		rw.WriteError(err, http.StatusInternalServerError)
+	}
+}
+
 func (h *TimeslotHandler) handleCreateTimeslot(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	// Read therapist ID from path
 	therapistID := domain.TherapistID(r.PathValue("therapistId"))
@@ -167,7 +223,7 @@ func (h *TimeslotHandler) handleCreateTimeslot(w http.ResponseWriter, r *http.Re
 }
 
 func (h *TimeslotHandler) handleListTimeslots(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	// Read therapist ID from path
 	therapistID := domain.TherapistID(r.PathValue("therapistId"))
@@ -241,7 +297,7 @@ func (h *TimeslotHandler) handleListTimeslots(w http.ResponseWriter, r *http.Req
 }
 
 func (h *TimeslotHandler) handleGetTimeslot(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	// Read therapist ID from path
 	therapistID := domain.TherapistID(r.PathValue("therapistId"))
@@ -312,7 +368,7 @@ func (h *TimeslotHandler) handleGetTimeslot(w http.ResponseWriter, r *http.Reque
 }
 
 func (h *TimeslotHandler) handleUpdateTimeslot(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	// Read therapist ID from path
 	therapistID := domain.TherapistID(r.PathValue("therapistId"))
@@ -422,7 +478,7 @@ func (h *TimeslotHandler) handleUpdateTimeslot(w http.ResponseWriter, r *http.Re
 }
 
 func (h *TimeslotHandler) handleDeleteTimeslot(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	// Read therapist ID from path
 	therapistID := domain.TherapistID(r.PathValue("therapistId"))

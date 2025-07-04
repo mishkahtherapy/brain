@@ -11,4 +11,5 @@ type TimeSlotRepository interface {
 	Delete(id string) error
 	ListByTherapist(therapistID string) ([]*timeslot.TimeSlot, error)
 	ListByDay(therapistID string, day string) ([]*timeslot.TimeSlot, error)
+	BulkToggleByTherapistID(therapistID string, isActive bool) error
 }

@@ -1,4 +1,4 @@
-package test
+package booking_handler
 
 import (
 	"bytes"
@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/adapters/db/booking_db"
 	"github.com/mishkahtherapy/brain/adapters/db/therapist_db"
@@ -115,6 +114,9 @@ func (r *TestTimeSlotRepository) ListByTherapist(therapistID string) ([]*timeslo
 func (r *TestTimeSlotRepository) ListByDay(therapistID string, day string) ([]*timeslot.TimeSlot, error) {
 	return nil, nil
 }
+func (r *TestTimeSlotRepository) BulkToggleByTherapistID(therapistID string, isActive bool) error {
+	return nil
+}
 
 func TestBookingE2E(t *testing.T) {
 	// Setup test database
@@ -140,7 +142,7 @@ func TestBookingE2E(t *testing.T) {
 	listByClientUsecase := list_bookings_by_client.NewUsecase(bookingRepo)
 
 	// Setup handler
-	bookingHandler := api.NewBookingHandler(
+	bookingHandler := NewBookingHandler(
 		*createBookingUsecase,
 		*getBookingUsecase,
 		*confirmBookingUsecase,

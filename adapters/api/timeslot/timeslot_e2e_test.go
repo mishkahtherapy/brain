@@ -1,4 +1,4 @@
-package test
+package timeslot_handler
 
 import (
 	"bytes"
@@ -9,13 +9,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/adapters/db/therapist_db"
 	"github.com/mishkahtherapy/brain/adapters/db/timeslot_db"
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/domain/timeslot"
 	"github.com/mishkahtherapy/brain/core/ports"
+	"github.com/mishkahtherapy/brain/core/usecases/timeslot/bulk_toggle_therapist_timeslots"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/create_therapist_timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/delete_therapist_timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/get_therapist_timeslot"
@@ -43,9 +43,11 @@ func TestTimeslotE2E(t *testing.T) {
 	updateUsecase := update_therapist_timeslot.NewUsecase(therapistRepo, timeslotRepo)
 	deleteUsecase := delete_therapist_timeslot.NewUsecase(therapistRepo, timeslotRepo)
 	listUsecase := list_therapist_timeslots.NewUsecase(therapistRepo, timeslotRepo)
+	bulkToggleUsecase := bulk_toggle_therapist_timeslots.NewUsecase(therapistRepo, timeslotRepo)
 
 	// Setup handler
-	timeslotHandler := api.NewTimeslotHandler(
+	timeslotHandler := NewTimeslotHandler(
+		bulkToggleUsecase,
 		*createUsecase,
 		*getUsecase,
 		*updateUsecase,

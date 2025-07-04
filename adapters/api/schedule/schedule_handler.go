@@ -1,9 +1,10 @@
-package api
+package schedule_handler
 
 import (
 	"net/http"
 	"time"
 
+	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/core/usecases/schedule/get_schedule"
 )
 
@@ -22,7 +23,7 @@ func (h *ScheduleHandler) RegisterRoutes(mux *http.ServeMux) {
 }
 
 func (h *ScheduleHandler) handleGetSchedule(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	// Parse tag parameter (required)
 	tag := r.URL.Query().Get("tag")

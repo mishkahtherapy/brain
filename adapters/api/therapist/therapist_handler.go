@@ -1,9 +1,10 @@
-package api
+package therapist_handler
 
 import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/domain/therapist"
 	"github.com/mishkahtherapy/brain/core/usecases/common"
@@ -61,7 +62,7 @@ func (h *TherapistHandler) RegisterRoutes(mux *http.ServeMux) {
 }
 
 func (h *TherapistHandler) handleNewTherapist(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	var input new_therapist.Input
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -98,7 +99,7 @@ func (h *TherapistHandler) handleNewTherapist(w http.ResponseWriter, r *http.Req
 }
 
 func (h *TherapistHandler) handleGetAllTherapists(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	therapists, err := h.getAllTherapistsUsecase.Execute()
 	if err != nil {
@@ -112,7 +113,7 @@ func (h *TherapistHandler) handleGetAllTherapists(w http.ResponseWriter, r *http
 }
 
 func (h *TherapistHandler) handleGetTherapist(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	// Read therapist id from path
 	id := domain.TherapistID(r.PathValue("id"))
@@ -137,7 +138,7 @@ func (h *TherapistHandler) handleGetTherapist(w http.ResponseWriter, r *http.Req
 }
 
 func (h *TherapistHandler) handleUpdateTherapistInfo(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	// Read therapist id from path
 	therapistID := domain.TherapistID(r.PathValue("id"))
@@ -199,7 +200,7 @@ func (h *TherapistHandler) handleUpdateTherapistInfo(w http.ResponseWriter, r *h
 }
 
 func (h *TherapistHandler) handleUpdateTherapistSpecializations(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
+	rw := api.NewResponseWriter(w)
 
 	// Read therapist id from path
 	therapistID := domain.TherapistID(r.PathValue("id"))

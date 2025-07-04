@@ -1,4 +1,4 @@
-package test
+package therapist_handler
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/mishkahtherapy/brain/adapters/api"
+	specialization_handler "github.com/mishkahtherapy/brain/adapters/api/specialization"
 	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/adapters/db/specialization_db"
 	"github.com/mishkahtherapy/brain/adapters/db/therapist_db"
@@ -50,8 +50,8 @@ func TestTherapistE2E(t *testing.T) {
 	updateTherapistSpecializationsUsecase := update_therapist_specializations.NewUsecase(therapistRepo, specializationRepo)
 
 	// Setup handlers
-	specializationHandler := api.NewSpecializationHandler(*newSpecializationUsecase, *getAllSpecializationsUsecase, *getSpecializationUsecase)
-	therapistHandler := api.NewTherapistHandler(*newTherapistUsecase, *getAllTherapistsUsecase, *getTherapistUsecase, *updateTherapistInfoUsecase, *updateTherapistSpecializationsUsecase)
+	specializationHandler := specialization_handler.NewSpecializationHandler(*newSpecializationUsecase, *getAllSpecializationsUsecase, *getSpecializationUsecase)
+	therapistHandler := NewTherapistHandler(*newTherapistUsecase, *getAllTherapistsUsecase, *getTherapistUsecase, *updateTherapistInfoUsecase, *updateTherapistSpecializationsUsecase)
 
 	// Setup router
 	mux := http.NewServeMux()
