@@ -43,6 +43,35 @@ INSERT INTO sessions (id, booking_id, therapist_id, client_id, timeslot_id, star
 ('session_010', 'booking_010', 'therapist_001', 'client_002', 'slot_002', '2026-01-29 10:30:00', 10000, 'english', 'done', 'Notes for session 10', 'https://meet.google.com/abc901'),
 ('session_011', 'booking_011', 'therapist_002', 'client_001', 'slot_004', '2026-02-05 09:00:00', 10000, 'english', 'done', 'Notes for session 11', 'https://meet.google.com/def234');
 
+-- Sample specializations
+INSERT INTO specializations (id, name) VALUES
+('spec_001', 'Anxiety'),
+('spec_002', 'Depression'),
+('spec_003', 'Trauma'),
+('spec_004', 'Couples Therapy'),
+('spec_005', 'Family Therapy'),
+('spec_006', 'Addiction'),
+('spec_007', 'Eating Disorders'),
+('spec_008', 'PTSD'),
+('spec_009', 'Grief and Loss'),
+('spec_010', 'Stress Management'),
+('spec_011', 'Self-Esteem'),
+('spec_012', 'Anger Management'),
+('spec_013', 'OCD'),
+('spec_014', 'ADHD'),
+('spec_015', 'Autism Spectrum');
+
+-- Sample therapist specializations
+INSERT INTO therapist_specializations (id, therapist_id, specialization_id) VALUES
+('ts_001', 'therapist_001', 'spec_001'),
+('ts_002', 'therapist_001', 'spec_002'),
+('ts_003', 'therapist_001', 'spec_003'),
+('ts_004', 'therapist_001', 'spec_004'),
+('ts_005', 'therapist_002', 'spec_005'),
+('ts_006', 'therapist_002', 'spec_006'),
+('ts_007', 'therapist_002', 'spec_007'),
+('ts_008', 'therapist_002', 'spec_008');
+
 -- =============================================================================
 -- COMMON QUERIES FOR REFERENCE (SQLite Compatible)
 -- =============================================================================
