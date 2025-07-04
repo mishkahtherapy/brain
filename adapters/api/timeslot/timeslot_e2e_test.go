@@ -5,16 +5,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
-	"time"
 
-	"github.com/mishkahtherapy/brain/adapters/db"
-	"github.com/mishkahtherapy/brain/adapters/db/therapist_db"
-	"github.com/mishkahtherapy/brain/adapters/db/timeslot_db"
-	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/adapters/api/internal/testutils"
 	"github.com/mishkahtherapy/brain/core/domain/timeslot"
-	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/bulk_toggle_therapist_timeslots"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/create_therapist_timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/delete_therapist_timeslot"
@@ -26,24 +20,23 @@ import (
 )
 
 func TestTimeslotE2E(t *testing.T) {
-	// Setup test database
-	database, cleanup := setupTimeslotTestDB(t)
+	// Setup test database using utilities
+	database, cleanup := testutils.SetupTestDB(t)
 	defer cleanup()
 
-	// Insert test therapist
-	testTherapistID := insertTestTherapist(t, database)
+	// Insert test therapist using utilities
+	testTherapistID := testutils.CreateTestTherapist(t, database)
 
-	// Setup repositories
-	therapistRepo := therapist_db.NewTherapistRepository(database)
-	timeslotRepo := timeslot_db.NewTimeSlotRepository(database)
+	// Setup repositories using utilities
+	repos := testutils.SetupRepositories(database)
 
-	// Setup usecases
-	createUsecase := create_therapist_timeslot.NewUsecase(therapistRepo, timeslotRepo)
-	getUsecase := get_therapist_timeslot.NewUsecase(therapistRepo, timeslotRepo)
-	updateUsecase := update_therapist_timeslot.NewUsecase(therapistRepo, timeslotRepo)
-	deleteUsecase := delete_therapist_timeslot.NewUsecase(therapistRepo, timeslotRepo)
-	listUsecase := list_therapist_timeslots.NewUsecase(therapistRepo, timeslotRepo)
-	bulkToggleUsecase := bulk_toggle_therapist_timeslots.NewUsecase(therapistRepo, timeslotRepo)
+	// Setup usecases (test-specific logic remains explicit)
+	createUsecase := create_therapist_timeslot.NewUsecase(repos.TherapistRepo, repos.TimeSlotRepo)
+	getUsecase := get_therapist_timeslot.NewUsecase(repos.TherapistRepo, repos.TimeSlotRepo)
+	updateUsecase := update_therapist_timeslot.NewUsecase(repos.TherapistRepo, repos.TimeSlotRepo)
+	deleteUsecase := delete_therapist_timeslot.NewUsecase(repos.TherapistRepo, repos.TimeSlotRepo)
+	listUsecase := list_therapist_timeslots.NewUsecase(repos.TherapistRepo, repos.TimeSlotRepo)
+	bulkToggleUsecase := bulk_toggle_therapist_timeslots.NewUsecase(repos.TherapistRepo, repos.TimeSlotRepo)
 
 	// Setup handler
 	timeslotHandler := NewTimeslotHandler(
@@ -81,16 +74,9 @@ func TestTimeslotE2E(t *testing.T) {
 
 		mux.ServeHTTP(createRec, createReq)
 
-		// Verify creation response
-		if createRec.Code != http.StatusCreated {
-			t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusCreated, createRec.Code, createRec.Body.String())
-		}
-
-		// Parse created timeslot (should be in local timezone)
+		// Verify creation response using utilities
 		var createdTimeslot timeslot.TimeSlot
-		if err := json.Unmarshal(createRec.Body.Bytes(), &createdTimeslot); err != nil {
-			t.Fatalf("Failed to parse created timeslot: %v", err)
-		}
+		testutils.AssertJSONResponse(t, createRec, http.StatusCreated, &createdTimeslot)
 
 		// Verify created timeslot data (should be converted back to local timezone for response)
 		if createdTimeslot.TherapistID != testTherapistID {
@@ -127,16 +113,9 @@ func TestTimeslotE2E(t *testing.T) {
 
 		mux.ServeHTTP(getRec, getReq)
 
-		// Verify get response
-		if getRec.Code != http.StatusOK {
-			t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusOK, getRec.Code, getRec.Body.String())
-		}
-
-		// Parse retrieved timeslot
+		// Verify get response using utilities
 		var retrievedTimeslot timeslot.TimeSlot
-		if err := json.Unmarshal(getRec.Body.Bytes(), &retrievedTimeslot); err != nil {
-			t.Fatalf("Failed to parse retrieved timeslot: %v", err)
-		}
+		testutils.AssertJSONResponse(t, getRec, http.StatusOK, &retrievedTimeslot)
 
 		// Verify retrieved timeslot matches created one
 		if retrievedTimeslot.ID != createdTimeslot.ID {
@@ -169,16 +148,9 @@ func TestTimeslotE2E(t *testing.T) {
 
 		mux.ServeHTTP(updateRec, updateReq)
 
-		// Verify update response
-		if updateRec.Code != http.StatusOK {
-			t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusOK, updateRec.Code, updateRec.Body.String())
-		}
-
-		// Parse updated timeslot
+		// Verify update response using utilities
 		var updatedTimeslot timeslot.TimeSlot
-		if err := json.Unmarshal(updateRec.Body.Bytes(), &updatedTimeslot); err != nil {
-			t.Fatalf("Failed to parse updated timeslot: %v", err)
-		}
+		testutils.AssertJSONResponse(t, updateRec, http.StatusOK, &updatedTimeslot)
 
 		// Verify updated timeslot data
 		if updatedTimeslot.ID != createdTimeslot.ID {
@@ -206,16 +178,9 @@ func TestTimeslotE2E(t *testing.T) {
 
 		mux.ServeHTTP(listAllRec, listAllReq)
 
-		// Verify list response
-		if listAllRec.Code != http.StatusOK {
-			t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusOK, listAllRec.Code, listAllRec.Body.String())
-		}
-
-		// Parse list response (direct array format, not nested)
+		// Verify list response using utilities
 		var listResponse []timeslot.TimeSlot
-		if err := json.Unmarshal(listAllRec.Body.Bytes(), &listResponse); err != nil {
-			t.Fatalf("Failed to parse list response: %v", err)
-		}
+		testutils.AssertJSONResponse(t, listAllRec, http.StatusOK, &listResponse)
 
 		// Verify our timeslot is in the list
 		found := false
@@ -545,9 +510,8 @@ func TestTimeslotE2E(t *testing.T) {
 
 		mux.ServeHTTP(getRec, getReq)
 
-		if getRec.Code != http.StatusNotFound {
-			t.Errorf("Expected status %d for non-existent timeslot, got %d", http.StatusNotFound, getRec.Code)
-		}
+		// Use utility for error checking
+		testutils.AssertStatus(t, getRec, http.StatusNotFound)
 
 		// Test missing required fields
 		missingFieldsData := map[string]interface{}{
@@ -562,9 +526,8 @@ func TestTimeslotE2E(t *testing.T) {
 
 		mux.ServeHTTP(missingFieldsRec, missingFieldsReq)
 
-		if missingFieldsRec.Code != http.StatusBadRequest {
-			t.Errorf("Expected status %d for missing required fields, got %d", http.StatusBadRequest, missingFieldsRec.Code)
-		}
+		// Use utility for error checking
+		testutils.AssertStatus(t, missingFieldsRec, http.StatusBadRequest)
 
 		// Test invalid day of week
 		invalidDayData := map[string]interface{}{
@@ -584,9 +547,8 @@ func TestTimeslotE2E(t *testing.T) {
 
 		mux.ServeHTTP(invalidDayRec, invalidDayReq)
 
-		if invalidDayRec.Code != http.StatusBadRequest {
-			t.Errorf("Expected status %d for invalid day of week, got %d", http.StatusBadRequest, invalidDayRec.Code)
-		}
+		// Use utility for error checking
+		testutils.AssertStatus(t, invalidDayRec, http.StatusBadRequest)
 
 		// Test invalid JSON
 		invalidJSONReq := httptest.NewRequest("POST", "/api/v1/therapists/"+string(testTherapistID)+"/timeslots?timezoneOffset=180", bytes.NewBufferString("{invalid json"))
@@ -595,9 +557,8 @@ func TestTimeslotE2E(t *testing.T) {
 
 		mux.ServeHTTP(invalidJSONRec, invalidJSONReq)
 
-		if invalidJSONRec.Code != http.StatusBadRequest {
-			t.Errorf("Expected status %d for invalid JSON, got %d", http.StatusBadRequest, invalidJSONRec.Code)
-		}
+		// Use utility for error checking
+		testutils.AssertStatus(t, invalidJSONRec, http.StatusBadRequest)
 	})
 
 	t.Run("IsActive field toggle", func(t *testing.T) {
@@ -619,14 +580,9 @@ func TestTimeslotE2E(t *testing.T) {
 
 		mux.ServeHTTP(createRec, createReq)
 
-		if createRec.Code != http.StatusCreated {
-			t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusCreated, createRec.Code, createRec.Body.String())
-		}
-
+		// Use utility for JSON parsing
 		var createdTimeslot timeslot.TimeSlot
-		if err := json.Unmarshal(createRec.Body.Bytes(), &createdTimeslot); err != nil {
-			t.Fatalf("Failed to parse created timeslot: %v", err)
-		}
+		testutils.AssertJSONResponse(t, createRec, http.StatusCreated, &createdTimeslot)
 
 		// Verify it's active by default
 		if !createdTimeslot.IsActive {
@@ -650,14 +606,9 @@ func TestTimeslotE2E(t *testing.T) {
 
 		mux.ServeHTTP(updateRec, updateReq)
 
-		if updateRec.Code != http.StatusOK {
-			t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusOK, updateRec.Code, updateRec.Body.String())
-		}
-
+		// Use utility for JSON parsing
 		var inactiveTimeslot timeslot.TimeSlot
-		if err := json.Unmarshal(updateRec.Body.Bytes(), &inactiveTimeslot); err != nil {
-			t.Fatalf("Failed to parse updated timeslot: %v", err)
-		}
+		testutils.AssertJSONResponse(t, updateRec, http.StatusOK, &inactiveTimeslot)
 
 		// Verify it's now inactive
 		if inactiveTimeslot.IsActive {
@@ -681,14 +632,9 @@ func TestTimeslotE2E(t *testing.T) {
 
 		mux.ServeHTTP(updateActiveRec, updateActiveReq)
 
-		if updateActiveRec.Code != http.StatusOK {
-			t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusOK, updateActiveRec.Code, updateActiveRec.Body.String())
-		}
-
+		// Use utility for JSON parsing
 		var activeTimeslot timeslot.TimeSlot
-		if err := json.Unmarshal(updateActiveRec.Body.Bytes(), &activeTimeslot); err != nil {
-			t.Fatalf("Failed to parse re-activated timeslot: %v", err)
-		}
+		testutils.AssertJSONResponse(t, updateActiveRec, http.StatusOK, &activeTimeslot)
 
 		// Verify it's active again
 		if !activeTimeslot.IsActive {
@@ -715,14 +661,9 @@ func TestTimeslotE2E(t *testing.T) {
 
 		mux.ServeHTTP(crossDayRec, crossDayReq)
 
-		if crossDayRec.Code != http.StatusCreated {
-			t.Fatalf("Expected status %d for cross-day timeslot, got %d. Body: %s", http.StatusCreated, crossDayRec.Code, crossDayRec.Body.String())
-		}
-
+		// Use utility for JSON parsing
 		var crossDayTimeslot timeslot.TimeSlot
-		if err := json.Unmarshal(crossDayRec.Body.Bytes(), &crossDayTimeslot); err != nil {
-			t.Fatalf("Failed to parse cross-day timeslot: %v", err)
-		}
+		testutils.AssertJSONResponse(t, crossDayRec, http.StatusCreated, &crossDayTimeslot)
 
 		// Verify the response is still in local timezone (shows as Monday)
 		if crossDayTimeslot.DayOfWeek != timeslot.DayOfWeekMonday {
@@ -735,43 +676,4 @@ func TestTimeslotE2E(t *testing.T) {
 			t.Errorf("Expected duration 120 minutes, got %d", crossDayTimeslot.DurationMinutes)
 		}
 	})
-}
-
-func insertTestTherapist(t *testing.T, database ports.SQLDatabase) domain.TherapistID {
-	now := time.Now().UTC()
-	therapistID := domain.NewTherapistID()
-
-	_, err := database.Exec(`
-		INSERT INTO therapists (id, name, email, phone_number, whatsapp_number, speaks_english, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`, therapistID, "Dr. Test Therapist", "test@example.com", "+1234567890", "+1234567890", true, now, now)
-
-	if err != nil {
-		t.Fatalf("Failed to insert test therapist: %v", err)
-	}
-
-	return therapistID
-}
-
-func setupTimeslotTestDB(t *testing.T) (ports.SQLDatabase, func()) {
-	// Create temporary database file
-	tmpfile, err := os.CreateTemp("", "timeslot_test_*.db")
-	if err != nil {
-		t.Fatal(err)
-	}
-	tmpfile.Close()
-	dbFilename := tmpfile.Name()
-
-	database := db.NewDatabase(db.DatabaseConfig{
-		DBFilename: dbFilename,
-		SchemaFile: "../../../schema.sql",
-	})
-
-	// Return cleanup function
-	cleanup := func() {
-		database.Close()
-		os.Remove(dbFilename)
-	}
-
-	return database, cleanup
 }
