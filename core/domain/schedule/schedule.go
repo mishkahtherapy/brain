@@ -12,6 +12,7 @@ type TherapistInfo struct {
 	Name            string                          `json:"name"`
 	Specializations []specialization.Specialization `json:"specializations"`
 	SpeaksEnglish   bool                            `json:"speaksEnglish"`
+	TimeSlotID      domain.TimeSlotID               `json:"timeSlotId"`
 }
 
 type AvailableTimeRange struct {

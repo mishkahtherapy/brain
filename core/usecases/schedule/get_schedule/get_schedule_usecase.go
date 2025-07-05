@@ -111,6 +111,7 @@ type therapistAvailability struct {
 	Therapist   *therapist.Therapist
 	StartTime   time.Time
 	EndTime     time.Time
+	TimeSlotID  domain.TimeSlotID
 }
 
 // calculateAvailableTimeRanges calculates available time ranges using a line sweep algorithm
@@ -160,6 +161,7 @@ func (u *Usecase) calculateAvailableTimeRanges(
 						Therapist:   therapist,
 						StartTime:   slotStart,
 						EndTime:     slotEnd,
+						TimeSlotID:  slot.ID,
 					})
 					continue
 				}
@@ -175,6 +177,7 @@ func (u *Usecase) calculateAvailableTimeRanges(
 						Therapist:   therapist,
 						StartTime:   r.StartTime,
 						EndTime:     r.EndTime,
+						TimeSlotID:  slot.ID,
 					})
 				}
 			}
@@ -291,6 +294,7 @@ func applyLineSweepAlgorithm(availabilities []therapistAvailability) []schedule.
 		IsStart     bool
 		TherapistID domain.TherapistID
 		Therapist   *therapist.Therapist
+		TimeSlotID  domain.TimeSlotID
 	}
 
 	timePoints := []TimePoint{}
@@ -301,6 +305,7 @@ func applyLineSweepAlgorithm(availabilities []therapistAvailability) []schedule.
 			IsStart:     true,
 			TherapistID: avail.TherapistID,
 			Therapist:   avail.Therapist,
+			TimeSlotID:  avail.TimeSlotID,
 		})
 
 		timePoints = append(timePoints, TimePoint{
@@ -308,6 +313,7 @@ func applyLineSweepAlgorithm(availabilities []therapistAvailability) []schedule.
 			IsStart:     false,
 			TherapistID: avail.TherapistID,
 			Therapist:   avail.Therapist,
+			TimeSlotID:  avail.TimeSlotID,
 		})
 	}
 
@@ -341,6 +347,7 @@ func applyLineSweepAlgorithm(availabilities []therapistAvailability) []schedule.
 					Name:            t.Name,
 					Specializations: t.Specializations,
 					SpeaksEnglish:   t.SpeaksEnglish,
+					TimeSlotID:      point.TimeSlotID,
 				})
 			}
 

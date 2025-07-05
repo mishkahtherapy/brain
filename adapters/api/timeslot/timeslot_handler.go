@@ -251,18 +251,9 @@ func (h *TimeslotHandler) handleListTimeslots(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Parse optional day query parameter (in local timezone)
-	dayParam := r.URL.Query().Get("day")
-	var dayFilter *timeslot.DayOfWeek
-	if dayParam != "" {
-		day := timeslot.DayOfWeek(dayParam)
-		dayFilter = &day
-	}
-
 	// Create input for usecase
 	input := list_therapist_timeslots.Input{
 		TherapistID: therapistID,
-		DayOfWeek:   dayFilter,
 	}
 
 	output, err := h.listTimeslotsUsecase.Execute(input)

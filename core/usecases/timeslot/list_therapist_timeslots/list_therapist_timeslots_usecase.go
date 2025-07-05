@@ -5,12 +5,10 @@ import (
 
 	"github.com/mishkahtherapy/brain/core/domain/timeslot"
 	"github.com/mishkahtherapy/brain/core/ports"
-	timeslot_usecase "github.com/mishkahtherapy/brain/core/usecases/timeslot"
 )
 
 type Input struct {
-	TherapistID domain.TherapistID  `json:"therapistId"`
-	DayOfWeek   *timeslot.DayOfWeek `json:"dayOfWeek,omitempty"` // Optional filter by day
+	TherapistID domain.TherapistID `json:"therapistId"`
 }
 
 type Output struct {
@@ -42,13 +40,7 @@ func (u *Usecase) Execute(input Input) (*Output, error) {
 
 	var timeslots []*timeslot.TimeSlot
 	var err error
-
-	// If day filter is provided, use ListByDay, otherwise get all therapist timeslots
-	if input.DayOfWeek != nil {
-		timeslots, err = u.timeslotRepo.ListByDay(string(input.TherapistID), string(*input.DayOfWeek))
-	} else {
-		timeslots, err = u.timeslotRepo.ListByTherapist(string(input.TherapistID))
-	}
+	timeslots, err = u.timeslotRepo.ListByTherapist(string(input.TherapistID))
 
 	if err != nil {
 		return nil, err
@@ -68,13 +60,6 @@ func (u *Usecase) Execute(input Input) (*Output, error) {
 func (u *Usecase) validateInput(input Input) error {
 	if input.TherapistID == "" {
 		return timeslot.ErrTherapistIDRequired
-	}
-
-	// Validate day of week if provided
-	if input.DayOfWeek != nil {
-		if !timeslot_usecase.IsValidDayOfWeek(*input.DayOfWeek) {
-			return timeslot.ErrInvalidDayOfWeek
-		}
 	}
 
 	return nil
