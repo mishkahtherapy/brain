@@ -5,6 +5,7 @@ import (
 
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/domain/booking"
+	"github.com/mishkahtherapy/brain/core/domain/timeslot"
 	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
@@ -61,15 +62,52 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 		return nil, common.ErrTimeSlotNotFound
 	}
 
-	// Check if timeslot is already booked (no existing confirmed/pending bookings)
+	// Fetch all timeslots for the therapist once to avoid repeated DB hits in the overlap check loop.
+	therapistTimeSlots, err := u.timeSlotRepo.ListByTherapist(string(input.TherapistID))
+	if err != nil {
+		return nil, common.ErrFailedToCreateBooking
+	}
+
+	// Build a quick lookup map: timeSlotID ➜ TimeSlot
+	therapistTimeSlotMap := make(map[domain.TimeSlotID]*timeslot.TimeSlot, len(therapistTimeSlots))
+	for _, ts := range therapistTimeSlots {
+		therapistTimeSlotMap[ts.ID] = ts
+	}
+
+	// Gather existing bookings for therapist
 	therapistBookings, err := u.bookingRepo.ListByTherapist(input.TherapistID)
 	if err != nil {
 		return nil, common.ErrFailedToCreateBooking
 	}
 
+	// Compute the occupied interval for the *new* booking. Note that the new booking's
+	// own post-session buffer does NOT affect conflict detection – only the existing
+	// booking's buffer matters as per business rules.
+	newBookingStart := time.Time(input.StartTime)
+	newBookingEnd := newBookingStart.Add(time.Duration(timeSlot.DurationMinutes) * time.Minute)
+
 	for _, existingBooking := range therapistBookings {
-		if existingBooking.TimeSlotID == input.TimeSlotID &&
-			(existingBooking.State == booking.BookingStateConfirmed || existingBooking.State == booking.BookingStatePending) {
+		if existingBooking.State != booking.BookingStateConfirmed && existingBooking.State != booking.BookingStatePending {
+			continue
+		}
+
+		existingTimeSlot, ok := therapistTimeSlotMap[existingBooking.TimeSlotID]
+		if !ok {
+			// Timeslot not found; conservative conflict
+			return nil, common.ErrTimeSlotAlreadyBooked
+		}
+
+		// Occupied interval of the *existing* booking, extended forward by its
+		// post-session buffer.
+		existingStartTime := time.Time(existingBooking.StartTime)
+		existingEndTime := existingStartTime.Add(time.Duration(existingTimeSlot.DurationMinutes) * time.Minute)
+		existingEndWithBuffer := existingEndTime.Add(time.Duration(existingTimeSlot.PostSessionBuffer) * time.Minute)
+
+		// Ranges overlap if:
+		//   newStart < existingEndWithBuffer  &&  newEnd > existingStart
+		// This captures full and partial overlaps, including intrusion into the
+		// existing booking's post-session buffer.
+		if newBookingStart.Before(existingEndWithBuffer) && newBookingEnd.After(existingStartTime) {
 			return nil, common.ErrTimeSlotAlreadyBooked
 		}
 	}
