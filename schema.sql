@@ -45,6 +45,7 @@ CREATE TABLE clients (
     name VARCHAR(255), -- Optional field
     -- email VARCHAR(255) UNIQUE NOT NULL,
     whatsapp_number VARCHAR(20) UNIQUE, -- International format support, unique
+    timezone VARCHAR(50) NOT NULL, -- Frontend hint for timezone adjustments
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
@@ -75,6 +76,7 @@ CREATE TABLE bookings (
     therapist_id VARCHAR(128) NOT NULL,
     client_id VARCHAR(128) NOT NULL,
     start_time DATETIME NOT NULL, -- Specific start datetime for this 1-hour booking
+    timezone VARCHAR(50) NOT NULL, -- Frontend hint for timezone adjustments
     state VARCHAR(20) DEFAULT 'pending' CHECK (state IN ('pending', 'confirmed', 'cancelled')),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -115,6 +117,7 @@ CREATE INDEX idx_therapists_email ON therapists(email);
 
 -- Client queries  
 -- CREATE INDEX idx_clients_email ON clients(email); -- Commented out since email column was removed
+CREATE INDEX idx_clients_timezone ON clients(timezone);
 
 -- Time slot queries (most critical for scheduling)
 CREATE INDEX idx_time_slots_therapist ON time_slots(therapist_id);
@@ -128,6 +131,7 @@ CREATE INDEX idx_bookings_client ON bookings(client_id);
 CREATE INDEX idx_bookings_start_time ON bookings(start_time);
 CREATE INDEX idx_bookings_therapist_start_time ON bookings(therapist_id, start_time);
 CREATE INDEX idx_bookings_state ON bookings(state);
+CREATE INDEX idx_bookings_timezone ON bookings(timezone);
 
 -- Session queries
 CREATE INDEX idx_sessions_booking ON sessions(booking_id);

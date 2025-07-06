@@ -9,9 +9,9 @@ INSERT INTO therapists (id, name, email, phone_number, whatsapp_number, speaks_e
 ('therapist_003', 'Dr. Emily Davis', 'emily.davis@therapy.com', '+1555098765', '+1122334455', true);
 
 -- Sample clients
-INSERT INTO clients (id, name, whatsapp_number) VALUES
-('client_001', 'John Doe', '+1555123456'),
-('client_002', 'Jane Smith', '+1555789012');
+INSERT INTO clients (id, name, whatsapp_number, timezone) VALUES
+('client_001', 'John Doe', '+1555123456', 'America/New_York'),
+('client_002', 'Jane Smith', '+1555789012', 'Europe/London');
 
 -- Sample time slots (stored in UTC timezone with duration)
 -- Note: These examples assume therapists are in Cairo (UTC+3) timezone
@@ -26,10 +26,10 @@ INSERT INTO time_slots (id, therapist_id, day_of_week, start_time, duration_minu
 ('slot_006', 'therapist_003', 'Monday', '09:00', 60, 30, 30);
 
 -- Sample bookings (1-hour appointments)
-INSERT INTO bookings (id, timeslot_id, therapist_id, client_id, start_time, state) VALUES
-('booking_001', 'slot_001', 'therapist_001', 'client_001', '2024-01-15 09:00:00', 'confirmed'),
-('booking_002', 'slot_002', 'therapist_001', 'client_002', '2024-01-15 11:45:00', 'pending'),
-('booking_003', 'slot_003', 'therapist_001', 'client_001', '2024-01-16 14:00:00', 'confirmed');
+INSERT INTO bookings (id, timeslot_id, therapist_id, client_id, start_time, timezone, state) VALUES
+('booking_001', 'slot_001', 'therapist_001', 'client_001', '2024-01-15 09:00:00', 'America/New_York', 'confirmed'),
+('booking_002', 'slot_002', 'therapist_001', 'client_002', '2024-01-15 11:45:00', 'Europe/London', 'pending'),
+('booking_003', 'slot_003', 'therapist_001', 'client_001', '2024-01-16 14:00:00', 'America/New_York', 'confirmed');
 
 
 -- Add sessions for confirmed bookings

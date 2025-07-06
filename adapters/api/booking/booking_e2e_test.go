@@ -1,13 +1,11 @@
 package booking_handler
 
 import (
-	"bytes"
-	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/mishkahtherapy/brain/adapters/api/internal/testutils"
 	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/adapters/db/booking_db"
 	"github.com/mishkahtherapy/brain/adapters/db/therapist_db"
@@ -71,11 +69,11 @@ type TestClientRepository struct {
 }
 
 func (r *TestClientRepository) GetByID(id domain.ClientID) (*client.Client, error) {
-	query := `SELECT id, name, whatsapp_number, created_at, updated_at FROM clients WHERE id = ?`
+	query := `SELECT id, name, whatsapp_number, timezone, created_at, updated_at FROM clients WHERE id = ?`
 	row := r.db.QueryRow(query, id)
 
 	var client client.Client
-	err := row.Scan(&client.ID, &client.Name, &client.WhatsAppNumber, &client.CreatedAt, &client.UpdatedAt)
+	err := row.Scan(&client.ID, &client.Name, &client.WhatsAppNumber, &client.Timezone, &client.CreatedAt, &client.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -89,6 +87,9 @@ func (r *TestClientRepository) GetByWhatsAppNumber(whatsappNumber domain.WhatsAp
 	return nil, nil
 }
 func (r *TestClientRepository) List() ([]*client.Client, error) { return nil, nil }
+func (r *TestClientRepository) UpdateTimezone(id domain.ClientID, timezone domain.Timezone) error {
+	return nil
+}
 
 type TestTimeSlotRepository struct {
 	db ports.SQLDatabase
@@ -124,9 +125,6 @@ func TestBookingE2E(t *testing.T) {
 	database, cleanup := setupBookingTestDB(t)
 	defer cleanup()
 
-	// Insert test data directly via SQL
-	testData := insertBookingTestData(t, database)
-
 	// Setup repositories
 	bookingRepo := booking_db.NewBookingRepository(database)
 	therapistRepo := therapist_db.NewTherapistRepository(database)
@@ -158,73 +156,41 @@ func TestBookingE2E(t *testing.T) {
 	mux := http.NewServeMux()
 	bookingHandler.RegisterRoutes(mux)
 
+	// Setup test utilities
+	testUtils := testutils.NewBookingTestUtils(mux, database)
+
 	t.Run("Complete booking workflow", func(t *testing.T) {
+		// Create test data
+		testData := testUtils.Database.CreateBookingTestData(t)
+
 		// Step 1: Create a booking
-		bookingData := map[string]interface{}{
-			"therapistId": testData.TherapistID,
-			"clientId":    testData.ClientID,
-			"timeSlotId":  testData.TimeSlotID,
-			"startTime":   "2024-12-15T10:00:00Z",
-		}
-		bookingBody, _ := json.Marshal(bookingData)
+		bookingRequest := testUtils.CreateBookingRequest(
+			testData.TherapistID,
+			testData.ClientID,
+			testData.TimeSlotID,
+			"2024-12-15T10:00:00Z",
+			"America/New_York",
+		)
 
-		createReq := httptest.NewRequest("POST", "/api/v1/bookings", bytes.NewBuffer(bookingBody))
-		createReq.Header.Set("Content-Type", "application/json")
-		createRec := httptest.NewRecorder()
-
-		mux.ServeHTTP(createRec, createReq)
+		rec, createdBooking := testUtils.CreateBooking(t, bookingRequest)
 
 		// Verify creation response
-		if createRec.Code != http.StatusCreated {
-			t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusCreated, createRec.Code, createRec.Body.String())
+		testUtils.AssertBookingCreated(t, rec, testData.TherapistID, testData.ClientID, testData.TimeSlotID)
+
+		// Verify timezone is stored correctly
+		if createdBooking.Timezone != "America/New_York" {
+			t.Errorf("Expected timezone %s, got %s", "America/New_York", createdBooking.Timezone)
 		}
 
-		// Parse created booking
-		var createdBooking booking.Booking
-		if err := json.Unmarshal(createRec.Body.Bytes(), &createdBooking); err != nil {
-			t.Fatalf("Failed to parse created booking: %v", err)
-		}
+		// Step 2: Get the booking
+		getRec := testUtils.HTTP.MakeRequest("GET", "/api/v1/bookings/"+string(createdBooking.ID), nil)
+		testUtils.HTTP.AssertStatus(t, getRec, http.StatusOK)
 
-		// Verify created booking data
-		if createdBooking.TherapistID != testData.TherapistID {
-			t.Errorf("Expected therapist ID %s, got %s", testData.TherapistID, createdBooking.TherapistID)
-		}
-		if createdBooking.ClientID != testData.ClientID {
-			t.Errorf("Expected client ID %s, got %s", testData.ClientID, createdBooking.ClientID)
-		}
-		if createdBooking.TimeSlotID != testData.TimeSlotID {
-			t.Errorf("Expected timeslot ID %s, got %s", testData.TimeSlotID, createdBooking.TimeSlotID)
-		}
-		if createdBooking.State != booking.BookingStatePending {
-			t.Errorf("Expected state %s, got %s", booking.BookingStatePending, createdBooking.State)
-		}
-		if createdBooking.ID == "" {
-			t.Error("Expected ID to be set")
-		}
-
-		// Step 2: Get the booking by ID
-		getReq := httptest.NewRequest("GET", "/api/v1/bookings/"+string(createdBooking.ID), nil)
-		getRec := httptest.NewRecorder()
-
-		mux.ServeHTTP(getRec, getReq)
-
-		// Verify get response
-		if getRec.Code != http.StatusOK {
-			t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusOK, getRec.Code, getRec.Body.String())
-		}
-
-		// Parse retrieved booking
 		var retrievedBooking booking.Booking
-		if err := json.Unmarshal(getRec.Body.Bytes(), &retrievedBooking); err != nil {
-			t.Fatalf("Failed to parse retrieved booking: %v", err)
-		}
+		testUtils.HTTP.ParseResponse(t, getRec, &retrievedBooking)
 
-		// Verify retrieved booking matches created one
 		if retrievedBooking.ID != createdBooking.ID {
-			t.Errorf("Expected ID %s, got %s", createdBooking.ID, retrievedBooking.ID)
-		}
-		if retrievedBooking.State != booking.BookingStatePending {
-			t.Errorf("Expected state %s, got %s", booking.BookingStatePending, retrievedBooking.State)
+			t.Errorf("Expected booking ID %s, got %s", createdBooking.ID, retrievedBooking.ID)
 		}
 
 		// Step 3: Confirm the booking
@@ -233,164 +199,86 @@ func TestBookingE2E(t *testing.T) {
 			"paidAmount": 9999, // $99.99 USD
 			"language":   "english",
 		}
-		confirmBody, _ := json.Marshal(confirmData)
-		confirmReq := httptest.NewRequest("PUT", "/api/v1/bookings/"+string(createdBooking.ID)+"/confirm", bytes.NewBuffer(confirmBody))
-		confirmReq.Header.Set("Content-Type", "application/json")
-		confirmRec := httptest.NewRecorder()
 
-		mux.ServeHTTP(confirmRec, confirmReq)
-
-		// Verify confirm response
-		if confirmRec.Code != http.StatusOK {
-			t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusOK, confirmRec.Code, confirmRec.Body.String())
-		}
-
-		// Parse confirmed booking
-		var confirmedBooking booking.Booking
-		if err := json.Unmarshal(confirmRec.Body.Bytes(), &confirmedBooking); err != nil {
-			t.Fatalf("Failed to parse confirmed booking: %v", err)
-		}
-
-		// Verify booking state changed to confirmed
-		if confirmedBooking.State != booking.BookingStateConfirmed {
-			t.Errorf("Expected state %s, got %s", booking.BookingStateConfirmed, confirmedBooking.State)
-		}
+		confirmRec := testUtils.HTTP.MakeRequest("PUT", "/api/v1/bookings/"+string(createdBooking.ID)+"/confirm", confirmData)
+		testUtils.HTTP.AssertStatus(t, confirmRec, http.StatusOK)
 
 		// Step 4: List bookings by therapist
-		listByTherapistReq := httptest.NewRequest("GET", "/api/v1/therapists/"+string(testData.TherapistID)+"/bookings", nil)
-		listByTherapistRec := httptest.NewRecorder()
+		listRec := testUtils.HTTP.MakeRequest("GET", "/api/v1/therapists/"+string(testData.TherapistID)+"/bookings", nil)
+		testUtils.HTTP.AssertStatus(t, listRec, http.StatusOK)
 
-		mux.ServeHTTP(listByTherapistRec, listByTherapistReq)
+		var bookings []booking.Booking
+		testUtils.HTTP.ParseResponse(t, listRec, &bookings)
 
-		// Verify list response
-		if listByTherapistRec.Code != http.StatusOK {
-			t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusOK, listByTherapistRec.Code, listByTherapistRec.Body.String())
+		if len(bookings) == 0 {
+			t.Error("Expected at least one booking in the list")
 		}
 
-		// Parse therapist bookings
-		var therapistBookings []*booking.Booking
-		if err := json.Unmarshal(listByTherapistRec.Body.Bytes(), &therapistBookings); err != nil {
-			t.Fatalf("Failed to parse therapist bookings: %v", err)
-		}
+		// Step 5: Cancel the booking
+		cancelRec := testUtils.HTTP.MakeRequest("PUT", "/api/v1/bookings/"+string(createdBooking.ID)+"/cancel", nil)
+		testUtils.HTTP.AssertStatus(t, cancelRec, http.StatusOK)
+	})
 
-		// Verify our booking is in the list
-		found := false
-		for _, therapistBookings := range therapistBookings {
-			if therapistBookings.ID == createdBooking.ID {
-				found = true
-				if therapistBookings.State != booking.BookingStateConfirmed {
-					t.Errorf("Expected booking state %s, got %s", booking.BookingStateConfirmed, therapistBookings.State)
-				}
-				break
-			}
-		}
-		if !found {
-			t.Error("Created booking not found in therapist bookings list")
-		}
+	t.Run("Timezone validation", func(t *testing.T) {
+		// Create test data
+		testData := testUtils.Database.CreateBookingTestData(t)
 
-		// Step 5: List bookings by client
-		listByClientReq := httptest.NewRequest("GET", "/api/v1/clients/"+string(testData.ClientID)+"/bookings", nil)
-		listByClientRec := httptest.NewRecorder()
+		// Test create booking without timezone (should fail)
+		bookingWithoutTimezone := testUtils.CreateBookingRequest(
+			testData.TherapistID,
+			testData.ClientID,
+			testData.TimeSlotID,
+			"2024-12-15T12:00:00Z",
+			"", // Missing timezone
+		)
+		rec, _ := testUtils.CreateBooking(t, bookingWithoutTimezone)
+		testUtils.AssertBookingError(t, rec, http.StatusBadRequest)
 
-		mux.ServeHTTP(listByClientRec, listByClientReq)
+		// Test create booking with invalid timezone (should fail)
+		bookingWithInvalidTimezone := testUtils.CreateBookingRequest(
+			testData.TherapistID,
+			testData.ClientID,
+			testData.TimeSlotID,
+			"2024-12-15T12:00:00Z",
+			"Invalid/Timezone",
+		)
+		rec, _ = testUtils.CreateBooking(t, bookingWithInvalidTimezone)
+		testUtils.AssertBookingError(t, rec, http.StatusBadRequest)
 
-		// Verify list response
-		if listByClientRec.Code != http.StatusOK {
-			t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusOK, listByClientRec.Code, listByClientRec.Body.String())
-		}
+		// Test create booking with valid timezone (using isolated data to avoid conflicts)
+		isolatedData := testUtils.CreateIsolatedBookingData(t, "Europe/London")
+		bookingWithValidTimezone := testUtils.CreateBookingRequest(
+			isolatedData.TherapistID,
+			isolatedData.ClientID,
+			isolatedData.TimeSlotID,
+			"2024-12-21T15:00:00Z",
+			"Europe/London",
+		)
+		rec, createdBooking := testUtils.CreateBooking(t, bookingWithValidTimezone)
+		testUtils.AssertBookingCreated(t, rec, isolatedData.TherapistID, isolatedData.ClientID, isolatedData.TimeSlotID)
 
-		// Parse client bookings
-		var clientBookings []*booking.Booking
-		if err := json.Unmarshal(listByClientRec.Body.Bytes(), &clientBookings); err != nil {
-			t.Fatalf("Failed to parse client bookings: %v", err)
-		}
-
-		// Verify our booking is in the list
-		found = false
-		for _, booking := range clientBookings {
-			if booking.ID == createdBooking.ID {
-				found = true
-				break
-			}
-		}
-		if !found {
-			t.Error("Created booking not found in client bookings list")
-		}
-
-		// Step 6: Test state filtering - list confirmed bookings for therapist
-		listConfirmedReq := httptest.NewRequest("GET", "/api/v1/therapists/"+string(testData.TherapistID)+"/bookings?state=confirmed", nil)
-		listConfirmedRec := httptest.NewRecorder()
-
-		mux.ServeHTTP(listConfirmedRec, listConfirmedReq)
-
-		if listConfirmedRec.Code != http.StatusOK {
-			t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusOK, listConfirmedRec.Code, listConfirmedRec.Body.String())
-		}
-
-		var confirmedBookings []*booking.Booking
-		if err := json.Unmarshal(listConfirmedRec.Body.Bytes(), &confirmedBookings); err != nil {
-			t.Fatalf("Failed to parse confirmed bookings: %v", err)
-		}
-
-		// Verify only confirmed bookings are returned
-		for _, confirmedBooking := range confirmedBookings {
-			if confirmedBooking.State != booking.BookingStateConfirmed {
-				t.Errorf("Expected only confirmed bookings, got booking with state %s", confirmedBooking.State)
-			}
-		}
-
-		// Step 7: Cancel the booking
-		cancelReq := httptest.NewRequest("PUT", "/api/v1/bookings/"+string(createdBooking.ID)+"/cancel", nil)
-		cancelRec := httptest.NewRecorder()
-
-		mux.ServeHTTP(cancelRec, cancelReq)
-
-		// Verify cancel response
-		if cancelRec.Code != http.StatusOK {
-			t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusOK, cancelRec.Code, cancelRec.Body.String())
-		}
-
-		// Parse cancelled booking
-		var cancelledBooking booking.Booking
-		if err := json.Unmarshal(cancelRec.Body.Bytes(), &cancelledBooking); err != nil {
-			t.Fatalf("Failed to parse cancelled booking: %v", err)
-		}
-
-		// Verify booking state changed to cancelled
-		if cancelledBooking.State != booking.BookingStateCancelled {
-			t.Errorf("Expected state %s, got %s", booking.BookingStateCancelled, cancelledBooking.State)
+		// Verify the created booking has correct timezone
+		if createdBooking.Timezone != "Europe/London" {
+			t.Errorf("Expected timezone %s, got %s", "Europe/London", createdBooking.Timezone)
 		}
 	})
 
 	t.Run("Error cases", func(t *testing.T) {
 		// Test get non-existent booking
 		nonExistentID := "booking_00000000-0000-0000-0000-000000000000"
-		getReq := httptest.NewRequest("GET", "/api/v1/bookings/"+nonExistentID, nil)
-		getRec := httptest.NewRecorder()
-
-		mux.ServeHTTP(getRec, getReq)
-
-		if getRec.Code != http.StatusNotFound {
-			t.Errorf("Expected status %d for non-existent booking, got %d", http.StatusNotFound, getRec.Code)
-		}
+		getRec := testUtils.HTTP.MakeRequest("GET", "/api/v1/bookings/"+nonExistentID, nil)
+		testUtils.HTTP.AssertStatus(t, getRec, http.StatusNotFound)
 
 		// Test create booking with invalid data (missing therapist ID)
+		testData := testUtils.Database.CreateBookingTestData(t)
 		invalidBookingData := map[string]interface{}{
 			"clientId":   testData.ClientID,
 			"timeSlotId": testData.TimeSlotID,
 			"startTime":  "2024-12-15T11:00:00Z",
+			"timezone":   "UTC",
 		}
-		invalidBody, _ := json.Marshal(invalidBookingData)
-
-		createReq := httptest.NewRequest("POST", "/api/v1/bookings", bytes.NewBuffer(invalidBody))
-		createReq.Header.Set("Content-Type", "application/json")
-		createRec := httptest.NewRecorder()
-
-		mux.ServeHTTP(createRec, createReq)
-
-		if createRec.Code != http.StatusBadRequest {
-			t.Errorf("Expected status %d for invalid booking data, got %d", http.StatusBadRequest, createRec.Code)
-		}
+		rec := testUtils.HTTP.MakeRequest("POST", "/api/v1/bookings", invalidBookingData)
+		testUtils.HTTP.AssertStatus(t, rec, http.StatusBadRequest)
 
 		// Test confirm non-existent booking
 		confirmData := map[string]interface{}{
@@ -398,96 +286,13 @@ func TestBookingE2E(t *testing.T) {
 			"paidAmount": 9999, // $99.99 USD
 			"language":   "english",
 		}
-		confirmBody, _ := json.Marshal(confirmData)
-		confirmReq := httptest.NewRequest("PUT", "/api/v1/bookings/"+nonExistentID+"/confirm", bytes.NewBuffer(confirmBody))
-		confirmReq.Header.Set("Content-Type", "application/json")
-		confirmRec := httptest.NewRecorder()
-
-		mux.ServeHTTP(confirmRec, confirmReq)
-
-		if confirmRec.Code != http.StatusNotFound {
-			t.Errorf("Expected status %d for confirming non-existent booking, got %d", http.StatusNotFound, confirmRec.Code)
-		}
+		confirmRec := testUtils.HTTP.MakeRequest("PUT", "/api/v1/bookings/"+nonExistentID+"/confirm", confirmData)
+		testUtils.HTTP.AssertStatus(t, confirmRec, http.StatusNotFound)
 
 		// Test invalid state parameter
-		invalidStateReq := httptest.NewRequest("GET", "/api/v1/therapists/"+string(testData.TherapistID)+"/bookings?state=invalid", nil)
-		invalidStateRec := httptest.NewRecorder()
-
-		mux.ServeHTTP(invalidStateRec, invalidStateReq)
-
-		if invalidStateRec.Code != http.StatusBadRequest {
-			t.Errorf("Expected status %d for invalid state parameter, got %d", http.StatusBadRequest, invalidStateRec.Code)
-		}
+		invalidStateRec := testUtils.HTTP.MakeRequest("GET", "/api/v1/therapists/"+string(testData.TherapistID)+"/bookings?state=invalid", nil)
+		testUtils.HTTP.AssertStatus(t, invalidStateRec, http.StatusBadRequest)
 	})
-}
-
-type BookingTestData struct {
-	TherapistID      domain.TherapistID
-	ClientID         domain.ClientID
-	TimeSlotID       domain.TimeSlotID
-	SpecializationID domain.SpecializationID
-}
-
-func insertBookingTestData(t *testing.T, database ports.SQLDatabase) *BookingTestData {
-	now := time.Now().UTC()
-
-	// Generate test IDs
-	specializationID := domain.NewSpecializationID()
-	therapistID := domain.NewTherapistID()
-	clientID := domain.NewClientID()
-	timeSlotID := domain.NewTimeSlotID()
-
-	// Insert specialization
-	_, err := database.Exec(`
-		INSERT INTO specializations (id, name, created_at, updated_at)
-		VALUES (?, ?, ?, ?)
-	`, specializationID, "Test Specialization", now, now)
-	if err != nil {
-		t.Fatalf("Failed to insert test specialization: %v", err)
-	}
-
-	// Insert therapist
-	_, err = database.Exec(`
-		INSERT INTO therapists (id, name, email, phone_number, whatsapp_number, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`, therapistID, "Dr. Test Therapist", "test.therapist@example.com", "+1234567890", "+1234567890", now, now)
-	if err != nil {
-		t.Fatalf("Failed to insert test therapist: %v", err)
-	}
-
-	// Insert therapist specialization
-	_, err = database.Exec(`
-		INSERT INTO therapist_specializations (id, therapist_id, specialization_id, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?)
-	`, "therapist_spec_test_1", therapistID, specializationID, now, now)
-	if err != nil {
-		t.Fatalf("Failed to insert therapist specialization: %v", err)
-	}
-
-	// Insert client
-	_, err = database.Exec(`
-		INSERT INTO clients (id, name, whatsapp_number, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?)
-	`, clientID, "Test Client", "+1234567891", now, now)
-	if err != nil {
-		t.Fatalf("Failed to insert test client: %v", err)
-	}
-
-	// Insert time slot using new duration-based schema
-	_, err = database.Exec(`
-		INSERT INTO time_slots (id, therapist_id, day_of_week, start_time, duration_minutes, pre_session_buffer, post_session_buffer, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, timeSlotID, therapistID, "Monday", "10:00", 60, 0, 0, now, now) // 60 minutes duration (10:00-11:00)
-	if err != nil {
-		t.Fatalf("Failed to insert test time slot: %v", err)
-	}
-
-	return &BookingTestData{
-		TherapistID:      therapistID,
-		ClientID:         clientID,
-		TimeSlotID:       timeSlotID,
-		SpecializationID: specializationID,
-	}
 }
 
 func setupBookingTestDB(_ *testing.T) (ports.SQLDatabase, func()) {

@@ -1,6 +1,7 @@
 package create_booking
 
 import (
+	"errors"
 	"time"
 
 	"github.com/mishkahtherapy/brain/core/domain"
@@ -10,11 +11,17 @@ import (
 	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
 
+var (
+	ErrTimezoneIsRequired = errors.New("timezone is required")
+	ErrInvalidTimezone    = errors.New("invalid timezone format")
+)
+
 type Input struct {
 	TherapistID domain.TherapistID  `json:"therapistId"`
 	ClientID    domain.ClientID     `json:"clientId"`
 	TimeSlotID  domain.TimeSlotID   `json:"timeSlotId"`
 	StartTime   domain.UTCTimestamp `json:"startTime"`
+	Timezone    domain.Timezone     `json:"timezone"` // Required timezone for this booking (frontend hint)
 }
 
 type Usecase struct {
@@ -60,6 +67,15 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 	timeSlot, err := u.timeSlotRepo.GetByID(string(input.TimeSlotID))
 	if err != nil || timeSlot == nil {
 		return nil, common.ErrTimeSlotNotFound
+	}
+
+	// Validate timezone (just validate format, no conversion)
+	if input.Timezone == "" {
+		return nil, domain.ErrTimezoneIsRequired
+	}
+
+	if !domain.Timezone(input.Timezone).IsValid() {
+		return nil, domain.ErrInvalidTimezone
 	}
 
 	// Fetch all timeslots for the therapist once to avoid repeated DB hits in the overlap check loop.
@@ -112,14 +128,15 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 		}
 	}
 
-	// Create booking with Pending state
+	// Create booking with Pending state and timezone (no conversion, just store as hint)
 	now := domain.NewUTCTimestamp()
 	createdBooking := &booking.Booking{
 		ID:          domain.NewBookingID(),
 		TherapistID: input.TherapistID,
 		ClientID:    input.ClientID,
 		TimeSlotID:  input.TimeSlotID,
-		StartTime:   input.StartTime,
+		StartTime:   input.StartTime, // Always in UTC
+		Timezone:    input.Timezone,  // Store as frontend hint, no conversion
 		State:       booking.BookingStatePending,
 		CreatedAt:   now,
 		UpdatedAt:   now,
@@ -145,6 +162,12 @@ func validateInput(input Input) error {
 	}
 	if time.Time(input.StartTime).IsZero() {
 		return common.ErrStartTimeIsRequired
+	}
+	if input.Timezone == "" {
+		return domain.ErrTimezoneIsRequired
+	}
+	if !domain.Timezone(input.Timezone).IsValid() {
+		return domain.ErrInvalidTimezone
 	}
 	return nil
 }

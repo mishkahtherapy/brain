@@ -93,7 +93,11 @@ func (h *BookingHandler) handleCreateBooking(w http.ResponseWriter, r *http.Requ
 		case common.ErrTherapistIDIsRequired,
 			common.ErrClientIDIsRequired,
 			common.ErrTimeSlotIDIsRequired,
-			common.ErrStartTimeIsRequired:
+			common.ErrStartTimeIsRequired,
+			create_booking.ErrTimezoneIsRequired,
+			create_booking.ErrInvalidTimezone,
+			domain.ErrTimezoneIsRequired,
+			domain.ErrInvalidTimezone:
 			rw.WriteBadRequest(err.Error())
 		case common.ErrTherapistNotFound,
 			common.ErrClientNotFound,

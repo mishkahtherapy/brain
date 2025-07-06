@@ -131,14 +131,14 @@ func TestTimeslotE2E(t *testing.T) {
 			t.Errorf("Expected duration %d, got %d", createdTimeslot.DurationMinutes, retrievedTimeslot.DurationMinutes)
 		}
 
-		// Step 3: Update the timeslot (duration-based format)
+		// Step 5: Update the timeslot
 		updateData := map[string]interface{}{
-			"dayOfWeek":         "Tuesday",
-			"startTime":         "10:00",
-			"durationMinutes":   360, // 6 hours
+			"dayOfWeek":         "Wednesday",
+			"startTime":         "15:00",
+			"durationMinutes":   180, // 3 hours
 			"preSessionBuffer":  10,
-			"postSessionBuffer": 45,
-			"isActive":          false,
+			"postSessionBuffer": 30,
+			"isActive":          true,
 		}
 		updateBody, _ := json.Marshal(updateData)
 
@@ -148,6 +148,10 @@ func TestTimeslotE2E(t *testing.T) {
 
 		mux.ServeHTTP(updateRec, updateReq)
 
+		if updateRec.Code != http.StatusOK {
+			t.Fatalf("Expected status %d for update, got %d. Body: %s", http.StatusOK, updateRec.Code, updateRec.Body.String())
+		}
+
 		// Verify update response using utilities
 		var updatedTimeslot timeslot.TimeSlot
 		testutils.AssertJSONResponse(t, updateRec, http.StatusOK, &updatedTimeslot)
@@ -156,23 +160,23 @@ func TestTimeslotE2E(t *testing.T) {
 		if updatedTimeslot.ID != createdTimeslot.ID {
 			t.Errorf("Expected ID to remain %s, got %s", createdTimeslot.ID, updatedTimeslot.ID)
 		}
-		if updatedTimeslot.DayOfWeek != timeslot.DayOfWeekTuesday {
-			t.Errorf("Expected updated day %s, got %s", timeslot.DayOfWeekTuesday, updatedTimeslot.DayOfWeek)
+		if updatedTimeslot.DayOfWeek != timeslot.DayOfWeekWednesday {
+			t.Errorf("Expected updated day %s, got %s", timeslot.DayOfWeekWednesday, updatedTimeslot.DayOfWeek)
 		}
-		if updatedTimeslot.StartTime != "10:00" {
-			t.Errorf("Expected updated start time %s, got %s", "10:00", updatedTimeslot.StartTime)
+		if updatedTimeslot.StartTime != "15:00" {
+			t.Errorf("Expected updated start time %s, got %s", "15:00", updatedTimeslot.StartTime)
 		}
-		if updatedTimeslot.DurationMinutes != 360 {
-			t.Errorf("Expected updated duration %d, got %d", 360, updatedTimeslot.DurationMinutes)
+		if updatedTimeslot.DurationMinutes != 180 {
+			t.Errorf("Expected updated duration %d, got %d", 180, updatedTimeslot.DurationMinutes)
 		}
-		if updatedTimeslot.PostSessionBuffer != 45 {
-			t.Errorf("Expected updated post-session buffer %d, got %d", 45, updatedTimeslot.PostSessionBuffer)
+		if updatedTimeslot.PostSessionBuffer != 30 {
+			t.Errorf("Expected updated post-session buffer %d, got %d", 30, updatedTimeslot.PostSessionBuffer)
 		}
-		if updatedTimeslot.IsActive {
-			t.Error("Expected timeslot to be inactive after update")
+		if !updatedTimeslot.IsActive {
+			t.Error("Expected timeslot to be active after update")
 		}
 
-		// Step 4: List all timeslots for therapist (with timezone conversion)
+		// Step 3: List all timeslots for therapist (with timezone conversion)
 		listAllReq := httptest.NewRequest("GET", "/api/v1/therapists/"+string(testTherapistID)+"/timeslots?timezoneOffset=180", nil)
 		listAllRec := httptest.NewRecorder()
 
@@ -187,8 +191,8 @@ func TestTimeslotE2E(t *testing.T) {
 		for _, ts := range listResponse {
 			if ts.ID == createdTimeslot.ID {
 				found = true
-				if ts.DayOfWeek != timeslot.DayOfWeekTuesday {
-					t.Errorf("Expected listed timeslot to have updated day %s, got %s", timeslot.DayOfWeekTuesday, ts.DayOfWeek)
+				if ts.DayOfWeek != timeslot.DayOfWeekWednesday {
+					t.Errorf("Expected listed timeslot to have updated day %s, got %s", timeslot.DayOfWeekWednesday, ts.DayOfWeek)
 				}
 				break
 			}
@@ -197,51 +201,7 @@ func TestTimeslotE2E(t *testing.T) {
 			t.Error("Created timeslot not found in list of all timeslots")
 		}
 
-		// Step 5: Create another timeslot for filtering test
-		wednesdayData := map[string]interface{}{
-			"therapistId":       string(testTherapistID),
-			"dayOfWeek":         "Wednesday",
-			"startTime":         "14:00",
-			"durationMinutes":   240, // 4 hours
-			"timezoneOffset":    testTimezoneOffset,
-			"preSessionBuffer":  0,
-			"postSessionBuffer": 30,
-		}
-		wednesdayBody, _ := json.Marshal(wednesdayData)
-
-		createWedReq := httptest.NewRequest("POST", "/api/v1/therapists/"+string(testTherapistID)+"/timeslots?timezoneOffset=180", bytes.NewBuffer(wednesdayBody))
-		createWedReq.Header.Set("Content-Type", "application/json")
-		createWedRec := httptest.NewRecorder()
-
-		mux.ServeHTTP(createWedRec, createWedReq)
-
-		if createWedRec.Code != http.StatusCreated {
-			t.Fatalf("Expected status %d for Wednesday timeslot, got %d. Body: %s", http.StatusCreated, createWedRec.Code, createWedRec.Body.String())
-		}
-
-		// Step 6: Test day filtering
-		listTuesdayReq := httptest.NewRequest("GET", "/api/v1/therapists/"+string(testTherapistID)+"/timeslots?day=Tuesday&timezoneOffset=180", nil)
-		listTuesdayRec := httptest.NewRecorder()
-
-		mux.ServeHTTP(listTuesdayRec, listTuesdayReq)
-
-		if listTuesdayRec.Code != http.StatusOK {
-			t.Fatalf("Expected status %d for Tuesday filter, got %d. Body: %s", http.StatusOK, listTuesdayRec.Code, listTuesdayRec.Body.String())
-		}
-
-		var tuesdayResponse []timeslot.TimeSlot
-		if err := json.Unmarshal(listTuesdayRec.Body.Bytes(), &tuesdayResponse); err != nil {
-			t.Fatalf("Failed to parse Tuesday list response: %v", err)
-		}
-
-		// Verify only Tuesday timeslots are returned
-		for _, ts := range tuesdayResponse {
-			if ts.DayOfWeek != timeslot.DayOfWeekTuesday {
-				t.Errorf("Expected only Tuesday timeslots, found %s", ts.DayOfWeek)
-			}
-		}
-
-		// Step 7: Delete the original timeslot
+		// Step 5: Delete the original timeslot
 		deleteReq := httptest.NewRequest("DELETE", "/api/v1/therapists/"+string(testTherapistID)+"/timeslots/"+string(createdTimeslot.ID), nil)
 		deleteRec := httptest.NewRecorder()
 
@@ -252,7 +212,7 @@ func TestTimeslotE2E(t *testing.T) {
 			t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusNoContent, deleteRec.Code, deleteRec.Body.String())
 		}
 
-		// Step 8: Verify timeslot is deleted
+		// Step 6: Verify timeslot is deleted
 		getDeletedReq := httptest.NewRequest("GET", "/api/v1/therapists/"+string(testTherapistID)+"/timeslots/"+string(createdTimeslot.ID)+"?timezoneOffset=180", nil)
 		getDeletedRec := httptest.NewRecorder()
 

@@ -20,14 +20,15 @@ func NewClientRepository(database ports.SQLDatabase) *ClientRepository {
 
 func (r *ClientRepository) Create(client *client.Client) error {
 	query := `
-		INSERT INTO clients (id, name, whatsapp_number, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO clients (id, name, whatsapp_number, timezone, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?)
 	`
 	_, err := r.db.Exec(
 		query,
 		client.ID,
 		client.Name,
 		client.WhatsAppNumber,
+		client.Timezone,
 		client.CreatedAt,
 		client.UpdatedAt,
 	)
@@ -36,7 +37,7 @@ func (r *ClientRepository) Create(client *client.Client) error {
 
 func (r *ClientRepository) GetByID(id domain.ClientID) (*client.Client, error) {
 	query := `
-		SELECT id, name, whatsapp_number, created_at, updated_at
+		SELECT id, name, whatsapp_number, timezone, created_at, updated_at
 		FROM clients
 		WHERE id = ?
 	`
@@ -47,6 +48,7 @@ func (r *ClientRepository) GetByID(id domain.ClientID) (*client.Client, error) {
 		&client.ID,
 		&client.Name,
 		&client.WhatsAppNumber,
+		&client.Timezone,
 		&client.CreatedAt,
 		&client.UpdatedAt,
 	)
@@ -69,7 +71,7 @@ func (r *ClientRepository) GetByID(id domain.ClientID) (*client.Client, error) {
 
 func (r *ClientRepository) GetByWhatsAppNumber(whatsAppNumber domain.WhatsAppNumber) (*client.Client, error) {
 	query := `
-		SELECT id, name, whatsapp_number, created_at, updated_at
+		SELECT id, name, whatsapp_number, timezone, created_at, updated_at
 		FROM clients
 		WHERE whatsapp_number = ?
 	`
@@ -80,6 +82,7 @@ func (r *ClientRepository) GetByWhatsAppNumber(whatsAppNumber domain.WhatsAppNum
 		&client.ID,
 		&client.Name,
 		&client.WhatsAppNumber,
+		&client.Timezone,
 		&client.CreatedAt,
 		&client.UpdatedAt,
 	)
@@ -102,7 +105,7 @@ func (r *ClientRepository) GetByWhatsAppNumber(whatsAppNumber domain.WhatsAppNum
 
 func (r *ClientRepository) List() ([]*client.Client, error) {
 	query := `
-		SELECT id, name, whatsapp_number, created_at, updated_at
+		SELECT id, name, whatsapp_number, timezone, created_at, updated_at
 		FROM clients
 		ORDER BY created_at DESC
 	`
@@ -119,6 +122,7 @@ func (r *ClientRepository) List() ([]*client.Client, error) {
 			&client.ID,
 			&client.Name,
 			&client.WhatsAppNumber,
+			&client.Timezone,
 			&client.CreatedAt,
 			&client.UpdatedAt,
 		)
@@ -142,13 +146,14 @@ func (r *ClientRepository) List() ([]*client.Client, error) {
 func (r *ClientRepository) Update(client *client.Client) error {
 	query := `
 		UPDATE clients
-		SET name = ?, whatsapp_number = ?, updated_at = ?
+		SET name = ?, whatsapp_number = ?, timezone = ?, updated_at = ?
 		WHERE id = ?
 	`
 	_, err := r.db.Exec(
 		query,
 		client.Name,
 		client.WhatsAppNumber,
+		client.Timezone,
 		client.UpdatedAt,
 		client.ID,
 	)
@@ -158,6 +163,12 @@ func (r *ClientRepository) Update(client *client.Client) error {
 func (r *ClientRepository) Delete(id domain.ClientID) error {
 	query := `DELETE FROM clients WHERE id = ?`
 	_, err := r.db.Exec(query, id)
+	return err
+}
+
+func (r *ClientRepository) UpdateTimezone(id domain.ClientID, timezone domain.Timezone) error {
+	query := `UPDATE clients SET timezone = ?, updated_at = ? WHERE id = ?`
+	_, err := r.db.Exec(query, timezone, domain.NewUTCTimestamp(), id)
 	return err
 }
 

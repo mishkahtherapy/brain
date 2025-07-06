@@ -61,7 +61,9 @@ func (h *ClientHandler) handleCreateClient(w http.ResponseWriter, r *http.Reques
 		// Handle specific business logic errors
 		switch err {
 		case create_client.ErrWhatsAppNumberIsRequired,
-			create_client.ErrInvalidWhatsAppNumber:
+			create_client.ErrInvalidWhatsAppNumber,
+			create_client.ErrTimezoneIsRequired,
+			create_client.ErrInvalidTimezone:
 			rw.WriteBadRequest(err.Error())
 		case create_client.ErrClientAlreadyExists:
 			rw.WriteError(err, http.StatusConflict)

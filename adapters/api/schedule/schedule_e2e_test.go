@@ -622,9 +622,9 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 	// Insert clients
 	for _, client := range clients {
 		_, err = database.Exec(`
-			INSERT INTO clients (id, name, whatsapp_number, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?)
-		`, client.ID, client.Name, client.WhatsAppNumber, client.CreatedAt, client.UpdatedAt)
+			INSERT INTO clients (id, name, whatsapp_number, timezone, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?)
+		`, client.ID, client.Name, client.WhatsAppNumber, "UTC", client.CreatedAt, client.UpdatedAt)
 		if err != nil {
 			t.Fatalf("Failed to insert client: %v", err)
 		}
@@ -661,10 +661,10 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 	// Insert bookings
 	for _, booking := range bookings {
 		_, err = database.Exec(`
-			INSERT INTO bookings (id, timeslot_id, therapist_id, client_id, start_time, state, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+			INSERT INTO bookings (id, timeslot_id, therapist_id, client_id, start_time, timezone, state, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`, booking.ID, booking.TimeSlotID, booking.TherapistID, booking.ClientID,
-			booking.StartTime, booking.State, booking.CreatedAt, booking.UpdatedAt)
+			booking.StartTime, "UTC", booking.State, booking.CreatedAt, booking.UpdatedAt)
 		if err != nil {
 			t.Fatalf("Failed to insert booking: %v", err)
 		}

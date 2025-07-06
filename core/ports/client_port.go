@@ -12,4 +12,5 @@ type ClientRepository interface {
 	List() ([]*client.Client, error)
 	Update(client *client.Client) error
 	Delete(id domain.ClientID) error
+	UpdateTimezone(id domain.ClientID, timezone domain.Timezone) error
 }

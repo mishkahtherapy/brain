@@ -83,10 +83,11 @@ func (r *inMemoryClientRepo) GetByID(id domain.ClientID) (*client.Client, error)
 func (r *inMemoryClientRepo) GetByWhatsAppNumber(domain.WhatsAppNumber) (*client.Client, error) {
 	return nil, nil
 }
-func (r *inMemoryClientRepo) Create(*client.Client) error     { return nil }
-func (r *inMemoryClientRepo) Update(*client.Client) error     { return nil }
-func (r *inMemoryClientRepo) Delete(domain.ClientID) error    { return nil }
-func (r *inMemoryClientRepo) List() ([]*client.Client, error) { return nil, nil }
+func (r *inMemoryClientRepo) UpdateTimezone(domain.ClientID, domain.Timezone) error { return nil }
+func (r *inMemoryClientRepo) Create(*client.Client) error                           { return nil }
+func (r *inMemoryClientRepo) Update(*client.Client) error                           { return nil }
+func (r *inMemoryClientRepo) Delete(domain.ClientID) error                          { return nil }
+func (r *inMemoryClientRepo) List() ([]*client.Client, error)                       { return nil, nil }
 
 type inMemoryTimeSlotRepo struct{ slots map[string]*timeslot.TimeSlot }
 
@@ -158,6 +159,7 @@ func TestCreateBooking_ConflictDetection(t *testing.T) {
 				ClientID:    clientID,
 				TimeSlotID:  tsMorning.ID,
 				StartTime:   mustParse(t, "2025-07-07T09:00:00Z"),
+				Timezone:    "UTC",
 			},
 			expectConflict: false,
 		},
@@ -177,6 +179,7 @@ func TestCreateBooking_ConflictDetection(t *testing.T) {
 				ClientID:    clientID,
 				TimeSlotID:  tsMorning.ID,
 				StartTime:   mustParse(t, "2025-07-07T09:00:00Z"),
+				Timezone:    "UTC",
 			},
 			expectConflict: true,
 		},
@@ -196,6 +199,7 @@ func TestCreateBooking_ConflictDetection(t *testing.T) {
 				ClientID:    clientID,
 				TimeSlotID:  tsMorning.ID,
 				StartTime:   mustParse(t, "2025-07-07T10:05:00Z"), // starts within 15-min buffer
+				Timezone:    "UTC",
 			},
 			expectConflict: true,
 		},
@@ -215,6 +219,7 @@ func TestCreateBooking_ConflictDetection(t *testing.T) {
 				ClientID:    clientID,
 				TimeSlotID:  tsLateMorning.ID,
 				StartTime:   mustParse(t, "2025-07-07T10:00:00Z"), // overlaps 10:00-10:30
+				Timezone:    "UTC",
 			},
 			expectConflict: true,
 		},
@@ -234,6 +239,7 @@ func TestCreateBooking_ConflictDetection(t *testing.T) {
 				ClientID:    clientID,
 				TimeSlotID:  tsMorning.ID,
 				StartTime:   mustParse(t, "2025-07-07T10:15:00Z"), // exactly after 15-min buffer
+				Timezone:    "UTC",
 			},
 			expectConflict: false,
 		},

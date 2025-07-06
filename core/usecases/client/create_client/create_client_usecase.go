@@ -13,11 +13,14 @@ var (
 	ErrWhatsAppNumberIsRequired = errors.New("whatsapp number is required")
 	ErrInvalidWhatsAppNumber    = errors.New("invalid whatsapp number format")
 	ErrClientAlreadyExists      = errors.New("client with this whatsapp number already exists")
+	ErrTimezoneIsRequired       = errors.New("timezone is required")
+	ErrInvalidTimezone          = errors.New("invalid timezone format")
 )
 
 type Input struct {
 	Name           string                `json:"name"`
 	WhatsAppNumber domain.WhatsAppNumber `json:"whatsAppNumber"`
+	Timezone       string                `json:"timezone"` // Required field
 }
 
 type Usecase struct {
@@ -50,6 +53,7 @@ func (u *Usecase) Execute(input Input) (*client.Client, error) {
 		ID:             domain.NewClientID(),
 		Name:           strings.TrimSpace(input.Name),
 		WhatsAppNumber: input.WhatsAppNumber,
+		Timezone:       input.Timezone, // Required timezone
 		BookingIDs:     []domain.BookingID{},
 		CreatedAt:      domain.NewUTCTimestamp(),
 		UpdatedAt:      domain.NewUTCTimestamp(),
@@ -80,6 +84,15 @@ func (u *Usecase) validateInput(input Input) error {
 		if char < '0' || char > '9' {
 			return ErrInvalidWhatsAppNumber
 		}
+	}
+
+	// Validate timezone (required)
+	if input.Timezone == "" {
+		return ErrTimezoneIsRequired
+	}
+
+	if !domain.Timezone(input.Timezone).IsValid() {
+		return ErrInvalidTimezone
 	}
 
 	return nil

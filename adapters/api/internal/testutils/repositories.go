@@ -14,7 +14,7 @@ type TestSessionRepository struct {
 	db ports.SQLDatabase
 }
 
-func NewTestSessionRepository(db ports.SQLDatabase) *TestSessionRepository {
+func NewTestSessionRepository(db ports.SQLDatabase) ports.SessionRepository {
 	return &TestSessionRepository{db: db}
 }
 
@@ -55,7 +55,7 @@ type TestClientRepository struct {
 	db ports.SQLDatabase
 }
 
-func NewTestClientRepository(db ports.SQLDatabase) *TestClientRepository {
+func NewTestClientRepository(db ports.SQLDatabase) ports.ClientRepository {
 	return &TestClientRepository{db: db}
 }
 
@@ -74,6 +74,9 @@ func (r *TestClientRepository) GetByID(id domain.ClientID) (*client.Client, erro
 func (r *TestClientRepository) Create(client *client.Client) error { return nil }
 func (r *TestClientRepository) Update(client *client.Client) error { return nil }
 func (r *TestClientRepository) Delete(id domain.ClientID) error    { return nil }
+func (r *TestClientRepository) UpdateTimezone(id domain.ClientID, timezone domain.Timezone) error {
+	return nil
+}
 func (r *TestClientRepository) GetByWhatsAppNumber(whatsappNumber domain.WhatsAppNumber) (*client.Client, error) {
 	return nil, nil
 }
@@ -84,7 +87,7 @@ type TestTimeSlotRepository struct {
 	db ports.SQLDatabase
 }
 
-func NewTestTimeSlotRepository(db ports.SQLDatabase) *TestTimeSlotRepository {
+func NewTestTimeSlotRepository(db ports.SQLDatabase) ports.TimeSlotRepository {
 	return &TestTimeSlotRepository{db: db}
 }
 
