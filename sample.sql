@@ -5,7 +5,8 @@
 -- Sample therapists
 INSERT INTO therapists (id, name, email, phone_number, whatsapp_number, speaks_english) VALUES
 ('therapist_001', 'Dr. Sarah Johnson', 'sarah.johnson@therapy.com', '+1555001234', '+1234567890', true),
-('therapist_002', 'Dr. Michael Chen', 'michael.chen@therapy.com', '+1555005678', '+1987654321', true);
+('therapist_002', 'Dr. Michael Chen', 'michael.chen@therapy.com', '+1555005678', '+1987654321', true),
+('therapist_003', 'Dr. Emily Davis', 'emily.davis@therapy.com', '+1555098765', '+1122334455', true);
 
 -- Sample clients
 INSERT INTO clients (id, name, whatsapp_number) VALUES
@@ -20,7 +21,9 @@ INSERT INTO time_slots (id, therapist_id, day_of_week, start_time, duration_minu
 ('slot_001', 'therapist_001', 'Monday', '09:00', 60, 30, 30),      -- Cairo: 12:00-1:00 PM Monday (effective: 11:30-1:15 PM)
 ('slot_002', 'therapist_001', 'Monday', '11:45', 60, 30, 30),      -- Cairo: 2:45-3:45 PM Monday (effective: 2:15-4:00 PM)
 ('slot_003', 'therapist_001', 'Tuesday', '14:00', 60, 60, 30),     -- Cairo: 5:00-6:00 PM Tuesday
-('slot_004', 'therapist_002', 'Wednesday', '09:00', 60, 120, 30);  -- Cairo: 12:00-1:00 PM Wednesday
+('slot_004', 'therapist_002', 'Wednesday', '09:00', 60, 120, 30),  -- Cairo: 12:00-1:00 PM Wednesday
+('slot_005', 'therapist_002', 'Monday', '09:00', 60, 30, 30),
+('slot_006', 'therapist_003', 'Monday', '09:00', 60, 30, 30);
 
 -- Sample bookings (1-hour appointments)
 INSERT INTO bookings (id, timeslot_id, therapist_id, client_id, start_time, state) VALUES
@@ -46,20 +49,9 @@ INSERT INTO sessions (id, booking_id, therapist_id, client_id, timeslot_id, star
 -- Sample specializations
 INSERT INTO specializations (id, name) VALUES
 ('spec_001', 'Anxiety'),
-('spec_002', 'Depression'),
-('spec_003', 'Trauma'),
-('spec_004', 'Couples Therapy'),
-('spec_005', 'Family Therapy'),
-('spec_006', 'Addiction'),
-('spec_007', 'Eating Disorders'),
-('spec_008', 'PTSD'),
-('spec_009', 'Grief and Loss'),
-('spec_010', 'Stress Management'),
-('spec_011', 'Self-Esteem'),
-('spec_012', 'Anger Management'),
-('spec_013', 'OCD'),
-('spec_014', 'ADHD'),
-('spec_015', 'Autism Spectrum');
+('spec_002', 'Couples Therapy'),
+('spec_003', 'Family Therapy'),
+('spec_004', 'OCD');
 
 -- Sample therapist specializations
 INSERT INTO therapist_specializations (id, therapist_id, specialization_id) VALUES
@@ -67,10 +59,11 @@ INSERT INTO therapist_specializations (id, therapist_id, specialization_id) VALU
 ('ts_002', 'therapist_001', 'spec_002'),
 ('ts_003', 'therapist_001', 'spec_003'),
 ('ts_004', 'therapist_001', 'spec_004'),
-('ts_005', 'therapist_002', 'spec_005'),
-('ts_006', 'therapist_002', 'spec_006'),
-('ts_007', 'therapist_002', 'spec_007'),
-('ts_008', 'therapist_002', 'spec_008');
+('ts_005', 'therapist_002', 'spec_001'),
+('ts_006', 'therapist_002', 'spec_002'),
+('ts_007', 'therapist_002', 'spec_003'),
+('ts_008', 'therapist_002', 'spec_004'),
+('ts_009', 'therapist_003', 'spec_001');
 
 -- =============================================================================
 -- COMMON QUERIES FOR REFERENCE (SQLite Compatible)

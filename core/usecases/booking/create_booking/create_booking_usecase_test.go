@@ -44,6 +44,12 @@ func (r *inMemoryBookingRepo) ListConfirmedByTherapistForDateRange(domain.Therap
 	return nil, nil
 }
 
+// Search satisfies the new method in the BookingRepository interface for tests.
+func (r *inMemoryBookingRepo) Search(startDate, endDate time.Time, state *booking.BookingState) ([]*booking.Booking, error) {
+	// Return all in-memory bookings ignoring filters for simplicity in unit tests.
+	return r.bookings, nil
+}
+
 type inMemoryTherapistRepo struct{}
 
 func (r *inMemoryTherapistRepo) GetByID(id domain.TherapistID) (*therapist.Therapist, error) {

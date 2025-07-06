@@ -18,4 +18,5 @@ type BookingRepository interface {
 	ListByTherapistAndState(therapistID domain.TherapistID, state booking.BookingState) ([]*booking.Booking, error)
 	ListByClientAndState(clientID domain.ClientID, state booking.BookingState) ([]*booking.Booking, error)
 	ListConfirmedByTherapistForDateRange(therapistID domain.TherapistID, startDate, endDate time.Time) ([]*booking.Booking, error)
+	Search(startDate, endDate time.Time, state *booking.BookingState) ([]*booking.Booking, error)
 }

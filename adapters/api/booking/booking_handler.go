@@ -3,6 +3,7 @@ package booking_handler
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/core/domain"
@@ -13,6 +14,7 @@ import (
 	"github.com/mishkahtherapy/brain/core/usecases/booking/get_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/list_bookings_by_client"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/list_bookings_by_therapist"
+	"github.com/mishkahtherapy/brain/core/usecases/booking/search_bookings"
 	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
 
@@ -23,6 +25,7 @@ type BookingHandler struct {
 	cancelBookingUsecase           cancel_booking.Usecase
 	listBookingsByTherapistUsecase list_bookings_by_therapist.Usecase
 	listBookingsByClientUsecase    list_bookings_by_client.Usecase
+	searchBookingsUsecase          search_bookings.Usecase
 }
 
 func NewBookingHandler(
@@ -32,6 +35,7 @@ func NewBookingHandler(
 	cancelUsecase cancel_booking.Usecase,
 	listByTherapistUsecase list_bookings_by_therapist.Usecase,
 	listByClientUsecase list_bookings_by_client.Usecase,
+	searchUsecase search_bookings.Usecase,
 ) *BookingHandler {
 	return &BookingHandler{
 		createBookingUsecase:           createUsecase,
@@ -40,6 +44,7 @@ func NewBookingHandler(
 		cancelBookingUsecase:           cancelUsecase,
 		listBookingsByTherapistUsecase: listByTherapistUsecase,
 		listBookingsByClientUsecase:    listByClientUsecase,
+		searchBookingsUsecase:          searchUsecase,
 	}
 }
 
@@ -51,6 +56,7 @@ func (h *BookingHandler) SetUsecases(
 	cancelUsecase cancel_booking.Usecase,
 	listByTherapistUsecase list_bookings_by_therapist.Usecase,
 	listByClientUsecase list_bookings_by_client.Usecase,
+	searchUsecase search_bookings.Usecase,
 ) {
 	h.createBookingUsecase = createUsecase
 	h.getBookingUsecase = getUsecase
@@ -58,10 +64,12 @@ func (h *BookingHandler) SetUsecases(
 	h.cancelBookingUsecase = cancelUsecase
 	h.listBookingsByTherapistUsecase = listByTherapistUsecase
 	h.listBookingsByClientUsecase = listByClientUsecase
+	h.searchBookingsUsecase = searchUsecase
 }
 
 func (h *BookingHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/bookings", h.handleCreateBooking)
+	mux.HandleFunc("GET /api/v1/bookings/search", h.handleSearchBookings)
 	mux.HandleFunc("GET /api/v1/bookings/{id}", h.handleGetBooking)
 	mux.HandleFunc("PUT /api/v1/bookings/{id}/confirm", h.handleConfirmBooking)
 	mux.HandleFunc("PUT /api/v1/bookings/{id}/cancel", h.handleCancelBooking)
@@ -100,6 +108,79 @@ func (h *BookingHandler) handleCreateBooking(w http.ResponseWriter, r *http.Requ
 	}
 
 	if err := rw.WriteJSON(booking, http.StatusCreated); err != nil {
+		rw.WriteError(err, http.StatusInternalServerError)
+	}
+}
+
+func (h *BookingHandler) handleSearchBookings(w http.ResponseWriter, r *http.Request) {
+	rw := api.NewResponseWriter(w)
+
+	// Parse optional start & end query params (YYYY-MM-DD expected)
+	startParam := r.URL.Query().Get("start")
+	endParam := r.URL.Query().Get("end")
+
+	var startTime, endTime time.Time
+	var err error
+
+	// Parse start date if provided
+	if startParam != "" {
+		startTime, err = time.Parse(time.DateOnly, startParam)
+		if err != nil {
+			rw.WriteBadRequest("invalid start parameter. Expected YYYY-MM-DD format")
+			return
+		}
+		startTime = startTime.UTC()
+	}
+
+	// Parse end date if provided
+	if endParam != "" {
+		endTime, err = time.Parse(time.DateOnly, endParam)
+		if err != nil {
+			rw.WriteBadRequest("invalid end parameter. Expected YYYY-MM-DD format")
+			return
+		}
+		endTime = endTime.AddDate(0, 0, 1).Add(-time.Nanosecond).UTC() // End of day
+	}
+
+	// Validate date range only if both dates are provided
+	if !startTime.IsZero() && !endTime.IsZero() && endTime.Before(startTime) {
+		rw.WriteBadRequest("end must be after start")
+		return
+	}
+
+	// Optional state filter
+	var state *booking.BookingState
+	if stateParam := r.URL.Query().Get("state"); stateParam != "" {
+		bookingState := booking.BookingState(stateParam)
+		if bookingState != booking.BookingStatePending &&
+			bookingState != booking.BookingStateConfirmed &&
+			bookingState != booking.BookingStateCancelled {
+			rw.WriteBadRequest("Invalid state parameter. Must be one of: pending, confirmed, cancelled")
+			return
+		}
+		state = &bookingState
+	}
+
+	input := search_bookings.Input{
+		Start: startTime,
+		End:   endTime,
+		State: state,
+	}
+
+	bookings, err := h.searchBookingsUsecase.Execute(input)
+	if err != nil {
+		switch err {
+		case common.ErrInvalidDateRange:
+			rw.WriteBadRequest(err.Error())
+		case common.ErrFailedToListBookings:
+			rw.WriteError(err, http.StatusInternalServerError)
+		default:
+			rw.WriteError(err, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	if err := rw.WriteJSON(bookings, http.StatusOK); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
 }

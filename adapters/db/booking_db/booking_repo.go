@@ -29,6 +29,7 @@ var ErrFailedToGetBookings = errors.New("failed to get bookings")
 var ErrFailedToCreateBooking = errors.New("failed to create booking")
 var ErrFailedToUpdateBooking = errors.New("failed to update booking")
 var ErrFailedToDeleteBooking = errors.New("failed to delete booking")
+var ErrInvalidDateRange = errors.New("invalid date range")
 
 func NewBookingRepository(db ports.SQLDatabase) *BookingRepository {
 	return &BookingRepository{db: db}
@@ -382,6 +383,47 @@ func (r *BookingRepository) ListConfirmedByTherapistForDateRange(
 			"startDate", startDate,
 			"endDate", endDate,
 		)
+		return nil, ErrFailedToGetBookings
+	}
+	defer rows.Close()
+
+	return r.scanBookings(rows)
+}
+
+// Search returns all bookings whose start_time is within the inclusive range
+// [startDate, endDate]. When state is provided (non-nil), the results are
+// further filtered by the given booking state.
+func (r *BookingRepository) Search(startDate, endDate time.Time, state *booking.BookingState) ([]*booking.Booking, error) {
+	query := `
+		SELECT id, timeslot_id, therapist_id, client_id, start_time, state, created_at, updated_at
+		FROM bookings
+		WHERE 1=1
+	`
+	params := []interface{}{}
+
+	// Add start date filter if provided (not zero time)
+	if !startDate.IsZero() {
+		query += " AND start_time >= ?"
+		params = append(params, startDate)
+	}
+
+	// Add end date filter if provided (not zero time)
+	if !endDate.IsZero() {
+		query += " AND start_time <= ?"
+		params = append(params, endDate)
+	}
+
+	// Add state filter if provided
+	if state != nil {
+		query += " AND state = ?"
+		params = append(params, *state)
+	}
+
+	query += " ORDER BY start_time ASC"
+
+	rows, err := r.db.Query(query, params...)
+	if err != nil {
+		slog.Error("error searching bookings", "error", err)
 		return nil, ErrFailedToGetBookings
 	}
 	defer rows.Close()

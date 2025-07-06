@@ -22,6 +22,7 @@ import (
 	"github.com/mishkahtherapy/brain/core/usecases/booking/get_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/list_bookings_by_client"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/list_bookings_by_therapist"
+	"github.com/mishkahtherapy/brain/core/usecases/booking/search_bookings"
 
 	_ "github.com/glebarez/go-sqlite"
 )
@@ -140,6 +141,7 @@ func TestBookingE2E(t *testing.T) {
 	cancelBookingUsecase := cancel_booking.NewUsecase(bookingRepo)
 	listByTherapistUsecase := list_bookings_by_therapist.NewUsecase(bookingRepo)
 	listByClientUsecase := list_bookings_by_client.NewUsecase(bookingRepo)
+	searchBookingsUsecase := search_bookings.NewUsecase(bookingRepo)
 
 	// Setup handler
 	bookingHandler := NewBookingHandler(
@@ -149,6 +151,7 @@ func TestBookingE2E(t *testing.T) {
 		*cancelBookingUsecase,
 		*listByTherapistUsecase,
 		*listByClientUsecase,
+		*searchBookingsUsecase,
 	)
 
 	// Setup router

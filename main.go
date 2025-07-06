@@ -27,6 +27,7 @@ import (
 	"github.com/mishkahtherapy/brain/core/usecases/booking/get_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/list_bookings_by_client"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/list_bookings_by_therapist"
+	"github.com/mishkahtherapy/brain/core/usecases/booking/search_bookings"
 	"github.com/mishkahtherapy/brain/core/usecases/client/create_client"
 	"github.com/mishkahtherapy/brain/core/usecases/client/get_all_clients"
 	"github.com/mishkahtherapy/brain/core/usecases/client/get_client"
@@ -115,6 +116,7 @@ func main() {
 	cancelBookingUsecase := cancel_booking.NewUsecase(bookingRepo)
 	listBookingsByTherapistUsecase := list_bookings_by_therapist.NewUsecase(bookingRepo)
 	listBookingsByClientUsecase := list_bookings_by_client.NewUsecase(bookingRepo)
+	searchBookingsUsecase := search_bookings.NewUsecase(bookingRepo)
 
 	// Initialize session usecases
 	createSessionUsecase := create_session.NewUsecase(sessionRepo, bookingRepo, therapistRepo, clientRepo, timeSlotRepo)
@@ -158,6 +160,7 @@ func main() {
 		*cancelBookingUsecase,
 		*listBookingsByTherapistUsecase,
 		*listBookingsByClientUsecase,
+		*searchBookingsUsecase,
 	)
 
 	sessionHandler := api.NewSessionHandler(

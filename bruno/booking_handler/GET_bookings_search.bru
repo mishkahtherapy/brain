@@ -1,0 +1,17 @@
+meta {
+  name: Search Bookings
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{API_URL}}/bookings/search?state=confirmed
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~start: 2025-07-01          # YYYY-MM-DD (optional - if omitted, returns all bookings until end date)
+  ~end: 2025-07-31            # YYYY-MM-DD (optional - if omitted, returns all bookings from start date onwards)
+  state: confirmed             # optional (pending | confirmed | cancelled)
+} 
