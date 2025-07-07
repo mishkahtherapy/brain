@@ -622,9 +622,9 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 	// Insert clients
 	for _, client := range clients {
 		_, err = database.Exec(`
-			INSERT INTO clients (id, name, whatsapp_number, timezone, created_at, updated_at)
+			INSERT INTO clients (id, name, whatsapp_number, timezone_offset, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?)
-		`, client.ID, client.Name, client.WhatsAppNumber, "UTC", client.CreatedAt, client.UpdatedAt)
+		`, client.ID, client.Name, client.WhatsAppNumber, 0, client.CreatedAt, client.UpdatedAt)
 		if err != nil {
 			t.Fatalf("Failed to insert client: %v", err)
 		}

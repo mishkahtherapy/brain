@@ -45,7 +45,7 @@ func TestClientE2E(t *testing.T) {
 		clientData := map[string]interface{}{
 			"name":           "John Doe",
 			"whatsAppNumber": "+1234567890",
-			"timezone":       "America/New_York",
+			"timezoneOffset": -300,
 		}
 		clientBody, _ := json.Marshal(clientData)
 
@@ -73,8 +73,8 @@ func TestClientE2E(t *testing.T) {
 		if createdClient.WhatsAppNumber != "+1234567890" {
 			t.Errorf("Expected WhatsApp number %s, got %s", "+1234567890", createdClient.WhatsAppNumber)
 		}
-		if createdClient.Timezone != "America/New_York" {
-			t.Errorf("Expected timezone %s, got %s", "America/New_York", createdClient.Timezone)
+		if createdClient.TimezoneOffset != -300 {
+			t.Errorf("Expected timezoneOffset %d, got %d", -300, createdClient.TimezoneOffset)
 		}
 		if createdClient.ID == "" {
 			t.Error("Expected ID to be set")
@@ -116,8 +116,8 @@ func TestClientE2E(t *testing.T) {
 		if retrievedClient.WhatsAppNumber != createdClient.WhatsAppNumber {
 			t.Errorf("Expected WhatsApp number %s, got %s", createdClient.WhatsAppNumber, retrievedClient.WhatsAppNumber)
 		}
-		if retrievedClient.Timezone != createdClient.Timezone {
-			t.Errorf("Expected timezone %s, got %s", createdClient.Timezone, retrievedClient.Timezone)
+		if retrievedClient.TimezoneOffset != createdClient.TimezoneOffset {
+			t.Errorf("Expected timezoneOffset %d, got %d", createdClient.TimezoneOffset, retrievedClient.TimezoneOffset)
 		}
 
 		// Step 3: Get all clients
@@ -164,15 +164,15 @@ func TestClientE2E(t *testing.T) {
 
 		mux.ServeHTTP(createRec, createReq)
 
-		if createRec.Code != http.StatusBadRequest {
-			t.Errorf("Expected status %d for missing timezone, got %d. Body: %s", http.StatusBadRequest, createRec.Code, createRec.Body.String())
+		if createRec.Code != http.StatusCreated {
+			t.Errorf("Expected status %d when timezoneOffset omitted (default 0), got %d. Body: %s", http.StatusCreated, createRec.Code, createRec.Body.String())
 		}
 
 		// Test create client with invalid timezone (should fail)
 		clientWithInvalidTimezoneData := map[string]interface{}{
 			"name":           "Test User",
 			"whatsAppNumber": "+1234567894",
-			"timezone":       "Invalid/Timezone",
+			"timezoneOffset": 9999,
 		}
 		clientWithInvalidTimezoneBody, _ := json.Marshal(clientWithInvalidTimezoneData)
 
@@ -190,7 +190,7 @@ func TestClientE2E(t *testing.T) {
 		clientWithValidTimezoneData := map[string]interface{}{
 			"name":           "Test User",
 			"whatsAppNumber": "+1234567895",
-			"timezone":       "Europe/London",
+			"timezoneOffset": 0,
 		}
 		clientWithValidTimezoneBody, _ := json.Marshal(clientWithValidTimezoneData)
 
@@ -209,8 +209,8 @@ func TestClientE2E(t *testing.T) {
 		if err := json.Unmarshal(createValidRec.Body.Bytes(), &createdClient); err != nil {
 			t.Fatalf("Failed to parse created client: %v", err)
 		}
-		if createdClient.Timezone != "Europe/London" {
-			t.Errorf("Expected timezone %s, got %s", "Europe/London", createdClient.Timezone)
+		if createdClient.TimezoneOffset != 0 {
+			t.Errorf("Expected timezoneOffset %d, got %d", 0, createdClient.TimezoneOffset)
 		}
 	})
 
@@ -229,7 +229,7 @@ func TestClientE2E(t *testing.T) {
 		// Test create client with missing name (should work since name is optional)
 		clientWithoutNameData := map[string]interface{}{
 			"whatsAppNumber": "+1234567891", // Different number to avoid duplicate
-			"timezone":       "UTC",
+			"timezoneOffset": 0,
 		}
 		clientWithoutNameBody, _ := json.Marshal(clientWithoutNameData)
 
@@ -245,8 +245,8 @@ func TestClientE2E(t *testing.T) {
 
 		// Test create client with invalid data (missing WhatsApp number)
 		invalidClientData := map[string]interface{}{
-			"name":     "Test User",
-			"timezone": "UTC",
+			"name":           "Test User",
+			"timezoneOffset": 0,
 		}
 		invalidBody, _ := json.Marshal(invalidClientData)
 
@@ -265,7 +265,7 @@ func TestClientE2E(t *testing.T) {
 		firstClientData := map[string]interface{}{
 			"name":           "First Client",
 			"whatsAppNumber": "+1234567892", // Unique number for this test
-			"timezone":       "UTC",
+			"timezoneOffset": 0,
 		}
 		firstClientBody, _ := json.Marshal(firstClientData)
 
@@ -283,7 +283,7 @@ func TestClientE2E(t *testing.T) {
 		duplicateClientData := map[string]interface{}{
 			"name":           "Jane Doe",
 			"whatsAppNumber": "+1234567892", // Same as first client
-			"timezone":       "UTC",
+			"timezoneOffset": 0,
 		}
 		duplicateBody, _ := json.Marshal(duplicateClientData)
 
@@ -301,7 +301,7 @@ func TestClientE2E(t *testing.T) {
 		invalidWhatsAppData := map[string]interface{}{
 			"name":           "Invalid User",
 			"whatsAppNumber": "invalid",
-			"timezone":       "UTC",
+			"timezoneOffset": 0,
 		}
 		invalidWhatsAppBody, _ := json.Marshal(invalidWhatsAppData)
 

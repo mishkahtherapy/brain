@@ -62,8 +62,7 @@ func (h *ClientHandler) handleCreateClient(w http.ResponseWriter, r *http.Reques
 		switch err {
 		case create_client.ErrWhatsAppNumberIsRequired,
 			create_client.ErrInvalidWhatsAppNumber,
-			create_client.ErrTimezoneIsRequired,
-			create_client.ErrInvalidTimezone:
+			create_client.ErrInvalidTimezoneOffset:
 			rw.WriteBadRequest(err.Error())
 		case create_client.ErrClientAlreadyExists:
 			rw.WriteError(err, http.StatusConflict)

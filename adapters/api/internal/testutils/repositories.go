@@ -74,7 +74,7 @@ func (r *TestClientRepository) GetByID(id domain.ClientID) (*client.Client, erro
 func (r *TestClientRepository) Create(client *client.Client) error { return nil }
 func (r *TestClientRepository) Update(client *client.Client) error { return nil }
 func (r *TestClientRepository) Delete(id domain.ClientID) error    { return nil }
-func (r *TestClientRepository) UpdateTimezone(id domain.ClientID, timezone domain.Timezone) error {
+func (r *TestClientRepository) UpdateTimezoneOffset(id domain.ClientID, offsetMinutes domain.TimezoneOffset) error {
 	return nil
 }
 func (r *TestClientRepository) GetByWhatsAppNumber(whatsappNumber domain.WhatsAppNumber) (*client.Client, error) {

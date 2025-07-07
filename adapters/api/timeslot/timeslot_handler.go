@@ -31,37 +31,6 @@ type TimeslotResponse struct {
 	CreatedAt         string `json:"createdAt"`
 	UpdatedAt         string `json:"updatedAt"`
 }
-
-// Convert UTC timeslot to local timezone response
-func transformTimeslotToLocalResponse(utcSlot *timeslot.TimeSlot, timezoneOffset int) (*TimeslotResponse, error) {
-	// Convert UTC to local time
-	localDay, localStart, err := timeslot_usecase.ConvertUTCToLocal(
-		string(utcSlot.DayOfWeek),
-		utcSlot.StartTime,
-		timezoneOffset,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Calculate local end time
-	localEnd, _ := timeslot_usecase.CalculateEndTime(localStart, utcSlot.DurationMinutes)
-
-	return &TimeslotResponse{
-		ID:                string(utcSlot.ID),
-		TherapistID:       string(utcSlot.TherapistID),
-		IsActive:          utcSlot.IsActive,
-		DayOfWeek:         localDay,
-		StartTime:         localStart,
-		EndTime:           localEnd,
-		DurationMinutes:   utcSlot.DurationMinutes,
-		PreSessionBuffer:  utcSlot.PreSessionBuffer,
-		PostSessionBuffer: utcSlot.PostSessionBuffer,
-		CreatedAt:         utcSlot.CreatedAt.String(),
-		UpdatedAt:         utcSlot.UpdatedAt.String(),
-	}, nil
-}
-
 type TimeslotHandler struct {
 	bulkToggleUsecase     bulk_toggle_therapist_timeslots.Usecase
 	createTimeslotUsecase create_therapist_timeslot.Usecase
@@ -160,12 +129,12 @@ func (h *TimeslotHandler) handleCreateTimeslot(w http.ResponseWriter, r *http.Re
 
 	// Parse request body
 	var requestBody struct {
-		DayOfWeek         string `json:"dayOfWeek"`         // Local day
-		StartTime         string `json:"startTime"`         // Local time
-		DurationMinutes   int    `json:"durationMinutes"`   // Duration in minutes
-		TimezoneOffset    int    `json:"timezoneOffset"`    // Minutes from UTC
-		PreSessionBuffer  int    `json:"preSessionBuffer"`  // minutes
-		PostSessionBuffer int    `json:"postSessionBuffer"` // minutes
+		DayOfWeek         string                `json:"dayOfWeek"`         // Local day
+		StartTime         string                `json:"startTime"`         // Local time
+		DurationMinutes   int                   `json:"durationMinutes"`   // Duration in minutes
+		TimezoneOffset    domain.TimezoneOffset `json:"timezoneOffset"`    // Minutes from UTC
+		PreSessionBuffer  int                   `json:"preSessionBuffer"`  // minutes
+		PostSessionBuffer int                   `json:"postSessionBuffer"` // minutes
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
@@ -210,14 +179,7 @@ func (h *TimeslotHandler) handleCreateTimeslot(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Convert UTC timeslot back to local timezone for response
-	localResponse, err := transformTimeslotToLocalResponse(newTimeslot, requestBody.TimezoneOffset)
-	if err != nil {
-		rw.WriteError(err, http.StatusInternalServerError)
-		return
-	}
-
-	if err := rw.WriteJSON(localResponse, http.StatusCreated); err != nil {
+	if err := rw.WriteJSON(newTimeslot, http.StatusCreated); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
 }
@@ -229,25 +191,6 @@ func (h *TimeslotHandler) handleListTimeslots(w http.ResponseWriter, r *http.Req
 	therapistID := domain.TherapistID(r.PathValue("therapistId"))
 	if therapistID == "" {
 		rw.WriteBadRequest("Missing therapist ID")
-		return
-	}
-
-	// Parse timezone offset from query parameter (required for response conversion)
-	timezoneOffsetParam := r.URL.Query().Get("timezoneOffset")
-	if timezoneOffsetParam == "" {
-		rw.WriteBadRequest("Missing timezoneOffset query parameter")
-		return
-	}
-
-	var timezoneOffset int
-	if _, err := fmt.Sscanf(timezoneOffsetParam, "%d", &timezoneOffset); err != nil {
-		rw.WriteBadRequest("Invalid timezoneOffset format")
-		return
-	}
-
-	// Validate timezone offset
-	if err := timeslot_usecase.ValidateTimezoneOffset(timezoneOffset); err != nil {
-		rw.WriteBadRequest(err.Error())
 		return
 	}
 
@@ -271,18 +214,7 @@ func (h *TimeslotHandler) handleListTimeslots(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Convert UTC timeslots to local timezone responses
-	localResponses := make([]*TimeslotResponse, 0, len(output.Timeslots))
-	for _, utcSlot := range output.Timeslots {
-		localResponse, err := transformTimeslotToLocalResponse(&utcSlot, timezoneOffset)
-		if err != nil {
-			rw.WriteError(err, http.StatusInternalServerError)
-			return
-		}
-		localResponses = append(localResponses, localResponse)
-	}
-
-	if err := rw.WriteJSON(localResponses, http.StatusOK); err != nil {
+	if err := rw.WriteJSON(output, http.StatusOK); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
 }
@@ -311,7 +243,7 @@ func (h *TimeslotHandler) handleGetTimeslot(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var timezoneOffset int
+	var timezoneOffset domain.TimezoneOffset
 	if _, err := fmt.Sscanf(timezoneOffsetParam, "%d", &timezoneOffset); err != nil {
 		rw.WriteBadRequest("Invalid timezoneOffset format")
 		return
@@ -346,14 +278,7 @@ func (h *TimeslotHandler) handleGetTimeslot(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Convert UTC timeslot to local timezone response
-	localResponse, err := transformTimeslotToLocalResponse(dbTimeslot, timezoneOffset)
-	if err != nil {
-		rw.WriteError(err, http.StatusInternalServerError)
-		return
-	}
-
-	if err := rw.WriteJSON(localResponse, http.StatusOK); err != nil {
+	if err := rw.WriteJSON(dbTimeslot, http.StatusOK); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
 }
@@ -382,7 +307,7 @@ func (h *TimeslotHandler) handleUpdateTimeslot(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	var timezoneOffset int
+	var timezoneOffset domain.TimezoneOffset
 	if _, err := fmt.Sscanf(timezoneOffsetParam, "%d", &timezoneOffset); err != nil {
 		rw.WriteBadRequest("Invalid timezoneOffset format")
 		return
@@ -456,14 +381,7 @@ func (h *TimeslotHandler) handleUpdateTimeslot(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Convert UTC timeslot back to local timezone response
-	localResponse, err := transformTimeslotToLocalResponse(updatedTimeslot, timezoneOffset)
-	if err != nil {
-		rw.WriteError(err, http.StatusInternalServerError)
-		return
-	}
-
-	if err := rw.WriteJSON(localResponse, http.StatusOK); err != nil {
+	if err := rw.WriteJSON(updatedTimeslot, http.StatusOK); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
 }

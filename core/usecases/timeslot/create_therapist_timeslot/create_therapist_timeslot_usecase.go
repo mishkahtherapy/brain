@@ -10,13 +10,13 @@ import (
 )
 
 type Input struct {
-	TherapistID       domain.TherapistID `json:"therapistId"`
-	LocalDayOfWeek    string             `json:"dayOfWeek"`         // Local day "Monday"
-	LocalStartTime    string             `json:"startTime"`         // Local time "01:30"
-	DurationMinutes   int                `json:"durationMinutes"`   // Duration in minutes
-	TimezoneOffset    int                `json:"timezoneOffset"`    // Minutes from UTC (+180 for GMT+3)
-	PreSessionBuffer  int                `json:"preSessionBuffer"`  // minutes
-	PostSessionBuffer int                `json:"postSessionBuffer"` // minutes
+	TherapistID       domain.TherapistID    `json:"therapistId"`
+	LocalDayOfWeek    string                `json:"dayOfWeek"`         // Local day "Monday"
+	LocalStartTime    string                `json:"startTime"`         // Local time "01:30"
+	DurationMinutes   int                   `json:"durationMinutes"`   // Duration in minutes
+	TimezoneOffset    domain.TimezoneOffset `json:"timezoneOffset"`    // Minutes from UTC (+180 for GMT+3)
+	PreSessionBuffer  int                   `json:"preSessionBuffer"`  // minutes
+	PostSessionBuffer int                   `json:"postSessionBuffer"` // minutes
 }
 
 type Usecase struct {

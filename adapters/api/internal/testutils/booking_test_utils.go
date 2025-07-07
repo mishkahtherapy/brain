@@ -91,11 +91,20 @@ func (d *DatabaseTestUtils) CreateTestClient(t *testing.T, name, whatsapp, timez
 	clientID := domain.NewClientID()
 	now := time.Now().UTC()
 
-	_, err := d.db.Exec(`
-		INSERT INTO clients (id, name, whatsapp_number, timezone, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?)
-	`, clientID, name, whatsapp, timezone, now, now)
+	// Map simple timezone strings used in tests (e.g., "UTC") to minute offsets.
+	var offset domain.TimezoneOffset
+	switch timezone {
+	case "UTC", "", "Etc/UTC":
+		offset = 0
+	default:
+		// Fallback: 0; tests don't rely on exact value
+		offset = 0
+	}
 
+	_, err := d.db.Exec(`
+		INSERT INTO clients (id, name, whatsapp_number, timezone_offset, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?)
+	`, clientID, name, whatsapp, offset, now, now)
 	if err != nil {
 		t.Fatalf("Failed to create test client: %v", err)
 	}

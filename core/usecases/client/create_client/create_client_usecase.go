@@ -7,20 +7,20 @@ import (
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/domain/client"
 	"github.com/mishkahtherapy/brain/core/ports"
+	timeslot_usecase "github.com/mishkahtherapy/brain/core/usecases/timeslot"
 )
 
 var (
 	ErrWhatsAppNumberIsRequired = errors.New("whatsapp number is required")
 	ErrInvalidWhatsAppNumber    = errors.New("invalid whatsapp number format")
 	ErrClientAlreadyExists      = errors.New("client with this whatsapp number already exists")
-	ErrTimezoneIsRequired       = errors.New("timezone is required")
-	ErrInvalidTimezone          = errors.New("invalid timezone format")
+	ErrInvalidTimezoneOffset    = errors.New("invalid timezoneOffset")
 )
 
 type Input struct {
 	Name           string                `json:"name"`
 	WhatsAppNumber domain.WhatsAppNumber `json:"whatsAppNumber"`
-	Timezone       string                `json:"timezone"` // Required field
+	TimezoneOffset domain.TimezoneOffset `json:"timezoneOffset"` // Minutes east of UTC, required
 }
 
 type Usecase struct {
@@ -53,7 +53,7 @@ func (u *Usecase) Execute(input Input) (*client.Client, error) {
 		ID:             domain.NewClientID(),
 		Name:           strings.TrimSpace(input.Name),
 		WhatsAppNumber: input.WhatsAppNumber,
-		Timezone:       input.Timezone, // Required timezone
+		TimezoneOffset: input.TimezoneOffset,
 		BookingIDs:     []domain.BookingID{},
 		CreatedAt:      domain.NewUTCTimestamp(),
 		UpdatedAt:      domain.NewUTCTimestamp(),
@@ -86,13 +86,9 @@ func (u *Usecase) validateInput(input Input) error {
 		}
 	}
 
-	// Validate timezone (required)
-	if input.Timezone == "" {
-		return ErrTimezoneIsRequired
-	}
-
-	if !domain.Timezone(input.Timezone).IsValid() {
-		return ErrInvalidTimezone
+	// Validate timezone offset
+	if err := timeslot_usecase.ValidateTimezoneOffset(input.TimezoneOffset); err != nil {
+		return ErrInvalidTimezoneOffset
 	}
 
 	return nil

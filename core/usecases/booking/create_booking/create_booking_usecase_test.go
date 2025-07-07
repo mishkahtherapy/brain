@@ -83,11 +83,13 @@ func (r *inMemoryClientRepo) GetByID(id domain.ClientID) (*client.Client, error)
 func (r *inMemoryClientRepo) GetByWhatsAppNumber(domain.WhatsAppNumber) (*client.Client, error) {
 	return nil, nil
 }
-func (r *inMemoryClientRepo) UpdateTimezone(domain.ClientID, domain.Timezone) error { return nil }
-func (r *inMemoryClientRepo) Create(*client.Client) error                           { return nil }
-func (r *inMemoryClientRepo) Update(*client.Client) error                           { return nil }
-func (r *inMemoryClientRepo) Delete(domain.ClientID) error                          { return nil }
-func (r *inMemoryClientRepo) List() ([]*client.Client, error)                       { return nil, nil }
+func (r *inMemoryClientRepo) UpdateTimezoneOffset(domain.ClientID, domain.TimezoneOffset) error {
+	return nil
+}
+func (r *inMemoryClientRepo) Create(*client.Client) error     { return nil }
+func (r *inMemoryClientRepo) Update(*client.Client) error     { return nil }
+func (r *inMemoryClientRepo) Delete(domain.ClientID) error    { return nil }
+func (r *inMemoryClientRepo) List() ([]*client.Client, error) { return nil, nil }
 
 type inMemoryTimeSlotRepo struct{ slots map[string]*timeslot.TimeSlot }
 

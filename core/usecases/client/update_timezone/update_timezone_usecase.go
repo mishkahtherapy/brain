@@ -5,17 +5,17 @@ import (
 
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/ports"
+	timeslot_usecase "github.com/mishkahtherapy/brain/core/usecases/timeslot"
 )
 
 var (
-	ErrTimezoneIsRequired = errors.New("timezone is required")
-	ErrInvalidTimezone    = errors.New("invalid timezone format")
-	ErrClientNotFound     = errors.New("client not found")
+	ErrInvalidTimezoneOffset = errors.New("invalid timezoneOffset")
+	ErrClientNotFound        = errors.New("client not found")
 )
 
 type Input struct {
-	ClientID domain.ClientID `json:"clientId"`
-	Timezone domain.Timezone `json:"timezone"`
+	ClientID       domain.ClientID       `json:"clientId"`
+	TimezoneOffset domain.TimezoneOffset `json:"timezoneOffset"`
 }
 
 type Usecase struct {
@@ -29,13 +29,9 @@ func NewUsecase(clientRepo ports.ClientRepository) *Usecase {
 }
 
 func (u *Usecase) Execute(input Input) error {
-	// Validate timezone
-	if input.Timezone == "" {
-		return ErrTimezoneIsRequired
-	}
-
-	if !domain.Timezone(input.Timezone).IsValid() {
-		return ErrInvalidTimezone
+	// Validate offset
+	if err := timeslot_usecase.ValidateTimezoneOffset(input.TimezoneOffset); err != nil {
+		return ErrInvalidTimezoneOffset
 	}
 
 	// Check if client exists
@@ -47,6 +43,6 @@ func (u *Usecase) Execute(input Input) error {
 		return ErrClientNotFound
 	}
 
-	// Update client timezone
-	return u.clientRepo.UpdateTimezone(input.ClientID, input.Timezone)
+	// Update client timezone offset
+	return u.clientRepo.UpdateTimezoneOffset(input.ClientID, input.TimezoneOffset)
 }

@@ -69,11 +69,11 @@ type TestClientRepository struct {
 }
 
 func (r *TestClientRepository) GetByID(id domain.ClientID) (*client.Client, error) {
-	query := `SELECT id, name, whatsapp_number, timezone, created_at, updated_at FROM clients WHERE id = ?`
+	query := `SELECT id, name, whatsapp_number, timezone_offset, created_at, updated_at FROM clients WHERE id = ?`
 	row := r.db.QueryRow(query, id)
 
 	var client client.Client
-	err := row.Scan(&client.ID, &client.Name, &client.WhatsAppNumber, &client.Timezone, &client.CreatedAt, &client.UpdatedAt)
+	err := row.Scan(&client.ID, &client.Name, &client.WhatsAppNumber, &client.TimezoneOffset, &client.CreatedAt, &client.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (r *TestClientRepository) GetByWhatsAppNumber(whatsappNumber domain.WhatsAp
 	return nil, nil
 }
 func (r *TestClientRepository) List() ([]*client.Client, error) { return nil, nil }
-func (r *TestClientRepository) UpdateTimezone(id domain.ClientID, timezone domain.Timezone) error {
+func (r *TestClientRepository) UpdateTimezoneOffset(id domain.ClientID, offsetMinutes domain.TimezoneOffset) error {
 	return nil
 }
 

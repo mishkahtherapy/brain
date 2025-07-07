@@ -3,6 +3,7 @@ package timeslot_usecase
 import (
 	"time"
 
+	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/domain/timeslot"
 )
 
@@ -89,7 +90,7 @@ func ValidateBufferTimes(preSessionBuffer, postSessionBuffer int) error {
 // ========== NEW TIMEZONE AND DURATION FUNCTIONS ==========
 
 // Convert local day/time to UTC day/time
-func ConvertLocalToUTC(localDay string, localStart string, timezoneOffset int) (utcDay string, utcStart string, err error) {
+func ConvertLocalToUTC(localDay string, localStart string, timezoneOffset domain.TimezoneOffset) (utcDay string, utcStart string, err error) {
 	// Get base date for the local day (using a reference week starting Sunday 2000-01-02)
 	baseDate := getBaseDateForDay(localDay)
 
@@ -107,27 +108,6 @@ func ConvertLocalToUTC(localDay string, localStart string, timezoneOffset int) (
 	utcDateTime := localDateTime.Add(-time.Duration(timezoneOffset) * time.Minute)
 
 	return getDayOfWeek(utcDateTime), utcDateTime.Format(TimeFormat), nil
-}
-
-// Convert UTC day/time to local day/time
-func ConvertUTCToLocal(utcDay string, utcStart string, timezoneOffset int) (localDay string, localStart string, err error) {
-	// Get base date for the UTC day
-	baseDate := getBaseDateForDay(utcDay)
-
-	// Parse UTC time
-	utcTime, err := time.Parse(TimeFormat, utcStart)
-	if err != nil {
-		return "", "", timeslot.ErrInvalidTimeFormat
-	}
-
-	// Create UTC datetime
-	utcDateTime := time.Date(baseDate.Year(), baseDate.Month(), baseDate.Day(),
-		utcTime.Hour(), utcTime.Minute(), 0, 0, time.UTC)
-
-	// Convert to local by adding timezone offset
-	localDateTime := utcDateTime.Add(time.Duration(timezoneOffset) * time.Minute)
-
-	return getDayOfWeek(localDateTime), localDateTime.Format(TimeFormat), nil
 }
 
 // Get actual time range for a time slot (handles cross-day scenarios)
@@ -210,7 +190,7 @@ func ValidateDuration(durationMinutes int) error {
 }
 
 // Validate timezone offset (between -12 to +14 hours in minutes)
-func ValidateTimezoneOffset(offsetMinutes int) error {
+func ValidateTimezoneOffset(offsetMinutes domain.TimezoneOffset) error {
 	if offsetMinutes < -720 || offsetMinutes > 840 {
 		return timeslot.ErrInvalidTimezoneOffset
 	}

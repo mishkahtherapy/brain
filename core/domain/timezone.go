@@ -10,6 +10,8 @@ var (
 	ErrInvalidTimezone    = errors.New("invalid timezone format")
 )
 
+type TimezoneOffset int // minutes ahead of UTC
+
 // Timezone represents an IANA timezone identifier
 // Used for validation only - no timezone conversions happen on the backend
 type Timezone string
