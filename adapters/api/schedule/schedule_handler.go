@@ -26,7 +26,7 @@ func (h *ScheduleHandler) handleGetSchedule(w http.ResponseWriter, r *http.Reque
 	rw := api.NewResponseWriter(w)
 
 	// Parse tag parameter (required)
-	tag := r.URL.Query().Get("tag")
+	tag := r.URL.Query().Get("specialization")
 	if tag == "" {
 		rw.WriteBadRequest("specialization tag is required")
 		return
@@ -34,38 +34,38 @@ func (h *ScheduleHandler) handleGetSchedule(w http.ResponseWriter, r *http.Reque
 
 	// Parse english parameter (optional)
 	english := false
-	englishParam := r.URL.Query().Get("english")
+	englishParam := r.URL.Query().Get("requiresEnglish")
 	if englishParam == "true" {
 		english = true
 	}
 
-	// Parse start_date parameter (optional)
+	// Parse startDate parameter (optional)
 	var startDate time.Time
-	startDateParam := r.URL.Query().Get("start_date")
+	startDateParam := r.URL.Query().Get("startDate")
 	if startDateParam != "" {
 		var err error
 		startDate, err = time.Parse("2006-01-02", startDateParam)
 		if err != nil {
-			rw.WriteBadRequest("invalid start_date format: use YYYY-MM-DD")
+			rw.WriteBadRequest("invalid startDate format: use YYYY-MM-DD")
 			return
 		}
 	}
 
-	// Parse end_date parameter (optional)
+	// Parse endDate parameter (optional)
 	var endDate time.Time
-	endDateParam := r.URL.Query().Get("end_date")
+	endDateParam := r.URL.Query().Get("endDate")
 	if endDateParam != "" {
 		var err error
 		endDate, err = time.Parse("2006-01-02", endDateParam)
 		if err != nil {
-			rw.WriteBadRequest("invalid end_date format: use YYYY-MM-DD")
+			rw.WriteBadRequest("invalid endDate format: use YYYY-MM-DD")
 			return
 		}
 	}
 
 	// Validate date range if both are provided
 	if !startDate.IsZero() && !endDate.IsZero() && endDate.Before(startDate) {
-		rw.WriteBadRequest("end_date must be after start_date")
+		rw.WriteBadRequest("endDate must be after startDate")
 		return
 	}
 

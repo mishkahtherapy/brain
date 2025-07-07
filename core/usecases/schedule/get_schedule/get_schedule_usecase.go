@@ -29,6 +29,8 @@ type Usecase struct {
 var ErrSpecializationTagIsRequired = errors.New("specialization tag is required")
 var ErrInvalidDateRange = errors.New("invalid date range")
 
+var timeRangeMinimumDurationMinutes = 60
+
 func NewUsecase(
 	therapistRepo ports.TherapistRepository,
 	timeSlotRepo ports.TimeSlotRepository,
@@ -66,9 +68,6 @@ func (u *Usecase) Execute(input Input) ([]schedule.AvailableTimeRange, error) {
 		return nil, err
 	}
 
-	// Prepare response
-	response := []schedule.AvailableTimeRange{}
-
 	// For each therapist, calculate their available time ranges
 	therapistTimeSlots := make(map[domain.TherapistID][]*timeslot.TimeSlot)
 	therapistBookings := make(map[domain.TherapistID][]*booking.Booking)
@@ -94,7 +93,7 @@ func (u *Usecase) Execute(input Input) ([]schedule.AvailableTimeRange, error) {
 	}
 
 	// Calculate available time ranges using the line sweep algorithm
-	response = u.calculateAvailableTimeRanges(
+	response := u.calculateAvailableTimeRanges(
 		therapists,
 		therapistTimeSlots,
 		therapistBookings,
@@ -250,7 +249,7 @@ func calculateAvailableRangesBetweenBookings(
 
 		if lastEndTime.Before(bufferedStartTime) {
 			duration := int(bufferedStartTime.Sub(lastEndTime).Minutes())
-			if duration >= 30 { // Minimum 30 minutes for an available slot
+			if duration >= timeRangeMinimumDurationMinutes { // Minimum 30 minutes for an available slot
 				availableRanges = append(availableRanges, calculatedRange{
 					StartTime:   lastEndTime,
 					EndTime:     bufferedStartTime,
@@ -288,32 +287,37 @@ func applyLineSweepAlgorithm(availabilities []therapistAvailability) []schedule.
 		return []schedule.AvailableTimeRange{}
 	}
 
+	type TherapistPointInfo struct {
+		Therapist  *therapist.Therapist
+		TimeSlotID domain.TimeSlotID
+	}
+
 	// Step 1: Collect all time points (start and end times)
 	type TimePoint struct {
-		Time        time.Time
-		IsStart     bool
-		TherapistID domain.TherapistID
-		Therapist   *therapist.Therapist
-		TimeSlotID  domain.TimeSlotID
+		Time          time.Time
+		IsStart       bool
+		TherapistInfo TherapistPointInfo
 	}
 
 	timePoints := []TimePoint{}
 
 	for _, avail := range availabilities {
 		timePoints = append(timePoints, TimePoint{
-			Time:        avail.StartTime,
-			IsStart:     true,
-			TherapistID: avail.TherapistID,
-			Therapist:   avail.Therapist,
-			TimeSlotID:  avail.TimeSlotID,
+			Time:    avail.StartTime,
+			IsStart: true,
+			TherapistInfo: TherapistPointInfo{
+				Therapist:  avail.Therapist,
+				TimeSlotID: avail.TimeSlotID,
+			},
 		})
 
 		timePoints = append(timePoints, TimePoint{
-			Time:        avail.EndTime,
-			IsStart:     false,
-			TherapistID: avail.TherapistID,
-			Therapist:   avail.Therapist,
-			TimeSlotID:  avail.TimeSlotID,
+			Time:    avail.EndTime,
+			IsStart: false,
+			TherapistInfo: TherapistPointInfo{
+				Therapist:  avail.Therapist,
+				TimeSlotID: avail.TimeSlotID,
+			},
 		})
 	}
 
@@ -328,7 +332,7 @@ func applyLineSweepAlgorithm(availabilities []therapistAvailability) []schedule.
 
 	// Step 3: Sweep through time points
 	result := []schedule.AvailableTimeRange{}
-	activeTherapists := map[domain.TherapistID]*therapist.Therapist{}
+	activeTherapists := map[domain.TherapistID]TherapistPointInfo{}
 	var lastTime time.Time
 
 	for i, point := range timePoints {
@@ -343,17 +347,17 @@ func applyLineSweepAlgorithm(availabilities []therapistAvailability) []schedule.
 			therapistInfos := []schedule.TherapistInfo{}
 			for _, t := range activeTherapists {
 				therapistInfos = append(therapistInfos, schedule.TherapistInfo{
-					ID:              t.ID,
-					Name:            t.Name,
-					Specializations: t.Specializations,
-					SpeaksEnglish:   t.SpeaksEnglish,
-					TimeSlotID:      point.TimeSlotID,
+					ID:              t.Therapist.ID,
+					Name:            t.Therapist.Name,
+					Specializations: t.Therapist.Specializations,
+					SpeaksEnglish:   t.Therapist.SpeaksEnglish,
+					TimeSlotID:      t.TimeSlotID,
 				})
 			}
 
-			// Only add ranges with at least 30 minutes duration
+			// Only add ranges with at least 60 minutes duration
 			duration := int(point.Time.Sub(lastTime).Minutes())
-			if duration >= 30 {
+			if duration >= timeRangeMinimumDurationMinutes {
 				// Determine the date (just the date part of the time)
 				date := time.Date(lastTime.Year(), lastTime.Month(), lastTime.Day(), 0, 0, 0, 0, lastTime.Location())
 
@@ -369,9 +373,9 @@ func applyLineSweepAlgorithm(availabilities []therapistAvailability) []schedule.
 
 		// Update active therapists
 		if point.IsStart {
-			activeTherapists[point.TherapistID] = point.Therapist
+			activeTherapists[point.TherapistInfo.Therapist.ID] = point.TherapistInfo
 		} else {
-			delete(activeTherapists, point.TherapistID)
+			delete(activeTherapists, point.TherapistInfo.Therapist.ID)
 		}
 
 		lastTime = point.Time

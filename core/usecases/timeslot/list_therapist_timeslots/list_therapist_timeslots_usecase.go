@@ -11,10 +11,6 @@ type Input struct {
 	TherapistID domain.TherapistID `json:"therapistId"`
 }
 
-type Output struct {
-	Timeslots []timeslot.TimeSlot `json:"timeslots"`
-}
-
 type Usecase struct {
 	therapistRepo ports.TherapistRepository
 	timeslotRepo  ports.TimeSlotRepository
@@ -27,7 +23,7 @@ func NewUsecase(therapistRepo ports.TherapistRepository, timeslotRepo ports.Time
 	}
 }
 
-func (u *Usecase) Execute(input Input) (*Output, error) {
+func (u *Usecase) Execute(input Input) ([]timeslot.TimeSlot, error) {
 	// Validate input
 	if err := u.validateInput(input); err != nil {
 		return nil, err
@@ -52,9 +48,7 @@ func (u *Usecase) Execute(input Input) (*Output, error) {
 		result[i] = *ts
 	}
 
-	return &Output{
-		Timeslots: result,
-	}, nil
+	return result, nil
 }
 
 func (u *Usecase) validateInput(input Input) error {

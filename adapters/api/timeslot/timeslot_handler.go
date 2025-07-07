@@ -199,7 +199,7 @@ func (h *TimeslotHandler) handleListTimeslots(w http.ResponseWriter, r *http.Req
 		TherapistID: therapistID,
 	}
 
-	output, err := h.listTimeslotsUsecase.Execute(input)
+	timeslots, err := h.listTimeslotsUsecase.Execute(input)
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
@@ -214,7 +214,7 @@ func (h *TimeslotHandler) handleListTimeslots(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if err := rw.WriteJSON(output, http.StatusOK); err != nil {
+	if err := rw.WriteJSON(timeslots, http.StatusOK); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
 }
