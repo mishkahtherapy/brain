@@ -11,14 +11,15 @@ import (
 )
 
 type Input struct {
-	TherapistID       domain.TherapistID `json:"therapistId"`
-	TimeslotID        domain.TimeSlotID  `json:"timeslotId"`
-	DayOfWeek         timeslot.DayOfWeek `json:"dayOfWeek"`
-	StartTime         string             `json:"startTime"`         // "09:00"
-	DurationMinutes   int                `json:"durationMinutes"`   // Duration in minutes
-	PreSessionBuffer  int                `json:"preSessionBuffer"`  // minutes
-	PostSessionBuffer int                `json:"postSessionBuffer"` // minutes
-	IsActive          bool               `json:"isActive"`
+	TherapistID       domain.TherapistID    `json:"therapistId"`
+	TimeslotID        domain.TimeSlotID     `json:"timeslotId"`
+	DayOfWeek         timeslot.DayOfWeek    `json:"dayOfWeek"`
+	StartTime         string                `json:"startTime"`         // "09:00"
+	DurationMinutes   int                   `json:"durationMinutes"`   // Duration in minutes
+	PreSessionBuffer  int                   `json:"preSessionBuffer"`  // minutes
+	PostSessionBuffer int                   `json:"postSessionBuffer"` // minutes
+	TimezoneOffset    domain.TimezoneOffset `json:"timezoneOffset"`    // Client's timezone offset in minutes from UTC
+	IsActive          bool                  `json:"isActive"`
 }
 
 type Usecase struct {
@@ -73,6 +74,7 @@ func (u *Usecase) Execute(input Input) (*timeslot.TimeSlot, error) {
 		DurationMinutes:   input.DurationMinutes,
 		PreSessionBuffer:  input.PreSessionBuffer,
 		PostSessionBuffer: input.PostSessionBuffer,
+		TimezoneOffset:    input.TimezoneOffset,
 		IsActive:          input.IsActive,
 		BookingIDs:        existingTimeslot.BookingIDs, // Preserve existing bookings
 		CreatedAt:         existingTimeslot.CreatedAt,  // Preserve creation time
@@ -148,6 +150,7 @@ func (u *Usecase) checkForOverlaps(input Input) error {
 		DurationMinutes:   input.DurationMinutes,
 		PreSessionBuffer:  input.PreSessionBuffer,
 		PostSessionBuffer: input.PostSessionBuffer,
+		TimezoneOffset:    input.TimezoneOffset,
 	}
 
 	// Check for conflicts and insufficient gaps

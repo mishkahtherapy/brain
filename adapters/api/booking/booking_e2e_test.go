@@ -169,7 +169,7 @@ func TestBookingE2E(t *testing.T) {
 			testData.ClientID,
 			testData.TimeSlotID,
 			"2024-12-15T10:00:00Z",
-			"America/New_York",
+			-300,
 		)
 
 		rec, createdBooking := testUtils.CreateBooking(t, bookingRequest)
@@ -178,8 +178,8 @@ func TestBookingE2E(t *testing.T) {
 		testUtils.AssertBookingCreated(t, rec, testData.TherapistID, testData.ClientID, testData.TimeSlotID)
 
 		// Verify timezone is stored correctly
-		if createdBooking.Timezone != "America/New_York" {
-			t.Errorf("Expected timezone %s, got %s", "America/New_York", createdBooking.Timezone)
+		if createdBooking.TimezoneOffset != -300 {
+			t.Errorf("Expected timezone %d, got %d", -300, createdBooking.TimezoneOffset)
 		}
 
 		// Step 2: Get the booking
@@ -229,7 +229,7 @@ func TestBookingE2E(t *testing.T) {
 			testData.ClientID,
 			testData.TimeSlotID,
 			"2024-12-15T12:00:00Z",
-			"", // Missing timezone
+			-60, // Missing timezone
 		)
 		rec, _ := testUtils.CreateBooking(t, bookingWithoutTimezone)
 		testUtils.AssertBookingError(t, rec, http.StatusBadRequest)
@@ -240,7 +240,7 @@ func TestBookingE2E(t *testing.T) {
 			testData.ClientID,
 			testData.TimeSlotID,
 			"2024-12-15T12:00:00Z",
-			"Invalid/Timezone",
+			-60,
 		)
 		rec, _ = testUtils.CreateBooking(t, bookingWithInvalidTimezone)
 		testUtils.AssertBookingError(t, rec, http.StatusBadRequest)
@@ -252,14 +252,14 @@ func TestBookingE2E(t *testing.T) {
 			isolatedData.ClientID,
 			isolatedData.TimeSlotID,
 			"2024-12-21T15:00:00Z",
-			"Europe/London",
+			-60,
 		)
 		rec, createdBooking := testUtils.CreateBooking(t, bookingWithValidTimezone)
 		testUtils.AssertBookingCreated(t, rec, isolatedData.TherapistID, isolatedData.ClientID, isolatedData.TimeSlotID)
 
 		// Verify the created booking has correct timezone
-		if createdBooking.Timezone != "Europe/London" {
-			t.Errorf("Expected timezone %s, got %s", "Europe/London", createdBooking.Timezone)
+		if createdBooking.TimezoneOffset != -60 {
+			t.Errorf("Expected timezone %d, got %d", -60, createdBooking.TimezoneOffset)
 		}
 	})
 

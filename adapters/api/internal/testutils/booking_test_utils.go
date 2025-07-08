@@ -208,13 +208,19 @@ func NewBookingTestUtils(mux *http.ServeMux, db ports.SQLDatabase) *BookingTestU
 }
 
 // CreateBookingRequest creates a booking request with the given data
-func (b *BookingTestUtils) CreateBookingRequest(therapistID domain.TherapistID, clientID domain.ClientID, timeSlotID domain.TimeSlotID, startTime, timezone string) map[string]interface{} {
+func (b *BookingTestUtils) CreateBookingRequest(
+	therapistID domain.TherapistID,
+	clientID domain.ClientID,
+	timeSlotID domain.TimeSlotID,
+	startTime string,
+	timezoneOffset domain.TimezoneOffset,
+) map[string]interface{} {
 	return map[string]interface{}{
-		"therapistId": therapistID,
-		"clientId":    clientID,
-		"timeSlotId":  timeSlotID,
-		"startTime":   startTime,
-		"timezone":    timezone,
+		"therapistId":    therapistID,
+		"clientId":       clientID,
+		"timeSlotId":     timeSlotID,
+		"startTime":      startTime,
+		"timezoneOffset": timezoneOffset,
 	}
 }
 

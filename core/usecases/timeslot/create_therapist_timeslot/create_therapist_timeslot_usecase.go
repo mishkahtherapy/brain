@@ -42,29 +42,20 @@ func (u *Usecase) Execute(input Input) (*timeslot.TimeSlot, error) {
 		return nil, timeslot.ErrTherapistNotFound
 	}
 
-	// Convert local time to UTC
-	utcDay, utcStart, err := timeslot_usecase.ConvertLocalToUTC(
-		input.LocalDayOfWeek,
-		input.LocalStartTime,
-		input.TimezoneOffset,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create UTC timeslot for storage
-	utcTimeslot := &timeslot.TimeSlot{
+	// Create timeslot for storage (no UTC conversion)
+	newTimeslot := &timeslot.TimeSlot{
 		TherapistID:       input.TherapistID,
-		DayOfWeek:         timeslot.DayOfWeek(utcDay),
-		StartTime:         utcStart,
+		DayOfWeek:         timeslot.DayOfWeek(input.LocalDayOfWeek),
+		StartTime:         input.LocalStartTime,
 		DurationMinutes:   input.DurationMinutes,
 		PreSessionBuffer:  input.PreSessionBuffer,
 		PostSessionBuffer: input.PostSessionBuffer,
+		TimezoneOffset:    input.TimezoneOffset,
 		IsActive:          true,
 	}
 
-	// Check for overlapping timeslots (using UTC times)
-	if err := u.checkForOverlaps(*utcTimeslot); err != nil {
+	// Check for overlapping timeslots
+	if err := u.checkForOverlaps(*newTimeslot); err != nil {
 		return nil, err
 	}
 
@@ -72,17 +63,17 @@ func (u *Usecase) Execute(input Input) (*timeslot.TimeSlot, error) {
 	timeslotID := domain.NewTimeSlotID()
 	now := domain.UTCTimestamp(time.Now().UTC())
 
-	utcTimeslot.ID = timeslotID
-	utcTimeslot.BookingIDs = make([]domain.BookingID, 0)
-	utcTimeslot.CreatedAt = now
-	utcTimeslot.UpdatedAt = now
+	newTimeslot.ID = timeslotID
+	newTimeslot.BookingIDs = make([]domain.BookingID, 0)
+	newTimeslot.CreatedAt = now
+	newTimeslot.UpdatedAt = now
 
 	// Save to repository
-	if err := u.timeslotRepo.Create(utcTimeslot); err != nil {
+	if err := u.timeslotRepo.Create(newTimeslot); err != nil {
 		return nil, err
 	}
 
-	return utcTimeslot, nil
+	return newTimeslot, nil
 }
 
 func (u *Usecase) validateInput(input Input) error {

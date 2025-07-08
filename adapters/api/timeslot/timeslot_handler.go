@@ -334,21 +334,14 @@ func (h *TimeslotHandler) handleUpdateTimeslot(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Convert local input to UTC for storage
-	utcDayOfWeek, utcStartTime, err := timeslot_usecase.ConvertLocalToUTC(
-		string(requestBody.DayOfWeek), requestBody.StartTime, timezoneOffset)
-	if err != nil {
-		rw.WriteBadRequest(err.Error())
-		return
-	}
-
 	// Create input for usecase (with UTC data)
 	input := update_therapist_timeslot.Input{
 		TherapistID:       therapistID,
 		TimeslotID:        timeslotID,
-		DayOfWeek:         timeslot.DayOfWeek(utcDayOfWeek),
-		StartTime:         utcStartTime,
+		DayOfWeek:         requestBody.DayOfWeek,
+		StartTime:         requestBody.StartTime,
 		DurationMinutes:   requestBody.DurationMinutes,
+		TimezoneOffset:    timezoneOffset,
 		PreSessionBuffer:  requestBody.PreSessionBuffer,
 		PostSessionBuffer: requestBody.PostSessionBuffer,
 		IsActive:          requestBody.IsActive,

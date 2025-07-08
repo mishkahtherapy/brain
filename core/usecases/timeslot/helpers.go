@@ -87,29 +87,6 @@ func ValidateBufferTimes(preSessionBuffer, postSessionBuffer int) error {
 	return nil
 }
 
-// ========== NEW TIMEZONE AND DURATION FUNCTIONS ==========
-
-// Convert local day/time to UTC day/time
-func ConvertLocalToUTC(localDay string, localStart string, timezoneOffset domain.TimezoneOffset) (utcDay string, utcStart string, err error) {
-	// Get base date for the local day (using a reference week starting Sunday 2000-01-02)
-	baseDate := getBaseDateForDay(localDay)
-
-	// Parse local time
-	localTime, err := time.Parse(TimeFormat, localStart)
-	if err != nil {
-		return "", "", timeslot.ErrInvalidTimeFormat
-	}
-
-	// Create local datetime
-	localDateTime := time.Date(baseDate.Year(), baseDate.Month(), baseDate.Day(),
-		localTime.Hour(), localTime.Minute(), 0, 0, time.UTC)
-
-	// Convert to UTC by subtracting timezone offset
-	utcDateTime := localDateTime.Add(-time.Duration(timezoneOffset) * time.Minute)
-
-	return getDayOfWeek(utcDateTime), utcDateTime.Format(TimeFormat), nil
-}
-
 // Get actual time range for a time slot (handles cross-day scenarios)
 func GetActualTimeRange(slot timeslot.TimeSlot) (start, end time.Time) {
 	baseDate := getBaseDateForDay(string(slot.DayOfWeek))
@@ -122,6 +99,11 @@ func GetActualTimeRange(slot timeslot.TimeSlot) (start, end time.Time) {
 
 // Check if two time slots have conflicting time ranges
 func HasTimeSlotConflict(slot1, slot2 timeslot.TimeSlot) bool {
+	// Skip validation if slots are on different days
+	if slot1.DayOfWeek != slot2.DayOfWeek {
+		return false
+	}
+
 	start1, end1 := GetActualTimeRange(slot1)
 	start2, end2 := GetActualTimeRange(slot2)
 	return start1.Before(end2) && start2.Before(end1)
@@ -197,27 +179,15 @@ func ValidateTimezoneOffset(offsetMinutes domain.TimezoneOffset) error {
 	return nil
 }
 
-// Calculate end time from start time and duration
-func CalculateEndTime(startTime string, durationMinutes int) (endTime string, crossesDay bool) {
-	start, _ := time.Parse(TimeFormat, startTime)
-	baseDate := time.Date(2000, 1, 1, start.Hour(), start.Minute(), 0, 0, time.UTC)
-	end := baseDate.Add(time.Duration(durationMinutes) * time.Minute)
-
-	crossesDay = end.Day() != baseDate.Day()
-	return end.Format(TimeFormat), crossesDay
-}
-
-// ========== HELPER UTILITY FUNCTIONS ==========
-
-// Get base date for a day of week (using reference week starting Sunday 2000-01-02)
+// Helper function to get base date for a day of week
 func getBaseDateForDay(dayOfWeek string) time.Time {
-	baseDate := time.Date(2000, 1, 2, 0, 0, 0, 0, time.UTC) // Sunday
-
+	// Use a reference week starting Sunday 2000-01-02
+	baseDate := time.Date(2000, 1, 2, 0, 0, 0, 0, time.UTC)
 	dayOffset := getDayOffset(dayOfWeek)
 	return baseDate.AddDate(0, 0, dayOffset)
 }
 
-// Get day offset from Sunday (0=Sunday, 1=Monday, etc.)
+// Helper function to get day offset from Sunday
 func getDayOffset(dayOfWeek string) int {
 	switch dayOfWeek {
 	case "Sunday":
@@ -236,27 +206,5 @@ func getDayOffset(dayOfWeek string) int {
 		return 6
 	default:
 		return 0
-	}
-}
-
-// Get day of week string from time.Time
-func getDayOfWeek(t time.Time) string {
-	switch t.Weekday() {
-	case time.Sunday:
-		return "Sunday"
-	case time.Monday:
-		return "Monday"
-	case time.Tuesday:
-		return "Tuesday"
-	case time.Wednesday:
-		return "Wednesday"
-	case time.Thursday:
-		return "Thursday"
-	case time.Friday:
-		return "Friday"
-	case time.Saturday:
-		return "Saturday"
-	default:
-		return "Sunday"
 	}
 }

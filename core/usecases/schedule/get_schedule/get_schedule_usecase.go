@@ -362,9 +362,9 @@ func applyLineSweepAlgorithm(availabilities []therapistAvailability) []schedule.
 				date := time.Date(lastTime.Year(), lastTime.Month(), lastTime.Day(), 0, 0, 0, 0, lastTime.Location())
 
 				result = append(result, schedule.AvailableTimeRange{
-					Date:            date,
-					StartTime:       lastTime,
-					EndTime:         point.Time,
+					DayOfWeek:       date.Weekday().String(),
+					From:            lastTime,
+					To:              point.Time,
 					DurationMinutes: duration,
 					Therapists:      therapistInfos,
 				})

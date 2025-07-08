@@ -52,16 +52,16 @@ func TestTimeslotE2E(t *testing.T) {
 	mux := http.NewServeMux()
 	timeslotHandler.RegisterRoutes(mux)
 
-	// Test timezone offset (GMT+3 Cairo)
+	// Test timezone offset (stored but not used for conversion)
 	const testTimezoneOffset = 180
 
 	t.Run("Complete timeslot workflow", func(t *testing.T) {
-		// Step 1: Create a timeslot (local time: 14:00-17:00 becomes 11:00-14:00 UTC)
+		// Step 1: Create a timeslot
 		timeslotData := map[string]interface{}{
 			"therapistId":       string(testTherapistID),
 			"dayOfWeek":         "Monday",
-			"startTime":         "14:00", // Local time (Cairo: GMT+3)
-			"durationMinutes":   180,     // 3 hours duration
+			"startTime":         "14:00",
+			"durationMinutes":   180,
 			"timezoneOffset":    testTimezoneOffset,
 			"preSessionBuffer":  15,
 			"postSessionBuffer": 30,
@@ -78,7 +78,7 @@ func TestTimeslotE2E(t *testing.T) {
 		var createdTimeslot timeslot.TimeSlot
 		testutils.AssertJSONResponse(t, createRec, http.StatusCreated, &createdTimeslot)
 
-		// Verify created timeslot data (should be converted back to local timezone for response)
+		// Verify created timeslot data
 		if createdTimeslot.TherapistID != testTherapistID {
 			t.Errorf("Expected therapist ID %s, got %s", testTherapistID, createdTimeslot.TherapistID)
 		}
@@ -97,6 +97,9 @@ func TestTimeslotE2E(t *testing.T) {
 		if createdTimeslot.PostSessionBuffer != 30 {
 			t.Errorf("Expected post-session buffer %d, got %d", 30, createdTimeslot.PostSessionBuffer)
 		}
+		if createdTimeslot.TimezoneOffset != testTimezoneOffset {
+			t.Errorf("Expected timezone offset %d, got %d", testTimezoneOffset, createdTimeslot.TimezoneOffset)
+		}
 		if createdTimeslot.ID == "" {
 			t.Error("Expected ID to be set")
 		}
@@ -107,7 +110,7 @@ func TestTimeslotE2E(t *testing.T) {
 			t.Error("Expected new timeslot to be active by default")
 		}
 
-		// Step 2: Get the timeslot by ID (with timezone conversion)
+		// Step 2: Get the timeslot by ID
 		getReq := httptest.NewRequest("GET", "/api/v1/therapists/"+string(testTherapistID)+"/timeslots/"+string(createdTimeslot.ID)+"?timezoneOffset=180", nil)
 		getRec := httptest.NewRecorder()
 
@@ -130,12 +133,16 @@ func TestTimeslotE2E(t *testing.T) {
 		if retrievedTimeslot.DurationMinutes != createdTimeslot.DurationMinutes {
 			t.Errorf("Expected duration %d, got %d", createdTimeslot.DurationMinutes, retrievedTimeslot.DurationMinutes)
 		}
+		if retrievedTimeslot.TimezoneOffset != testTimezoneOffset {
+			t.Errorf("Expected timezone offset %d, got %d", testTimezoneOffset, retrievedTimeslot.TimezoneOffset)
+		}
 
 		// Step 5: Update the timeslot
 		updateData := map[string]interface{}{
 			"dayOfWeek":         "Wednesday",
 			"startTime":         "15:00",
-			"durationMinutes":   180, // 3 hours
+			"durationMinutes":   180,
+			"timezoneOffset":    testTimezoneOffset,
 			"preSessionBuffer":  10,
 			"postSessionBuffer": 30,
 			"isActive":          true,
@@ -172,11 +179,14 @@ func TestTimeslotE2E(t *testing.T) {
 		if updatedTimeslot.PostSessionBuffer != 30 {
 			t.Errorf("Expected updated post-session buffer %d, got %d", 30, updatedTimeslot.PostSessionBuffer)
 		}
+		if updatedTimeslot.TimezoneOffset != testTimezoneOffset {
+			t.Errorf("Expected timezone offset %d, got %d", testTimezoneOffset, updatedTimeslot.TimezoneOffset)
+		}
 		if !updatedTimeslot.IsActive {
 			t.Error("Expected timeslot to be active after update")
 		}
 
-		// Step 3: List all timeslots for therapist (with timezone conversion)
+		// Step 3: List all timeslots for therapist
 		listAllReq := httptest.NewRequest("GET", "/api/v1/therapists/"+string(testTherapistID)+"/timeslots?timezoneOffset=180", nil)
 		listAllRec := httptest.NewRecorder()
 
@@ -193,6 +203,9 @@ func TestTimeslotE2E(t *testing.T) {
 				found = true
 				if ts.DayOfWeek != timeslot.DayOfWeekWednesday {
 					t.Errorf("Expected listed timeslot to have updated day %s, got %s", timeslot.DayOfWeekWednesday, ts.DayOfWeek)
+				}
+				if ts.TimezoneOffset != testTimezoneOffset {
+					t.Errorf("Expected timezone offset %d, got %d", testTimezoneOffset, ts.TimezoneOffset)
 				}
 				break
 			}
@@ -213,7 +226,7 @@ func TestTimeslotE2E(t *testing.T) {
 		}
 
 		// Step 6: Verify timeslot is deleted
-		getDeletedReq := httptest.NewRequest("GET", "/api/v1/therapists/"+string(testTherapistID)+"/timeslots/"+string(createdTimeslot.ID)+"?timezoneOffset=180", nil)
+		getDeletedReq := httptest.NewRequest("GET", "/api/v1/therapists/"+string(testTherapistID)+"/timeslots/"+string(createdTimeslot.ID), nil)
 		getDeletedRec := httptest.NewRecorder()
 
 		mux.ServeHTTP(getDeletedRec, getDeletedReq)
@@ -382,62 +395,6 @@ func TestTimeslotE2E(t *testing.T) {
 		}
 	})
 
-	t.Run("Timezone validation", func(t *testing.T) {
-		// Test invalid timezone offset (too positive)
-		invalidPositiveOffsetData := map[string]interface{}{
-			"therapistId":       string(testTherapistID),
-			"dayOfWeek":         "Monday",
-			"startTime":         "14:00",
-			"durationMinutes":   60,
-			"timezoneOffset":    900, // Invalid: +15 hours (max is +14)
-			"preSessionBuffer":  0,
-			"postSessionBuffer": 30,
-		}
-		invalidPositiveOffsetBody, _ := json.Marshal(invalidPositiveOffsetData)
-
-		invalidPositiveOffsetReq := httptest.NewRequest("POST", "/api/v1/therapists/"+string(testTherapistID)+"/timeslots?timezoneOffset=180", bytes.NewBuffer(invalidPositiveOffsetBody))
-		invalidPositiveOffsetReq.Header.Set("Content-Type", "application/json")
-		invalidPositiveOffsetRec := httptest.NewRecorder()
-
-		mux.ServeHTTP(invalidPositiveOffsetRec, invalidPositiveOffsetReq)
-
-		if invalidPositiveOffsetRec.Code != http.StatusBadRequest {
-			t.Errorf("Expected status %d for invalid positive timezone offset, got %d", http.StatusBadRequest, invalidPositiveOffsetRec.Code)
-		}
-
-		// Test invalid timezone offset (too negative)
-		invalidNegativeOffsetData := map[string]interface{}{
-			"therapistId":       string(testTherapistID),
-			"dayOfWeek":         "Monday",
-			"startTime":         "14:00",
-			"durationMinutes":   60,
-			"timezoneOffset":    -780, // Invalid: -13 hours (min is -12)
-			"preSessionBuffer":  0,
-			"postSessionBuffer": 30,
-		}
-		invalidNegativeOffsetBody, _ := json.Marshal(invalidNegativeOffsetData)
-
-		invalidNegativeOffsetReq := httptest.NewRequest("POST", "/api/v1/therapists/"+string(testTherapistID)+"/timeslots?timezoneOffset=180", bytes.NewBuffer(invalidNegativeOffsetBody))
-		invalidNegativeOffsetReq.Header.Set("Content-Type", "application/json")
-		invalidNegativeOffsetRec := httptest.NewRecorder()
-
-		mux.ServeHTTP(invalidNegativeOffsetRec, invalidNegativeOffsetReq)
-
-		if invalidNegativeOffsetRec.Code != http.StatusBadRequest {
-			t.Errorf("Expected status %d for invalid negative timezone offset, got %d", http.StatusBadRequest, invalidNegativeOffsetRec.Code)
-		}
-
-		// Test missing timezone offset in query parameter for GET request
-		missingTimezoneReq := httptest.NewRequest("GET", "/api/v1/therapists/"+string(testTherapistID)+"/timeslots", nil)
-		missingTimezoneRec := httptest.NewRecorder()
-
-		mux.ServeHTTP(missingTimezoneRec, missingTimezoneReq)
-
-		if missingTimezoneRec.Code != http.StatusBadRequest {
-			t.Errorf("Expected status %d for missing timezone offset in query, got %d", http.StatusBadRequest, missingTimezoneRec.Code)
-		}
-	})
-
 	t.Run("Error cases", func(t *testing.T) {
 		// Test with non-existent therapist
 		nonExistentTherapistID := "therapist_00000000-0000-0000-0000-000000000000"
@@ -554,6 +511,7 @@ func TestTimeslotE2E(t *testing.T) {
 			"dayOfWeek":         "Friday",
 			"startTime":         "14:00",
 			"durationMinutes":   60,
+			"timezoneOffset":    testTimezoneOffset,
 			"preSessionBuffer":  0,
 			"postSessionBuffer": 30,
 			"isActive":          false,
@@ -580,6 +538,7 @@ func TestTimeslotE2E(t *testing.T) {
 			"dayOfWeek":         "Friday",
 			"startTime":         "14:00",
 			"durationMinutes":   60,
+			"timezoneOffset":    testTimezoneOffset,
 			"preSessionBuffer":  0,
 			"postSessionBuffer": 30,
 			"isActive":          true,
@@ -599,41 +558,6 @@ func TestTimeslotE2E(t *testing.T) {
 		// Verify it's active again
 		if !activeTimeslot.IsActive {
 			t.Error("Expected timeslot to be active after re-activation")
-		}
-	})
-
-	t.Run("Cross-day timezone conversion", func(t *testing.T) {
-		// Test cross-day scenario: Monday 1:30 AM local → Sunday 22:30 UTC
-		crossDayData := map[string]interface{}{
-			"therapistId":       string(testTherapistID),
-			"dayOfWeek":         "Monday",
-			"startTime":         "01:30", // Local time (Cairo: GMT+3)
-			"durationMinutes":   120,     // 2 hours
-			"timezoneOffset":    testTimezoneOffset,
-			"preSessionBuffer":  0,
-			"postSessionBuffer": 30,
-		}
-		crossDayBody, _ := json.Marshal(crossDayData)
-
-		crossDayReq := httptest.NewRequest("POST", "/api/v1/therapists/"+string(testTherapistID)+"/timeslots?timezoneOffset=180", bytes.NewBuffer(crossDayBody))
-		crossDayReq.Header.Set("Content-Type", "application/json")
-		crossDayRec := httptest.NewRecorder()
-
-		mux.ServeHTTP(crossDayRec, crossDayReq)
-
-		// Use utility for JSON parsing
-		var crossDayTimeslot timeslot.TimeSlot
-		testutils.AssertJSONResponse(t, crossDayRec, http.StatusCreated, &crossDayTimeslot)
-
-		// Verify the response is still in local timezone (shows as Monday)
-		if crossDayTimeslot.DayOfWeek != timeslot.DayOfWeekMonday {
-			t.Errorf("Expected local day Monday, got %s", crossDayTimeslot.DayOfWeek)
-		}
-		if crossDayTimeslot.StartTime != "01:30" {
-			t.Errorf("Expected local start time 01:30, got %s", crossDayTimeslot.StartTime)
-		}
-		if crossDayTimeslot.DurationMinutes != 120 {
-			t.Errorf("Expected duration 120 minutes, got %d", crossDayTimeslot.DurationMinutes)
 		}
 	})
 }

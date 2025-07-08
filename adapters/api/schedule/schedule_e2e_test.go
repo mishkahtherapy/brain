@@ -91,8 +91,8 @@ func TestScheduleE2E(t *testing.T) {
 		found2Therapists := false
 
 		for _, avail := range response {
-			startTime := avail.StartTime.Format("15:04")
-			endTime := avail.EndTime.Format("15:04")
+			startTime := avail.From.Format("15:04")
+			endTime := avail.To.Format("15:04")
 			therapistCount := len(avail.Therapists)
 
 			// Check for 3-therapist overlap (9:15-10:00)
@@ -144,8 +144,8 @@ func TestScheduleE2E(t *testing.T) {
 		for i, avail := range response {
 			t.Logf("Range %d: %s-%s (%d therapists)",
 				i+1,
-				avail.StartTime.Format("15:04"),
-				avail.EndTime.Format("15:04"),
+				avail.From.Format("15:04"),
+				avail.To.Format("15:04"),
 				len(avail.Therapists))
 		}
 	})
@@ -170,14 +170,14 @@ func TestScheduleE2E(t *testing.T) {
 		// Verify that non-hour boundary times are handled correctly
 		hasNonHourBoundary := false
 		for _, avail := range response {
-			startMinute := avail.StartTime.Minute()
-			endMinute := avail.EndTime.Minute()
+			startMinute := avail.From.Minute()
+			endMinute := avail.To.Minute()
 
 			if startMinute != 0 || endMinute != 0 {
 				hasNonHourBoundary = true
 				t.Logf("Found non-hour boundary: %s-%s",
-					avail.StartTime.Format("15:04"),
-					avail.EndTime.Format("15:04"))
+					avail.From.Format("15:04"),
+					avail.To.Format("15:04"))
 			}
 		}
 
@@ -210,7 +210,7 @@ func TestScheduleE2E(t *testing.T) {
 
 		// Verify ranges are properly sorted
 		for i := 1; i < len(response); i++ {
-			if response[i].StartTime.Before(response[i-1].EndTime) {
+			if response[i].From.Before(response[i-1].To) {
 				t.Error("Availability ranges are not properly sorted or have overlaps")
 			}
 		}
@@ -266,8 +266,8 @@ func TestScheduleE2E(t *testing.T) {
 		for i, avail := range response {
 			t.Logf("Range %d: %s-%s (%d min, %d therapists)",
 				i+1,
-				avail.StartTime.Format("15:04"),
-				avail.EndTime.Format("15:04"),
+				avail.From.Format("15:04"),
+				avail.To.Format("15:04"),
 				avail.DurationMinutes,
 				len(avail.Therapists))
 		}
@@ -661,10 +661,10 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 	// Insert bookings
 	for _, booking := range bookings {
 		_, err = database.Exec(`
-			INSERT INTO bookings (id, timeslot_id, therapist_id, client_id, start_time, timezone, state, created_at, updated_at)
+			INSERT INTO bookings (id, timeslot_id, therapist_id, client_id, start_time, timezone_offset, state, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`, booking.ID, booking.TimeSlotID, booking.TherapistID, booking.ClientID,
-			booking.StartTime, "UTC", booking.State, booking.CreatedAt, booking.UpdatedAt)
+			booking.StartTime, booking.TimezoneOffset, booking.State, booking.CreatedAt, booking.UpdatedAt)
 		if err != nil {
 			t.Fatalf("Failed to insert booking: %v", err)
 		}

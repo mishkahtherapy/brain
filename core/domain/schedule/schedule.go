@@ -16,9 +16,9 @@ type TherapistInfo struct {
 }
 
 type AvailableTimeRange struct {
-	Date            time.Time       `json:"date"`            // The specific date for this availability
-	StartTime       time.Time       `json:"startTime"`       // Start of available range
-	EndTime         time.Time       `json:"endTime"`         // End of available range
+	DayOfWeek       string          `json:"dayOfWeek"`       // The day of the week for this availability
+	From            time.Time       `json:"from"`            // Start of available range
+	To              time.Time       `json:"to"`              // End of available range
 	DurationMinutes int             `json:"durationMinutes"` // Duration in minutes
 	Therapists      []TherapistInfo `json:"therapists"`      // List of therapists available in this time range
 }

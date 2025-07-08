@@ -17,11 +17,11 @@ var (
 )
 
 type Input struct {
-	TherapistID domain.TherapistID  `json:"therapistId"`
-	ClientID    domain.ClientID     `json:"clientId"`
-	TimeSlotID  domain.TimeSlotID   `json:"timeSlotId"`
-	StartTime   domain.UTCTimestamp `json:"startTime"`
-	Timezone    domain.Timezone     `json:"timezone"` // Required timezone for this booking (frontend hint)
+	TherapistID    domain.TherapistID    `json:"therapistId"`
+	ClientID       domain.ClientID       `json:"clientId"`
+	TimeSlotID     domain.TimeSlotID     `json:"timeSlotId"`
+	StartTime      domain.UTCTimestamp   `json:"startTime"`
+	TimezoneOffset domain.TimezoneOffset `json:"timezoneOffset"`
 }
 
 type Usecase struct {
@@ -69,15 +69,6 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 		return nil, common.ErrTimeSlotNotFound
 	}
 
-	// Validate timezone (just validate format, no conversion)
-	if input.Timezone == "" {
-		return nil, domain.ErrTimezoneIsRequired
-	}
-
-	if !domain.Timezone(input.Timezone).IsValid() {
-		return nil, domain.ErrInvalidTimezone
-	}
-
 	// Fetch all timeslots for the therapist once to avoid repeated DB hits in the overlap check loop.
 	therapistTimeSlots, err := u.timeSlotRepo.ListByTherapist(string(input.TherapistID))
 	if err != nil {
@@ -103,7 +94,7 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 	newBookingEnd := newBookingStart.Add(time.Duration(timeSlot.DurationMinutes) * time.Minute)
 
 	for _, existingBooking := range therapistBookings {
-		if existingBooking.State != booking.BookingStateConfirmed && existingBooking.State != booking.BookingStatePending {
+		if existingBooking.State != booking.BookingStateConfirmed {
 			continue
 		}
 
@@ -131,15 +122,15 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 	// Create booking with Pending state and timezone (no conversion, just store as hint)
 	now := domain.NewUTCTimestamp()
 	createdBooking := &booking.Booking{
-		ID:          domain.NewBookingID(),
-		TherapistID: input.TherapistID,
-		ClientID:    input.ClientID,
-		TimeSlotID:  input.TimeSlotID,
-		StartTime:   input.StartTime, // Always in UTC
-		Timezone:    input.Timezone,  // Store as frontend hint, no conversion
-		State:       booking.BookingStatePending,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:             domain.NewBookingID(),
+		TherapistID:    input.TherapistID,
+		ClientID:       input.ClientID,
+		TimeSlotID:     input.TimeSlotID,
+		StartTime:      input.StartTime,      // Always in UTC
+		TimezoneOffset: input.TimezoneOffset, // Store as frontend hint, no conversion
+		State:          booking.BookingStatePending,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 
 	err = u.bookingRepo.Create(createdBooking)
@@ -163,11 +154,6 @@ func validateInput(input Input) error {
 	if time.Time(input.StartTime).IsZero() {
 		return common.ErrStartTimeIsRequired
 	}
-	if input.Timezone == "" {
-		return domain.ErrTimezoneIsRequired
-	}
-	if !domain.Timezone(input.Timezone).IsValid() {
-		return domain.ErrInvalidTimezone
-	}
+
 	return nil
 }
