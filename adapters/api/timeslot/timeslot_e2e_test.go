@@ -62,7 +62,6 @@ func TestTimeslotE2E(t *testing.T) {
 			"dayOfWeek":         "Monday",
 			"startTime":         "14:00",
 			"durationMinutes":   180,
-			"timezoneOffset":    testTimezoneOffset,
 			"preSessionBuffer":  15,
 			"postSessionBuffer": 30,
 		}
@@ -85,20 +84,17 @@ func TestTimeslotE2E(t *testing.T) {
 		if createdTimeslot.DayOfWeek != timeslot.DayOfWeekMonday {
 			t.Errorf("Expected day %s, got %s", timeslot.DayOfWeekMonday, createdTimeslot.DayOfWeek)
 		}
-		if createdTimeslot.StartTime != "14:00" {
-			t.Errorf("Expected start time %s, got %s", "14:00", createdTimeslot.StartTime)
+		if createdTimeslot.Start != "14:00" {
+			t.Errorf("Expected start time %s, got %s", "14:00", createdTimeslot.Start)
 		}
-		if createdTimeslot.DurationMinutes != 180 {
-			t.Errorf("Expected duration %d, got %d", 180, createdTimeslot.DurationMinutes)
+		if createdTimeslot.Duration != 180 {
+			t.Errorf("Expected duration %d, got %d", 180, createdTimeslot.Duration)
 		}
 		if createdTimeslot.PreSessionBuffer != 15 {
 			t.Errorf("Expected pre-session buffer %d, got %d", 15, createdTimeslot.PreSessionBuffer)
 		}
 		if createdTimeslot.PostSessionBuffer != 30 {
 			t.Errorf("Expected post-session buffer %d, got %d", 30, createdTimeslot.PostSessionBuffer)
-		}
-		if createdTimeslot.TimezoneOffset != testTimezoneOffset {
-			t.Errorf("Expected timezone offset %d, got %d", testTimezoneOffset, createdTimeslot.TimezoneOffset)
 		}
 		if createdTimeslot.ID == "" {
 			t.Error("Expected ID to be set")
@@ -127,14 +123,11 @@ func TestTimeslotE2E(t *testing.T) {
 		if retrievedTimeslot.DayOfWeek != createdTimeslot.DayOfWeek {
 			t.Errorf("Expected day %s, got %s", createdTimeslot.DayOfWeek, retrievedTimeslot.DayOfWeek)
 		}
-		if retrievedTimeslot.StartTime != createdTimeslot.StartTime {
-			t.Errorf("Expected start time %s, got %s", createdTimeslot.StartTime, retrievedTimeslot.StartTime)
+		if retrievedTimeslot.Start != createdTimeslot.Start {
+			t.Errorf("Expected start time %s, got %s", createdTimeslot.Start, retrievedTimeslot.Start)
 		}
-		if retrievedTimeslot.DurationMinutes != createdTimeslot.DurationMinutes {
-			t.Errorf("Expected duration %d, got %d", createdTimeslot.DurationMinutes, retrievedTimeslot.DurationMinutes)
-		}
-		if retrievedTimeslot.TimezoneOffset != testTimezoneOffset {
-			t.Errorf("Expected timezone offset %d, got %d", testTimezoneOffset, retrievedTimeslot.TimezoneOffset)
+		if retrievedTimeslot.Duration != createdTimeslot.Duration {
+			t.Errorf("Expected duration %d, got %d", createdTimeslot.Duration, retrievedTimeslot.Duration)
 		}
 
 		// Step 5: Update the timeslot
@@ -170,17 +163,14 @@ func TestTimeslotE2E(t *testing.T) {
 		if updatedTimeslot.DayOfWeek != timeslot.DayOfWeekWednesday {
 			t.Errorf("Expected updated day %s, got %s", timeslot.DayOfWeekWednesday, updatedTimeslot.DayOfWeek)
 		}
-		if updatedTimeslot.StartTime != "15:00" {
-			t.Errorf("Expected updated start time %s, got %s", "15:00", updatedTimeslot.StartTime)
+		if updatedTimeslot.Start != "15:00" {
+			t.Errorf("Expected updated start time %s, got %s", "15:00", updatedTimeslot.Start)
 		}
-		if updatedTimeslot.DurationMinutes != 180 {
-			t.Errorf("Expected updated duration %d, got %d", 180, updatedTimeslot.DurationMinutes)
+		if updatedTimeslot.Duration != 180 {
+			t.Errorf("Expected updated duration %d, got %d", 180, updatedTimeslot.Duration)
 		}
 		if updatedTimeslot.PostSessionBuffer != 30 {
 			t.Errorf("Expected updated post-session buffer %d, got %d", 30, updatedTimeslot.PostSessionBuffer)
-		}
-		if updatedTimeslot.TimezoneOffset != testTimezoneOffset {
-			t.Errorf("Expected timezone offset %d, got %d", testTimezoneOffset, updatedTimeslot.TimezoneOffset)
 		}
 		if !updatedTimeslot.IsActive {
 			t.Error("Expected timeslot to be active after update")
@@ -203,9 +193,6 @@ func TestTimeslotE2E(t *testing.T) {
 				found = true
 				if ts.DayOfWeek != timeslot.DayOfWeekWednesday {
 					t.Errorf("Expected listed timeslot to have updated day %s, got %s", timeslot.DayOfWeekWednesday, ts.DayOfWeek)
-				}
-				if ts.TimezoneOffset != testTimezoneOffset {
-					t.Errorf("Expected timezone offset %d, got %d", testTimezoneOffset, ts.TimezoneOffset)
 				}
 				break
 			}

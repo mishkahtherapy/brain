@@ -40,7 +40,7 @@ func (r *inMemoryBookingRepo) ListByTherapistAndState(domain.TherapistID, bookin
 func (r *inMemoryBookingRepo) ListByClientAndState(domain.ClientID, booking.BookingState) ([]*booking.Booking, error) {
 	return nil, nil
 }
-func (r *inMemoryBookingRepo) ListConfirmedByTherapistForDateRange(domain.TherapistID, time.Time, time.Time) ([]*booking.Booking, error) {
+func (r *inMemoryBookingRepo) BulkListByTherapistForDateRange([]domain.TherapistID, booking.BookingState, time.Time, time.Time) (map[domain.TherapistID][]*booking.Booking, error) {
 	return nil, nil
 }
 
@@ -91,22 +91,35 @@ func (r *inMemoryClientRepo) Update(*client.Client) error     { return nil }
 func (r *inMemoryClientRepo) Delete(domain.ClientID) error    { return nil }
 func (r *inMemoryClientRepo) List() ([]*client.Client, error) { return nil, nil }
 
-type inMemoryTimeSlotRepo struct{ slots map[string]*timeslot.TimeSlot }
+type inMemoryTimeSlotRepo struct {
+	slots map[domain.TimeSlotID]*timeslot.TimeSlot
+}
 
-func (r *inMemoryTimeSlotRepo) GetByID(id string) (*timeslot.TimeSlot, error) {
+func (r *inMemoryTimeSlotRepo) GetByID(id domain.TimeSlotID) (*timeslot.TimeSlot, error) {
 	return r.slots[id], nil
 }
-func (r *inMemoryTimeSlotRepo) Create(*timeslot.TimeSlot) error { return nil }
-func (r *inMemoryTimeSlotRepo) Update(*timeslot.TimeSlot) error { return nil }
-func (r *inMemoryTimeSlotRepo) Delete(id string) error          { return nil }
-func (r *inMemoryTimeSlotRepo) ListByTherapist(therapistID string) ([]*timeslot.TimeSlot, error) {
+func (r *inMemoryTimeSlotRepo) Create(*timeslot.TimeSlot) error   { return nil }
+func (r *inMemoryTimeSlotRepo) Update(*timeslot.TimeSlot) error   { return nil }
+func (r *inMemoryTimeSlotRepo) Delete(id domain.TimeSlotID) error { return nil }
+func (r *inMemoryTimeSlotRepo) ListByTherapist(therapistID domain.TherapistID) ([]*timeslot.TimeSlot, error) {
 	out := make([]*timeslot.TimeSlot, 0, len(r.slots))
 	for _, s := range r.slots {
 		out = append(out, s)
 	}
 	return out, nil
 }
-func (r *inMemoryTimeSlotRepo) BulkToggleByTherapistID(string, bool) error { return nil }
+func (r *inMemoryTimeSlotRepo) BulkToggleByTherapistID(domain.TherapistID, bool) error { return nil }
+func (r *inMemoryTimeSlotRepo) BulkListByTherapist(therapistIDs []domain.TherapistID) (map[domain.TherapistID][]*timeslot.TimeSlot, error) {
+	out := make(map[domain.TherapistID][]*timeslot.TimeSlot)
+	for _, s := range r.slots {
+		if _, ok := out[s.TherapistID]; !ok {
+			out[s.TherapistID] = []*timeslot.TimeSlot{}
+		}
+
+		out[s.TherapistID] = append(out[s.TherapistID], s)
+	}
+	return out, nil
+}
 
 // -----------------------------
 // Tests
@@ -128,20 +141,20 @@ func TestCreateBooking_ConflictDetection(t *testing.T) {
 	tsMorning := &timeslot.TimeSlot{
 		ID:                "slot_morning",
 		TherapistID:       therapistID,
-		DurationMinutes:   60,
+		Duration:          60,
 		PostSessionBuffer: 15,
 	}
 
 	tsLateMorning := &timeslot.TimeSlot{
 		ID:                "slot_late",
 		TherapistID:       therapistID,
-		DurationMinutes:   60,
+		Duration:          60,
 		PostSessionBuffer: 15,
 	}
 
-	slotRepo := &inMemoryTimeSlotRepo{slots: map[string]*timeslot.TimeSlot{
-		string(tsMorning.ID):     tsMorning,
-		string(tsLateMorning.ID): tsLateMorning,
+	slotRepo := &inMemoryTimeSlotRepo{slots: map[domain.TimeSlotID]*timeslot.TimeSlot{
+		tsMorning.ID:     tsMorning,
+		tsLateMorning.ID: tsLateMorning,
 	}}
 
 	therapistRepo := &inMemoryTherapistRepo{}
@@ -157,11 +170,11 @@ func TestCreateBooking_ConflictDetection(t *testing.T) {
 			name:     "no conflict - empty schedule",
 			existing: nil,
 			newInput: Input{
-				TherapistID: therapistID,
-				ClientID:    clientID,
-				TimeSlotID:  tsMorning.ID,
-				StartTime:   mustParse(t, "2025-07-07T09:00:00Z"),
-				Timezone:    "UTC",
+				TherapistID:    therapistID,
+				ClientID:       clientID,
+				TimeSlotID:     tsMorning.ID,
+				StartTime:      mustParse(t, "2025-07-07T09:00:00Z"),
+				TimezoneOffset: 0,
 			},
 			expectConflict: false,
 		},
@@ -177,11 +190,11 @@ func TestCreateBooking_ConflictDetection(t *testing.T) {
 				},
 			},
 			newInput: Input{
-				TherapistID: therapistID,
-				ClientID:    clientID,
-				TimeSlotID:  tsMorning.ID,
-				StartTime:   mustParse(t, "2025-07-07T09:00:00Z"),
-				Timezone:    "UTC",
+				TherapistID:    therapistID,
+				ClientID:       clientID,
+				TimeSlotID:     tsMorning.ID,
+				StartTime:      mustParse(t, "2025-07-07T09:00:00Z"),
+				TimezoneOffset: 0,
 			},
 			expectConflict: true,
 		},
@@ -197,11 +210,11 @@ func TestCreateBooking_ConflictDetection(t *testing.T) {
 				},
 			},
 			newInput: Input{
-				TherapistID: therapistID,
-				ClientID:    clientID,
-				TimeSlotID:  tsMorning.ID,
-				StartTime:   mustParse(t, "2025-07-07T10:05:00Z"), // starts within 15-min buffer
-				Timezone:    "UTC",
+				TherapistID:    therapistID,
+				ClientID:       clientID,
+				TimeSlotID:     tsMorning.ID,
+				StartTime:      mustParse(t, "2025-07-07T10:05:00Z"), // starts within 15-min buffer
+				TimezoneOffset: 0,
 			},
 			expectConflict: true,
 		},
@@ -217,11 +230,11 @@ func TestCreateBooking_ConflictDetection(t *testing.T) {
 				},
 			},
 			newInput: Input{
-				TherapistID: therapistID,
-				ClientID:    clientID,
-				TimeSlotID:  tsLateMorning.ID,
-				StartTime:   mustParse(t, "2025-07-07T10:00:00Z"), // overlaps 10:00-10:30
-				Timezone:    "UTC",
+				TherapistID:    therapistID,
+				ClientID:       clientID,
+				TimeSlotID:     tsLateMorning.ID,
+				StartTime:      mustParse(t, "2025-07-07T10:00:00Z"), // overlaps 10:00-10:30
+				TimezoneOffset: 0,
 			},
 			expectConflict: true,
 		},
@@ -237,11 +250,11 @@ func TestCreateBooking_ConflictDetection(t *testing.T) {
 				},
 			},
 			newInput: Input{
-				TherapistID: therapistID,
-				ClientID:    clientID,
-				TimeSlotID:  tsMorning.ID,
-				StartTime:   mustParse(t, "2025-07-07T10:15:00Z"), // exactly after 15-min buffer
-				Timezone:    "UTC",
+				TherapistID:    therapistID,
+				ClientID:       clientID,
+				TimeSlotID:     tsMorning.ID,
+				StartTime:      mustParse(t, "2025-07-07T10:15:00Z"), // exactly after 15-min buffer
+				TimezoneOffset: 0,
 			},
 			expectConflict: false,
 		},

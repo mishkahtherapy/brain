@@ -36,7 +36,7 @@ func (u *Usecase) Execute(input Input) ([]timeslot.TimeSlot, error) {
 
 	var timeslots []*timeslot.TimeSlot
 	var err error
-	timeslots, err = u.timeslotRepo.ListByTherapist(string(input.TherapistID))
+	timeslots, err = u.timeslotRepo.ListByTherapist(input.TherapistID)
 
 	if err != nil {
 		return nil, err

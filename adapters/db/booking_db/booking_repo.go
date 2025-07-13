@@ -3,7 +3,9 @@ package booking_db
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/mishkahtherapy/brain/core/domain"
@@ -31,7 +33,7 @@ var ErrFailedToUpdateBooking = errors.New("failed to update booking")
 var ErrFailedToDeleteBooking = errors.New("failed to delete booking")
 var ErrInvalidDateRange = errors.New("invalid date range")
 
-func NewBookingRepository(db ports.SQLDatabase) *BookingRepository {
+func NewBookingRepository(db ports.SQLDatabase) ports.BookingRepository {
 	return &BookingRepository{db: db}
 }
 
@@ -346,44 +348,69 @@ func (r *BookingRepository) scanBookings(rows *sql.Rows) ([]*booking.Booking, er
 	return bookings, nil
 }
 
-func (r *BookingRepository) ListConfirmedByTherapistForDateRange(
-	therapistID domain.TherapistID, startDate, endDate time.Time) ([]*booking.Booking, error) {
-	if therapistID == "" {
+func (r *BookingRepository) BulkListByTherapistForDateRange(
+	therapistIDs []domain.TherapistID,
+	state booking.BookingState,
+	startDate time.Time,
+	endDate time.Time,
+) (map[domain.TherapistID][]*booking.Booking, error) {
+	if len(therapistIDs) == 0 {
 		return nil, ErrBookingTherapistIDIsRequired
 	}
 
-	// TODO: make this a parameter.
+	// Start and end dates are days, not times.
+	if startDate.Hour() != 0 || startDate.Minute() != 0 || startDate.Second() != 0 {
+		return nil, ErrInvalidDateRange
+	}
+
+	if endDate.Hour() != 0 || endDate.Minute() != 0 || endDate.Second() != 0 {
+		return nil, ErrInvalidDateRange
+	}
+
 	// Calculate endTimeForBookingStartedBeforeRange (startDate - 1 hour)
-	// This captures bookings that start before the range but extend into it
-	oneHourBefore := startDate.Add(-time.Hour)
+	// FIXME: I don't capture bookings that start before the range but extend into it
+	// Example: a booking at 11.30PM that ends at 12.30AM next day is not captured.
 
 	query := `
 	       SELECT id, timeslot_id, therapist_id, client_id, start_time, timezone_offset, state, created_at, updated_at
 	       FROM bookings
-	       WHERE therapist_id = ?
-	       AND state = ?
+	       WHERE state = ?
 	       AND (
 		       -- Bookings that start within the range
 		       (start_time >= ? AND start_time <= ?)
 		       OR
-		       -- Bookings that start before the range but end within or after it
-		       -- (assuming fixed 1-hour duration for all bookings)
-		       (start_time >= ? AND start_time < ?)
+		       -- Parse partially overlapping bookings. Add start_time + duration_minutes
+		       (
+			   	datetime(start_time, '+' || duration_minutes || ' minutes') > ? 
+				AND 
+			    datetime(start_time, '+' || duration_minutes || ' minutes') <= ?
+			   )
 	       )
+	       AND therapist_id IN (%s)
 	       ORDER BY start_time ASC
 	   `
 
-	rows, err := r.db.Query(
-		query,
-		therapistID,
-		booking.BookingStateConfirmed, // TODO: refactor this parameter
-		startDate, endDate,            // For bookings starting within range
-		oneHourBefore, startDate, // For bookings starting before range but extending into it
-	)
+	placeholders := make([]string, len(therapistIDs))
+
+	therapistIds := make([]interface{}, len(therapistIDs))
+	for i, id := range therapistIDs {
+		placeholders[i] = "?"
+		therapistIds[i] = id
+	}
+	placeholdersStr := strings.Join(placeholders, ",")
+	query = fmt.Sprintf(query, placeholdersStr)
+	values := []interface{}{
+		state,
+		startDate,
+		endDate,
+	}
+	values = append(values, therapistIds...)
+	rows, err := r.db.Query(query, values...)
+
 	if err != nil {
 		slog.Error("error listing confirmed bookings by therapist for date range",
 			"error", err,
-			"therapistID", therapistID,
+			"therapistIDs", therapistIDs,
 			"startDate", startDate,
 			"endDate", endDate,
 		)
@@ -391,7 +418,28 @@ func (r *BookingRepository) ListConfirmedByTherapistForDateRange(
 	}
 	defer rows.Close()
 
-	return r.scanBookings(rows)
+	bookings := make(map[domain.TherapistID][]*booking.Booking)
+	for rows.Next() {
+		booking := &booking.Booking{}
+		err := rows.Scan(
+			&booking.ID,
+			&booking.TimeSlotID,
+			&booking.TherapistID,
+			&booking.ClientID,
+			&booking.StartTime,
+			&booking.TimezoneOffset,
+			&booking.State,
+			&booking.CreatedAt,
+			&booking.UpdatedAt,
+		)
+		if err != nil {
+			slog.Error("error scanning booking", "error", err)
+			return nil, ErrFailedToGetBookings
+		}
+		bookings[booking.TherapistID] = append(bookings[booking.TherapistID], booking)
+	}
+
+	return bookings, nil
 }
 
 // Search returns all bookings whose start_time is within the inclusive range

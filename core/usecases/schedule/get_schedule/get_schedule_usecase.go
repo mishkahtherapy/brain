@@ -16,6 +16,7 @@ import (
 type Input struct {
 	SpecializationTag string
 	MustSpeakEnglish  bool
+	TherapistIDs      []domain.TherapistID
 	StartDate         time.Time
 	EndDate           time.Time
 }
@@ -68,28 +69,36 @@ func (u *Usecase) Execute(input Input) ([]schedule.AvailableTimeRange, error) {
 		return nil, err
 	}
 
+	therapistIDs := make([]domain.TherapistID, len(therapists))
+	for i, therapist := range therapists {
+		therapistIDs[i] = therapist.ID
+	}
+
 	// For each therapist, calculate their available time ranges
 	therapistTimeSlots := make(map[domain.TherapistID][]*timeslot.TimeSlot)
 	therapistBookings := make(map[domain.TherapistID][]*booking.Booking)
 
+	therapistSlots, err := u.timeSlotRepo.BulkListByTherapist(therapistIDs)
+	if err != nil {
+		return nil, err
+	}
+	bookings, err := u.bookingRepo.BulkListByTherapistForDateRange(
+		therapistIDs,
+		booking.BookingStateConfirmed,
+		input.StartDate,
+		input.EndDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	for _, therapist := range therapists {
 		// Get all time slots for this therapist
-		timeSlots, err := u.timeSlotRepo.ListByTherapist(string(therapist.ID))
-		if err != nil {
-			return nil, err
-		}
+		timeSlots := therapistSlots[therapist.ID]
 		therapistTimeSlots[therapist.ID] = timeSlots
 
 		// Get confirmed bookings for this therapist in the date range
-		bookings, err := u.bookingRepo.ListConfirmedByTherapistForDateRange(
-			therapist.ID,
-			input.StartDate,
-			input.EndDate,
-		)
-		if err != nil {
-			return nil, err
-		}
-		therapistBookings[therapist.ID] = bookings
+		therapistBookings[therapist.ID] = bookings[therapist.ID]
 	}
 
 	// Calculate available time ranges using the line sweep algorithm
@@ -108,8 +117,8 @@ func (u *Usecase) Execute(input Input) ([]schedule.AvailableTimeRange, error) {
 type therapistAvailability struct {
 	TherapistID domain.TherapistID
 	Therapist   *therapist.Therapist
-	StartTime   time.Time
-	EndTime     time.Time
+	StartTime   domain.UTCTimestamp
+	EndTime     domain.UTCTimestamp
 	TimeSlotID  domain.TimeSlotID
 }
 
@@ -134,19 +143,15 @@ func (u *Usecase) calculateAvailableTimeRanges(
 
 		// For each day in the date range
 		for current := startDate; !current.After(endDate); current = current.AddDate(0, 0, 1) {
-			dayOfWeek := timeslot.DayOfWeek(current.Weekday().String())
 
 			// For each time slot on this day
 			for _, slot := range timeSlots {
-				if slot.DayOfWeek != dayOfWeek {
-					continue
-				}
 
 				// Calculate the specific time slot for this date
-				slotStart, slotEnd := getSlotTimes(current, slot)
+				slotStart, slotEnd := slot.ApplyToDate(current)
 
 				// If the slot is in the past, skip it
-				if slotEnd.Before(time.Now().UTC()) {
+				if slotEnd.Before(domain.NewUTCTimestamp()) {
 					continue
 				}
 
@@ -200,14 +205,6 @@ func makeBookingMap(bookings []*booking.Booking) map[string]map[domain.TimeSlotI
 	return bookingMap
 }
 
-func getSlotTimes(date time.Time, slot *timeslot.TimeSlot) (time.Time, time.Time) {
-	slotStartTime, _ := time.Parse("15:04", slot.StartTime)
-
-	start := time.Date(date.Year(), date.Month(), date.Day(), slotStartTime.Hour(), slotStartTime.Minute(), 0, 0, time.UTC)
-	end := start.Add(time.Duration(slot.DurationMinutes) * time.Minute)
-	return start, end
-}
-
 func getBookingsForSlot(bookingMap map[string]map[domain.TimeSlotID][]*booking.Booking, slotID domain.TimeSlotID, date time.Time) []*booking.Booking {
 	dateStr := date.Format("2006-01-02")
 	if dateMap, ok := bookingMap[dateStr]; ok {
@@ -217,15 +214,15 @@ func getBookingsForSlot(bookingMap map[string]map[domain.TimeSlotID][]*booking.B
 }
 
 type calculatedRange struct {
-	StartTime   time.Time
-	EndTime     time.Time
+	StartTime   domain.UTCTimestamp
+	EndTime     domain.UTCTimestamp
 	TherapistID domain.TherapistID
 }
 
 func calculateAvailableRangesBetweenBookings(
-	slotStart, slotEnd time.Time,
+	slotStart, slotEnd domain.UTCTimestamp,
 	bookings []*booking.Booking,
-	preBuffer, postBuffer int,
+	preBuffer, postBuffer domain.DurationMinutes,
 ) []calculatedRange {
 	availableRanges := []calculatedRange{}
 	sortBookingsByStartTime(bookings)
@@ -233,7 +230,7 @@ func calculateAvailableRangesBetweenBookings(
 	lastEndTime := slotStart
 
 	for _, booking := range bookings {
-		bookingStartTime := time.Time(booking.StartTime)
+		bookingStartTime := domain.UTCTimestamp(booking.StartTime)
 		bookingEndTime := bookingStartTime.Add(time.Hour) // Assuming 1-hour sessions
 
 		bufferedStartTime := bookingStartTime.Add(-time.Duration(preBuffer) * time.Minute)
@@ -294,7 +291,7 @@ func applyLineSweepAlgorithm(availabilities []therapistAvailability) []schedule.
 
 	// Step 1: Collect all time points (start and end times)
 	type TimePoint struct {
-		Time          time.Time
+		Time          domain.UTCTimestamp
 		IsStart       bool
 		TherapistInfo TherapistPointInfo
 	}
@@ -333,7 +330,7 @@ func applyLineSweepAlgorithm(availabilities []therapistAvailability) []schedule.
 	// Step 3: Sweep through time points
 	result := []schedule.AvailableTimeRange{}
 	activeTherapists := map[domain.TherapistID]TherapistPointInfo{}
-	var lastTime time.Time
+	var lastTime domain.UTCTimestamp
 
 	for i, point := range timePoints {
 		// Initialize lastTime with the first point's time
@@ -359,7 +356,13 @@ func applyLineSweepAlgorithm(availabilities []therapistAvailability) []schedule.
 			duration := int(point.Time.Sub(lastTime).Minutes())
 			if duration >= timeRangeMinimumDurationMinutes {
 				// Determine the date (just the date part of the time)
-				date := time.Date(lastTime.Year(), lastTime.Month(), lastTime.Day(), 0, 0, 0, 0, lastTime.Location())
+				date := time.Date(
+					lastTime.Year(),
+					lastTime.Month(),
+					lastTime.Day(),
+					0, 0, 0, 0,
+					time.UTC,
+				)
 
 				result = append(result, schedule.AvailableTimeRange{
 					DayOfWeek:       date.Weekday().String(),

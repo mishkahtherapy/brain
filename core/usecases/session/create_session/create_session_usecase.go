@@ -71,7 +71,7 @@ func (u *Usecase) Execute(input Input) (*domain.Session, error) {
 	}
 
 	// Verify the timeslot exists
-	timeSlot, err := u.timeSlotRepo.GetByID(string(input.TimeSlotID))
+	timeSlot, err := u.timeSlotRepo.GetByID(input.TimeSlotID)
 	if err != nil || timeSlot == nil {
 		return nil, common.ErrTimeSlotNotFound
 	}

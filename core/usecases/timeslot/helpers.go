@@ -7,11 +7,6 @@ import (
 	"github.com/mishkahtherapy/brain/core/domain/timeslot"
 )
 
-// TimeFormat is the standard 24-hour time format (HH:MM) used throughout the application
-// This constant can be reused by other packages that need to parse time strings
-// Based on Go's reference time: Mon Jan 2 15:04:05 MST 2006
-const TimeFormat = "15:04"
-
 // Helper function to validate day of week
 func IsValidDayOfWeek(day timeslot.DayOfWeek) bool {
 	validDays := []timeslot.DayOfWeek{
@@ -39,7 +34,7 @@ func TimesOverlap(start1, end1, start2, end2 time.Time) bool {
 
 // Helper function to parse and validate time format
 // This function ensures strict 24-hour HH:MM format and rejects AM/PM formats
-func ParseTimeString(timeStr string) (time.Time, error) {
+func ParseTimeString(timeStr domain.Time24h) (time.Time, error) {
 	// First check if the string has the exact length expected for HH:MM format
 	if len(timeStr) != 5 {
 		return time.Time{}, timeslot.ErrInvalidTimeFormat
@@ -47,7 +42,7 @@ func ParseTimeString(timeStr string) (time.Time, error) {
 
 	// Use Go's time.Parse which automatically rejects AM/PM formats when using 15:04
 	// It will return an error like "extra text: ' AM'" for formats like "9:30 AM"
-	parsedTime, err := time.Parse(TimeFormat, timeStr)
+	parsedTime, err := timeStr.ParseTime()
 	if err != nil {
 		return time.Time{}, timeslot.ErrInvalidTimeFormat
 	}
@@ -56,7 +51,7 @@ func ParseTimeString(timeStr string) (time.Time, error) {
 }
 
 // Helper function to validate time range (start must be before end)
-func ValidateTimeRange(startTime, endTime string) error {
+func ValidateTimeRange(startTime, endTime domain.Time24h) error {
 	start, err := ParseTimeString(startTime)
 	if err != nil {
 		return timeslot.ErrInvalidTimeFormat
@@ -75,7 +70,7 @@ func ValidateTimeRange(startTime, endTime string) error {
 }
 
 // Helper function to validate buffer times
-func ValidateBufferTimes(preSessionBuffer, postSessionBuffer int) error {
+func ValidateBufferTimes(preSessionBuffer, postSessionBuffer domain.DurationMinutes) error {
 	if preSessionBuffer < 0 {
 		return timeslot.ErrPreSessionBufferNegative
 	}
@@ -90,10 +85,10 @@ func ValidateBufferTimes(preSessionBuffer, postSessionBuffer int) error {
 // Get actual time range for a time slot (handles cross-day scenarios)
 func GetActualTimeRange(slot timeslot.TimeSlot) (start, end time.Time) {
 	baseDate := getBaseDateForDay(string(slot.DayOfWeek))
-	startTime, _ := time.Parse(TimeFormat, slot.StartTime)
+	startTime, _ := slot.Start.ParseTime()
 	start = time.Date(baseDate.Year(), baseDate.Month(), baseDate.Day(),
 		startTime.Hour(), startTime.Minute(), 0, 0, time.UTC)
-	end = start.Add(time.Duration(slot.DurationMinutes) * time.Minute)
+	end = start.Add(time.Duration(slot.Duration) * time.Minute)
 	return start, end
 }
 
@@ -110,18 +105,14 @@ func HasTimeSlotConflict(slot1, slot2 timeslot.TimeSlot) bool {
 }
 
 // Get effective time range for a time slot including buffers (handles cross-day scenarios)
-func GetEffectiveTimeRange(slot timeslot.TimeSlot) (start, end time.Time) {
+func ApplyTimesToReferenceDate(slot timeslot.TimeSlot) (start, end time.Time) {
 	baseDate := getBaseDateForDay(string(slot.DayOfWeek))
-	startTime, _ := time.Parse(TimeFormat, slot.StartTime)
+	startTime, _ := slot.Start.ParseTime()
 	sessionStart := time.Date(baseDate.Year(), baseDate.Month(), baseDate.Day(),
 		startTime.Hour(), startTime.Minute(), 0, 0, time.UTC)
-	sessionEnd := sessionStart.Add(time.Duration(slot.DurationMinutes) * time.Minute)
+	sessionEnd := sessionStart.Add(time.Duration(slot.Duration) * time.Minute)
 
-	// Apply buffers to get effective range
-	effectiveStart := sessionStart.Add(-time.Duration(slot.PreSessionBuffer) * time.Minute)
-	effectiveEnd := sessionEnd.Add(time.Duration(slot.PostSessionBuffer) * time.Minute)
-
-	return effectiveStart, effectiveEnd
+	return sessionStart, sessionEnd
 }
 
 // Check if two time slots have sufficient gap between them (at least 30 minutes)
@@ -131,8 +122,8 @@ func HasSufficientGapBetweenSlots(slot1, slot2 timeslot.TimeSlot) bool {
 		return true
 	}
 
-	start1, end1 := GetEffectiveTimeRange(slot1)
-	start2, end2 := GetEffectiveTimeRange(slot2)
+	start1, end1 := ApplyTimesToReferenceDate(slot1)
+	start2, end2 := ApplyTimesToReferenceDate(slot2)
 
 	// Check if there's at least 30 minutes between the slots
 	minGap := 30 * time.Minute
@@ -158,13 +149,13 @@ func HasEffectiveTimeSlotConflict(slot1, slot2 timeslot.TimeSlot) bool {
 		return false
 	}
 
-	start1, end1 := GetEffectiveTimeRange(slot1)
-	start2, end2 := GetEffectiveTimeRange(slot2)
+	start1, end1 := ApplyTimesToReferenceDate(slot1)
+	start2, end2 := ApplyTimesToReferenceDate(slot2)
 	return start1.Before(end2) && start2.Before(end1)
 }
 
 // Validate duration
-func ValidateDuration(durationMinutes int) error {
+func ValidateDuration(durationMinutes domain.DurationMinutes) error {
 	if durationMinutes <= 0 || durationMinutes > 24*60 {
 		return timeslot.ErrInvalidDuration
 	}

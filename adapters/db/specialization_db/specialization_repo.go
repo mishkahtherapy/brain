@@ -24,7 +24,7 @@ var ErrSpecializationUpdatedAtIsRequired = errors.New("specialization updated at
 var ErrSpecializationIDIsRequired = errors.New("specialization id is required")
 var ErrFailedToGetSpecializations = errors.New("failed to get specializations")
 
-func NewSpecializationRepository(db ports.SQLDatabase) *SpecializationRepository {
+func NewSpecializationRepository(db ports.SQLDatabase) ports.SpecializationRepository {
 	return &SpecializationRepository{db: db}
 }
 

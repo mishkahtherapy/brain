@@ -79,7 +79,7 @@ VALUES (
         'Monday',
         '09:00',
         60,
-        86400,
+        4320,
         30
     ), -- Cairo: 12:00-1:00 PM Monday (effective: 11:30-1:15 PM)
     (
@@ -88,7 +88,7 @@ VALUES (
         'Monday',
         '11:45',
         60,
-        86400,
+        4320,
         30
     ), -- Cairo: 2:45-3:45 PM Monday (effective: 2:15-4:00 PM)
     (
@@ -97,7 +97,7 @@ VALUES (
         'Tuesday',
         '14:00',
         60,
-        86400,
+        4320,
         30
     ), -- Cairo: 5:00-6:00 PM Tuesday
     (
@@ -106,7 +106,7 @@ VALUES (
         'Wednesday',
         '09:00',
         60,
-        86400,
+        4320,
         30
     ), -- Cairo: 12:00-1:00 PM Wednesday
     (
@@ -115,7 +115,7 @@ VALUES (
         'Monday',
         '09:00',
         60,
-        86400,
+        4320,
         30
     ),
     (
@@ -136,6 +136,7 @@ INSERT INTO
         therapist_id,
         client_id,
         start_time,
+        duration_minutes,
         timezone_offset,
         state
     )
@@ -145,6 +146,7 @@ VALUES (
         'therapist_001',
         'client_001',
         '2024-01-15 09:00:00',
+        60,
         -300,
         'confirmed'
     ),
@@ -154,6 +156,7 @@ VALUES (
         'therapist_001',
         'client_002',
         '2024-01-15 11:45:00',
+        60,
         -60,
         'pending'
     ),
@@ -163,6 +166,7 @@ VALUES (
         'therapist_001',
         'client_001',
         '2024-01-16 14:00:00',
+        60,
         300,
         'confirmed'
     );

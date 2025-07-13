@@ -64,13 +64,13 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 	}
 
 	// Check if timeslot exists
-	timeSlot, err := u.timeSlotRepo.GetByID(string(input.TimeSlotID))
+	timeSlot, err := u.timeSlotRepo.GetByID(input.TimeSlotID)
 	if err != nil || timeSlot == nil {
 		return nil, common.ErrTimeSlotNotFound
 	}
 
 	// Fetch all timeslots for the therapist once to avoid repeated DB hits in the overlap check loop.
-	therapistTimeSlots, err := u.timeSlotRepo.ListByTherapist(string(input.TherapistID))
+	therapistTimeSlots, err := u.timeSlotRepo.ListByTherapist(input.TherapistID)
 	if err != nil {
 		return nil, common.ErrFailedToCreateBooking
 	}
@@ -91,7 +91,7 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 	// own post-session buffer does NOT affect conflict detection – only the existing
 	// booking's buffer matters as per business rules.
 	newBookingStart := time.Time(input.StartTime)
-	newBookingEnd := newBookingStart.Add(time.Duration(timeSlot.DurationMinutes) * time.Minute)
+	newBookingEnd := newBookingStart.Add(time.Duration(timeSlot.Duration) * time.Minute)
 
 	for _, existingBooking := range therapistBookings {
 		if existingBooking.State != booking.BookingStateConfirmed {
@@ -107,7 +107,7 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 		// Occupied interval of the *existing* booking, extended forward by its
 		// post-session buffer.
 		existingStartTime := time.Time(existingBooking.StartTime)
-		existingEndTime := existingStartTime.Add(time.Duration(existingTimeSlot.DurationMinutes) * time.Minute)
+		existingEndTime := existingStartTime.Add(time.Duration(existingTimeSlot.Duration) * time.Minute)
 		existingEndWithBuffer := existingEndTime.Add(time.Duration(existingTimeSlot.PostSessionBuffer) * time.Minute)
 
 		// Ranges overlap if:

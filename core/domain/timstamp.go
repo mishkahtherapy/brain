@@ -13,6 +13,54 @@ func NewUTCTimestamp() UTCTimestamp {
 	return UTCTimestamp(time.Now().UTC().Round(time.Second))
 }
 
+func (i UTCTimestamp) Time() time.Time {
+	return time.Time(i)
+}
+
+func (i UTCTimestamp) Year() int {
+	return time.Time(i).Year()
+}
+
+func (i UTCTimestamp) Month() time.Month {
+	return time.Time(i).Month()
+}
+
+func (i UTCTimestamp) Day() int {
+	return time.Time(i).Day()
+}
+
+func (i UTCTimestamp) Hour() int {
+	return time.Time(i).Hour()
+}
+
+func (i UTCTimestamp) Minute() int {
+	return time.Time(i).Minute()
+}
+
+func (i UTCTimestamp) Before(other UTCTimestamp) bool {
+	return time.Time(i).Before(time.Time(other))
+}
+
+func (i UTCTimestamp) After(other UTCTimestamp) bool {
+	return time.Time(i).After(time.Time(other))
+}
+
+func (i UTCTimestamp) Equal(other UTCTimestamp) bool {
+	return time.Time(i).Equal(time.Time(other))
+}
+
+func (i UTCTimestamp) Add(d time.Duration) UTCTimestamp {
+	return UTCTimestamp(time.Time(i).Add(d))
+}
+
+func (i UTCTimestamp) Sub(other UTCTimestamp) time.Duration {
+	return time.Time(i).Sub(time.Time(other))
+}
+
+func (i UTCTimestamp) Format(layout string) string {
+	return time.Time(i).UTC().Format(layout)
+}
+
 // MarshalJSON implements json.Marshaler interface
 func (i UTCTimestamp) MarshalJSON() ([]byte, error) {
 	t := time.Time(i).UTC()

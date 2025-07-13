@@ -129,12 +129,12 @@ func (h *TimeslotHandler) handleCreateTimeslot(w http.ResponseWriter, r *http.Re
 
 	// Parse request body
 	var requestBody struct {
-		DayOfWeek         string                `json:"dayOfWeek"`         // Local day
-		StartTime         string                `json:"startTime"`         // Local time
-		DurationMinutes   int                   `json:"durationMinutes"`   // Duration in minutes
-		TimezoneOffset    domain.TimezoneOffset `json:"timezoneOffset"`    // Minutes from UTC
-		PreSessionBuffer  int                   `json:"preSessionBuffer"`  // minutes
-		PostSessionBuffer int                   `json:"postSessionBuffer"` // minutes
+		DayOfWeek string                 `json:"dayOfWeek"` // Local day
+		Start     domain.Time24h         `json:"start"`     // Local time
+		Duration  domain.DurationMinutes `json:"duration"`  // Duration in minutes
+		// TimezoneOffset    domain.TimezoneOffset  `json:"timezoneOffset"`    // Minutes from UTC
+		PreSessionBuffer  domain.DurationMinutes `json:"preSessionBuffer"`  // minutes
+		PostSessionBuffer domain.DurationMinutes `json:"postSessionBuffer"` // minutes
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
@@ -146,9 +146,8 @@ func (h *TimeslotHandler) handleCreateTimeslot(w http.ResponseWriter, r *http.Re
 	input := create_therapist_timeslot.Input{
 		TherapistID:       therapistID,
 		LocalDayOfWeek:    requestBody.DayOfWeek,
-		LocalStartTime:    requestBody.StartTime,
-		DurationMinutes:   requestBody.DurationMinutes,
-		TimezoneOffset:    requestBody.TimezoneOffset,
+		LocalStartTime:    requestBody.Start,
+		DurationMinutes:   requestBody.Duration,
 		PreSessionBuffer:  requestBody.PreSessionBuffer,
 		PostSessionBuffer: requestBody.PostSessionBuffer,
 	}
@@ -300,33 +299,14 @@ func (h *TimeslotHandler) handleUpdateTimeslot(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Parse timezone offset from query parameter (required for input conversion)
-	timezoneOffsetParam := r.URL.Query().Get("timezoneOffset")
-	if timezoneOffsetParam == "" {
-		rw.WriteBadRequest("Missing timezoneOffset query parameter")
-		return
-	}
-
-	var timezoneOffset domain.TimezoneOffset
-	if _, err := fmt.Sscanf(timezoneOffsetParam, "%d", &timezoneOffset); err != nil {
-		rw.WriteBadRequest("Invalid timezoneOffset format")
-		return
-	}
-
-	// Validate timezone offset
-	if err := timeslot_usecase.ValidateTimezoneOffset(timezoneOffset); err != nil {
-		rw.WriteBadRequest(err.Error())
-		return
-	}
-
 	// Parse request body (contains local timezone data)
 	var requestBody struct {
-		DayOfWeek         timeslot.DayOfWeek `json:"dayOfWeek"`
-		StartTime         string             `json:"startTime"` // Local time
-		DurationMinutes   int                `json:"durationMinutes"`
-		PreSessionBuffer  int                `json:"preSessionBuffer"`
-		PostSessionBuffer int                `json:"postSessionBuffer"`
-		IsActive          bool               `json:"isActive"`
+		DayOfWeek         timeslot.DayOfWeek     `json:"dayOfWeek"`
+		Start             domain.Time24h         `json:"start"` // Local time
+		Duration          domain.DurationMinutes `json:"duration"`
+		PreSessionBuffer  domain.DurationMinutes `json:"preSessionBuffer"`
+		PostSessionBuffer domain.DurationMinutes `json:"postSessionBuffer"`
+		IsActive          bool                   `json:"isActive"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
@@ -339,9 +319,8 @@ func (h *TimeslotHandler) handleUpdateTimeslot(w http.ResponseWriter, r *http.Re
 		TherapistID:       therapistID,
 		TimeslotID:        timeslotID,
 		DayOfWeek:         requestBody.DayOfWeek,
-		StartTime:         requestBody.StartTime,
-		DurationMinutes:   requestBody.DurationMinutes,
-		TimezoneOffset:    timezoneOffset,
+		Start:             requestBody.Start,
+		Duration:          requestBody.Duration,
 		PreSessionBuffer:  requestBody.PreSessionBuffer,
 		PostSessionBuffer: requestBody.PostSessionBuffer,
 		IsActive:          requestBody.IsActive,

@@ -35,7 +35,7 @@ func (u *Usecase) Execute(input Input) error {
 	}
 
 	// Get the timeslot
-	timeslotResult, err := u.timeslotRepo.GetByID(string(input.TimeslotID))
+	timeslotResult, err := u.timeslotRepo.GetByID(input.TimeslotID)
 	if err != nil {
 		// Check if it's the repository's not found error
 		if err.Error() == "timeslot not found" {
@@ -55,7 +55,7 @@ func (u *Usecase) Execute(input Input) error {
 	}
 
 	// Delete the timeslot
-	if err := u.timeslotRepo.Delete(string(input.TimeslotID)); err != nil {
+	if err := u.timeslotRepo.Delete(input.TimeslotID); err != nil {
 		return err
 	}
 

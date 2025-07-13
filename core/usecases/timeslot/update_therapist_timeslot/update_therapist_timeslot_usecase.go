@@ -11,15 +11,14 @@ import (
 )
 
 type Input struct {
-	TherapistID       domain.TherapistID    `json:"therapistId"`
-	TimeslotID        domain.TimeSlotID     `json:"timeslotId"`
-	DayOfWeek         timeslot.DayOfWeek    `json:"dayOfWeek"`
-	StartTime         string                `json:"startTime"`         // "09:00"
-	DurationMinutes   int                   `json:"durationMinutes"`   // Duration in minutes
-	PreSessionBuffer  int                   `json:"preSessionBuffer"`  // minutes
-	PostSessionBuffer int                   `json:"postSessionBuffer"` // minutes
-	TimezoneOffset    domain.TimezoneOffset `json:"timezoneOffset"`    // Client's timezone offset in minutes from UTC
-	IsActive          bool                  `json:"isActive"`
+	TherapistID       domain.TherapistID     `json:"therapistId"`
+	TimeslotID        domain.TimeSlotID      `json:"timeslotId"`
+	DayOfWeek         timeslot.DayOfWeek     `json:"dayOfWeek"`
+	Start             domain.Time24h         `json:"start"`             // "09:00"
+	Duration          domain.DurationMinutes `json:"duration"`          // Duration in minutes
+	PreSessionBuffer  domain.DurationMinutes `json:"preSessionBuffer"`  // minutes
+	PostSessionBuffer domain.DurationMinutes `json:"postSessionBuffer"` // minutes
+	IsActive          bool                   `json:"isActive"`
 }
 
 type Usecase struct {
@@ -46,7 +45,7 @@ func (u *Usecase) Execute(input Input) (*timeslot.TimeSlot, error) {
 	}
 
 	// Get existing timeslot
-	existingTimeslot, err := u.timeslotRepo.GetByID(string(input.TimeslotID))
+	existingTimeslot, err := u.timeslotRepo.GetByID(input.TimeslotID)
 	if err != nil {
 		// Check if it's the repository's not found error
 		if err.Error() == "timeslot not found" {
@@ -70,11 +69,10 @@ func (u *Usecase) Execute(input Input) (*timeslot.TimeSlot, error) {
 		ID:                input.TimeslotID,
 		TherapistID:       input.TherapistID,
 		DayOfWeek:         input.DayOfWeek,
-		StartTime:         input.StartTime,
-		DurationMinutes:   input.DurationMinutes,
+		Start:             input.Start,
+		Duration:          input.Duration,
 		PreSessionBuffer:  input.PreSessionBuffer,
 		PostSessionBuffer: input.PostSessionBuffer,
-		TimezoneOffset:    input.TimezoneOffset,
 		IsActive:          input.IsActive,
 		BookingIDs:        existingTimeslot.BookingIDs, // Preserve existing bookings
 		CreatedAt:         existingTimeslot.CreatedAt,  // Preserve creation time
@@ -103,11 +101,11 @@ func (u *Usecase) validateInput(input Input) error {
 		return timeslot.ErrDayOfWeekIsRequired
 	}
 
-	if input.StartTime == "" {
+	if input.Start == "" {
 		return timeslot.ErrStartTimeIsRequired
 	}
 
-	if input.DurationMinutes == 0 {
+	if input.Duration == 0 {
 		return timeslot.ErrDurationIsRequired
 	}
 
@@ -117,12 +115,12 @@ func (u *Usecase) validateInput(input Input) error {
 	}
 
 	// Validate time format
-	if _, err := timeslot_usecase.ParseTimeString(input.StartTime); err != nil {
+	if _, err := timeslot_usecase.ParseTimeString(input.Start); err != nil {
 		return err
 	}
 
 	// Validate duration
-	if err := timeslot_usecase.ValidateDuration(input.DurationMinutes); err != nil {
+	if err := timeslot_usecase.ValidateDuration(input.Duration); err != nil {
 		return err
 	}
 
@@ -136,7 +134,7 @@ func (u *Usecase) validateInput(input Input) error {
 
 func (u *Usecase) checkForOverlaps(input Input) error {
 	// Get all existing timeslots for this therapist
-	existingSlots, err := u.timeslotRepo.ListByTherapist(string(input.TherapistID))
+	existingSlots, err := u.timeslotRepo.ListByTherapist(input.TherapistID)
 	if err != nil {
 		return err
 	}
@@ -146,11 +144,10 @@ func (u *Usecase) checkForOverlaps(input Input) error {
 		ID:                input.TimeslotID,
 		TherapistID:       input.TherapistID,
 		DayOfWeek:         input.DayOfWeek,
-		StartTime:         input.StartTime,
-		DurationMinutes:   input.DurationMinutes,
+		Start:             input.Start,
+		Duration:          input.Duration,
 		PreSessionBuffer:  input.PreSessionBuffer,
 		PostSessionBuffer: input.PostSessionBuffer,
-		TimezoneOffset:    input.TimezoneOffset,
 	}
 
 	// Check for conflicts and insufficient gaps

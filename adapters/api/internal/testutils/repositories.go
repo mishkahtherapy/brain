@@ -91,12 +91,12 @@ func NewTestTimeSlotRepository(db ports.SQLDatabase) ports.TimeSlotRepository {
 	return &TestTimeSlotRepository{db: db}
 }
 
-func (r *TestTimeSlotRepository) GetByID(id string) (*timeslot.TimeSlot, error) {
+func (r *TestTimeSlotRepository) GetByID(id domain.TimeSlotID) (*timeslot.TimeSlot, error) {
 	query := `SELECT id, therapist_id, day_of_week, start_time, duration_minutes, pre_session_buffer, post_session_buffer, is_active, created_at, updated_at FROM time_slots WHERE id = ?`
 	row := r.db.QueryRow(query, id)
 
 	var timeSlot timeslot.TimeSlot
-	err := row.Scan(&timeSlot.ID, &timeSlot.TherapistID, &timeSlot.DayOfWeek, &timeSlot.StartTime, &timeSlot.DurationMinutes, &timeSlot.PreSessionBuffer, &timeSlot.PostSessionBuffer, &timeSlot.IsActive, &timeSlot.CreatedAt, &timeSlot.UpdatedAt)
+	err := row.Scan(&timeSlot.ID, &timeSlot.TherapistID, &timeSlot.DayOfWeek, &timeSlot.Start, &timeSlot.Duration, &timeSlot.PreSessionBuffer, &timeSlot.PostSessionBuffer, &timeSlot.IsActive, &timeSlot.CreatedAt, &timeSlot.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -105,13 +105,14 @@ func (r *TestTimeSlotRepository) GetByID(id string) (*timeslot.TimeSlot, error) 
 
 func (r *TestTimeSlotRepository) Create(timeslot *timeslot.TimeSlot) error { return nil }
 func (r *TestTimeSlotRepository) Update(timeslot *timeslot.TimeSlot) error { return nil }
-func (r *TestTimeSlotRepository) Delete(id string) error                   { return nil }
-func (r *TestTimeSlotRepository) ListByTherapist(therapistID string) ([]*timeslot.TimeSlot, error) {
+func (r *TestTimeSlotRepository) Delete(id domain.TimeSlotID) error        { return nil }
+func (r *TestTimeSlotRepository) ListByTherapist(therapistID domain.TherapistID) ([]*timeslot.TimeSlot, error) {
 	return nil, nil
 }
-func (r *TestTimeSlotRepository) ListByDay(therapistID string, day string) ([]*timeslot.TimeSlot, error) {
+func (r *TestTimeSlotRepository) BulkListByTherapist(therapistIDs []domain.TherapistID) (map[domain.TherapistID][]*timeslot.TimeSlot, error) {
 	return nil, nil
 }
-func (r *TestTimeSlotRepository) BulkToggleByTherapistID(therapistID string, isActive bool) error {
+
+func (r *TestTimeSlotRepository) BulkToggleByTherapistID(therapistID domain.TherapistID, isActive bool) error {
 	return nil
 }

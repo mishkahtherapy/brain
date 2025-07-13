@@ -25,9 +25,9 @@ func (h *ScheduleHandler) RegisterRoutes(mux *http.ServeMux) {
 func (h *ScheduleHandler) handleGetSchedule(w http.ResponseWriter, r *http.Request) {
 	rw := api.NewResponseWriter(w)
 
-	// Parse tag parameter (required)
-	tag := r.URL.Query().Get("specialization")
-	if tag == "" {
+	// Parse specialization parameter (required)
+	specialization := r.URL.Query().Get("specialization")
+	if specialization == "" {
 		rw.WriteBadRequest("specialization tag is required")
 		return
 	}
@@ -71,7 +71,7 @@ func (h *ScheduleHandler) handleGetSchedule(w http.ResponseWriter, r *http.Reque
 
 	// Create input for usecase
 	input := get_schedule.Input{
-		SpecializationTag: tag,
+		SpecializationTag: specialization,
 		MustSpeakEnglish:  english,
 		StartDate:         startDate,
 		EndDate:           endDate,

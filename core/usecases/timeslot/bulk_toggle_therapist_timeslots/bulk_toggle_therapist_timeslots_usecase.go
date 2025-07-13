@@ -44,7 +44,7 @@ func (u *usecase) Execute(input Input) error {
 	}
 
 	// Bulk toggle all timeslots for the therapist
-	err = u.timeslotRepo.BulkToggleByTherapistID(string(input.TherapistID), input.IsActive)
+	err = u.timeslotRepo.BulkToggleByTherapistID(input.TherapistID, input.IsActive)
 	if err != nil {
 		return err
 	}

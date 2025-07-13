@@ -29,7 +29,7 @@ var ErrFailedToCreateTherapist = errors.New("failed to create therapist")
 var ErrFailedToUpdateTherapist = errors.New("failed to update therapist")
 var ErrFailedToUpdateTherapistSpecializations = errors.New("failed to update therapist specializations")
 
-func NewTherapistRepository(db ports.SQLDatabase) *TherapistRepository {
+func NewTherapistRepository(db ports.SQLDatabase) ports.TherapistRepository {
 	return &TherapistRepository{db: db}
 }
 

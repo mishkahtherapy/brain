@@ -34,7 +34,7 @@ var ErrFailedToUpdateSession = errors.New("failed to update session")
 var ErrInvalidDateRange = errors.New("invalid date range")
 
 // NewSessionRepository creates a new session repository
-func NewSessionRepository(db ports.SQLDatabase) *SessionRepository {
+func NewSessionRepository(db ports.SQLDatabase) ports.SessionRepository {
 	return &SessionRepository{db: db}
 }
 

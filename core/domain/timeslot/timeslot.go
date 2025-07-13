@@ -1,6 +1,10 @@
 package timeslot
 
-import "github.com/mishkahtherapy/brain/core/domain"
+import (
+	"time"
+
+	"github.com/mishkahtherapy/brain/core/domain"
+)
 
 type DayOfWeek string
 
@@ -15,25 +19,34 @@ const (
 )
 
 type TimeSlot struct {
-	ID                domain.TimeSlotID     `json:"id"`
-	TherapistID       domain.TherapistID    `json:"therapistId"`
-	IsActive          bool                  `json:"isActive"`
-	DayOfWeek         DayOfWeek             `json:"dayOfWeek"`         // UTC day
-	StartTime         string                `json:"startTime"`         // UTC time e.g. "22:30"
-	DurationMinutes   int                   `json:"durationMinutes"`   // Duration in minutes e.g. 60
-	PreSessionBuffer  int                   `json:"preSessionBuffer"`  // minutes (advance notice), used only when preparing schedule.
-	PostSessionBuffer int                   `json:"postSessionBuffer"` // minutes (break after session).
-	TimezoneOffset    domain.TimezoneOffset `json:"timezoneOffset"`    // Client's timezone offset in minutes from UTC
-	BookingIDs        []domain.BookingID    `json:"bookingIds"`
-	CreatedAt         domain.UTCTimestamp   `json:"createdAt"`
-	UpdatedAt         domain.UTCTimestamp   `json:"updatedAt"`
+	ID                domain.TimeSlotID      `json:"id"`
+	TherapistID       domain.TherapistID     `json:"therapistId"`
+	IsActive          bool                   `json:"isActive"`
+	DayOfWeek         DayOfWeek              `json:"dayOfWeek"`         // UTC day
+	Start             domain.Time24h         `json:"start"`             // UTC time e.g. "22:30"
+	Duration          domain.DurationMinutes `json:"duration"`          // Duration in minutes e.g. 60
+	PreSessionBuffer  domain.DurationMinutes `json:"preSessionBuffer"`  // minutes (advance notice), used only when preparing schedule.
+	PostSessionBuffer domain.DurationMinutes `json:"postSessionBuffer"` // minutes (break after session).
+	BookingIDs        []domain.BookingID     `json:"bookingIds"`
+	CreatedAt         domain.UTCTimestamp    `json:"createdAt"`
+	UpdatedAt         domain.UTCTimestamp    `json:"updatedAt"`
 }
 
 // Helper method to convert buffer to minutes for calculations
-func (ts *TimeSlot) PreSessionBufferInMinutes() int {
+func (ts *TimeSlot) PreSessionBufferInMinutes() domain.DurationMinutes {
 	return ts.PreSessionBuffer
 }
 
-func (ts *TimeSlot) PostSessionBufferInMinutes() int {
+func (ts *TimeSlot) PostSessionBufferInMinutes() domain.DurationMinutes {
 	return ts.PostSessionBuffer
+}
+
+func (ts *TimeSlot) ApplyToDate(date time.Time) (domain.UTCTimestamp, domain.UTCTimestamp) {
+	slotStartTime, err := ts.Start.ParseTime()
+	if err != nil {
+		panic(err)
+	}
+	start := time.Date(date.Year(), date.Month(), date.Day(), slotStartTime.Hour(), slotStartTime.Minute(), 0, 0, time.UTC)
+	end := start.Add(time.Duration(ts.Duration) * time.Minute)
+	return domain.UTCTimestamp(start), domain.UTCTimestamp(end)
 }

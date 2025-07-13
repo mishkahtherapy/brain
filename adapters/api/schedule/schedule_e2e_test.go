@@ -63,7 +63,7 @@ func TestScheduleE2E(t *testing.T) {
 		// Test overlapping availability from 9:15-10:45 on Monday
 		// Expected: 3 therapists available from 9:15-10:00, then 2 therapists from 10:00-10:45
 		// Use a future Monday
-		req := httptest.NewRequest("GET", "/api/v1/schedule?tag=anxiety&start_date=2025-07-07&end_date=2025-07-07", nil)
+		req := httptest.NewRequest("GET", "/api/v1/schedule?specialization=anxiety&startDate=2025-07-07&endDate=2025-07-07", nil)
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, req)
@@ -78,8 +78,8 @@ func TestScheduleE2E(t *testing.T) {
 		}
 
 		// Debug output
-		t.Logf("Response body: %s", rec.Body.String())
-		t.Logf("Found %d availability ranges", len(response))
+		// t.Logf("Response body: %s", rec.Body.String())
+		// t.Logf("Found %d availability ranges", len(response))
 
 		// Verify we have availability ranges
 		if len(response) == 0 {
@@ -91,20 +91,20 @@ func TestScheduleE2E(t *testing.T) {
 		found2Therapists := false
 
 		for _, avail := range response {
-			startTime := avail.From.Format("15:04")
-			endTime := avail.To.Format("15:04")
+			startTime := avail.From.Format(domain.Time24hLayout)
+			endTime := avail.To.Format(domain.Time24hLayout)
 			therapistCount := len(avail.Therapists)
 
 			// Check for 3-therapist overlap (9:15-10:00)
 			if startTime == "09:15" && endTime == "10:00" && therapistCount == 3 {
 				found3Therapists = true
-				t.Logf("Found 3-therapist range: %s-%s with %d therapists", startTime, endTime, therapistCount)
+				// t.Logf("Found 3-therapist range: %s-%s with %d therapists", startTime, endTime, therapistCount)
 			}
 
 			// Check for 2-therapist overlap (10:00-10:45)
 			if startTime == "10:00" && endTime == "10:45" && therapistCount == 2 {
 				found2Therapists = true
-				t.Logf("Found 2-therapist range: %s-%s with %d therapists", startTime, endTime, therapistCount)
+				// t.Logf("Found 2-therapist range: %s-%s with %d therapists", startTime, endTime, therapistCount)
 			}
 		}
 
@@ -120,7 +120,7 @@ func TestScheduleE2E(t *testing.T) {
 		// Test Wednesday where therapists join and leave at different times
 		// Expected: Complex transitions with varying therapist counts
 		// Use a future Wednesday
-		req := httptest.NewRequest("GET", "/api/v1/schedule?tag=depression&start_date=2025-07-09&end_date=2025-07-09", nil)
+		req := httptest.NewRequest("GET", "/api/v1/schedule?specialization=depression&startDate=2025-07-09&endDate=2025-07-09", nil)
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, req)
@@ -140,20 +140,20 @@ func TestScheduleE2E(t *testing.T) {
 		}
 
 		// Log all availability ranges for debugging
-		t.Logf("Found %d availability ranges on Wednesday:", len(response))
-		for i, avail := range response {
-			t.Logf("Range %d: %s-%s (%d therapists)",
-				i+1,
-				avail.From.Format("15:04"),
-				avail.To.Format("15:04"),
-				len(avail.Therapists))
-		}
+		// t.Logf("Found %d availability ranges on Wednesday:", len(response))
+		// for i, avail := range response {
+		// 	t.Logf("Range %d: %s-%s (%d therapists)",
+		// 		i+1,
+		// 		avail.From.Format(domain.Time24hLayout),
+		// 		avail.To.Format(domain.Time24hLayout),
+		// 		len(avail.Therapists))
+		// }
 	})
 
 	t.Run("Mid-Hour Overlap Complex Pattern", func(t *testing.T) {
 		// Test Tuesday with non-standard times creating complex overlaps
 		// Use a future Tuesday
-		req := httptest.NewRequest("GET", "/api/v1/schedule?tag=anxiety&start_date=2025-07-08&end_date=2025-07-08", nil)
+		req := httptest.NewRequest("GET", "/api/v1/schedule?specialization=anxiety&startDate=2025-07-08&endDate=2025-07-08", nil)
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, req)
@@ -176,8 +176,8 @@ func TestScheduleE2E(t *testing.T) {
 			if startMinute != 0 || endMinute != 0 {
 				hasNonHourBoundary = true
 				t.Logf("Found non-hour boundary: %s-%s",
-					avail.From.Format("15:04"),
-					avail.To.Format("15:04"))
+					avail.From.Format(domain.Time24hLayout),
+					avail.To.Format(domain.Time24hLayout))
 			}
 		}
 
@@ -189,7 +189,7 @@ func TestScheduleE2E(t *testing.T) {
 	t.Run("Full Day Multiple Therapists", func(t *testing.T) {
 		// Test Thursday with comprehensive availability patterns
 		// Use a future Thursday
-		req := httptest.NewRequest("GET", "/api/v1/schedule?tag=anxiety&start_date=2025-07-10&end_date=2025-07-10", nil)
+		req := httptest.NewRequest("GET", "/api/v1/schedule?specialization=anxiety&startDate=2025-07-10&endDate=2025-07-10", nil)
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, req)
@@ -219,7 +219,7 @@ func TestScheduleE2E(t *testing.T) {
 	t.Run("English Language Requirement", func(t *testing.T) {
 		// Test with english=true filter
 		// Use a future Monday
-		req := httptest.NewRequest("GET", "/api/v1/schedule?tag=anxiety&english=true&start_date=2025-07-07&end_date=2025-07-07", nil)
+		req := httptest.NewRequest("GET", "/api/v1/schedule?specialization=anxiety&english=true&startDate=2025-07-07&endDate=2025-07-07", nil)
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, req)
@@ -246,7 +246,7 @@ func TestScheduleE2E(t *testing.T) {
 	t.Run("Booking Interference Testing", func(t *testing.T) {
 		// Test Friday where bookings create "holes" in availability
 		// Use a future Friday
-		req := httptest.NewRequest("GET", "/api/v1/schedule?tag=anxiety&start_date=2025-07-11&end_date=2025-07-11", nil)
+		req := httptest.NewRequest("GET", "/api/v1/schedule?specialization=anxiety&startDate=2025-07-11&endDate=2025-07-11", nil)
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, req)
@@ -266,8 +266,8 @@ func TestScheduleE2E(t *testing.T) {
 		for i, avail := range response {
 			t.Logf("Range %d: %s-%s (%d min, %d therapists)",
 				i+1,
-				avail.From.Format("15:04"),
-				avail.To.Format("15:04"),
+				avail.From.Format(domain.Time24hLayout),
+				avail.To.Format(domain.Time24hLayout),
 				avail.DurationMinutes,
 				len(avail.Therapists))
 		}
@@ -276,7 +276,7 @@ func TestScheduleE2E(t *testing.T) {
 	t.Run("No Matching Therapists Edge Case", func(t *testing.T) {
 		// Test with a specialization that doesn't exist
 		// Use a future Monday
-		req := httptest.NewRequest("GET", "/api/v1/schedule?tag=nonexistent&start_date=2025-07-07&end_date=2025-07-07", nil)
+		req := httptest.NewRequest("GET", "/api/v1/schedule?specialization=nonexistent&startDate=2025-07-07&endDate=2025-07-07", nil)
 		rec := httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, req)
@@ -308,7 +308,7 @@ func TestScheduleE2E(t *testing.T) {
 		}
 
 		// Test invalid date format
-		req = httptest.NewRequest("GET", "/api/v1/schedule?tag=anxiety&start_date=invalid", nil)
+		req = httptest.NewRequest("GET", "/api/v1/schedule?specialization=anxiety&startDate=invalid", nil)
 		rec = httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, req)
@@ -318,7 +318,7 @@ func TestScheduleE2E(t *testing.T) {
 		}
 
 		// Test invalid date range
-		req = httptest.NewRequest("GET", "/api/v1/schedule?tag=anxiety&start_date=2024-01-10&end_date=2024-01-08", nil)
+		req = httptest.NewRequest("GET", "/api/v1/schedule?specialization=anxiety&startDate=2024-01-10&endDate=2024-01-08", nil)
 		rec = httptest.NewRecorder()
 
 		mux.ServeHTTP(rec, req)
@@ -330,21 +330,21 @@ func TestScheduleE2E(t *testing.T) {
 }
 
 func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleTestData {
-	now := time.Now().UTC()
+	now := domain.NewUTCTimestamp()
 
 	// Create specializations
 	anxietySpec := specialization.Specialization{
 		ID:        domain.NewSpecializationID(),
 		Name:      "anxiety",
-		CreatedAt: domain.UTCTimestamp(now),
-		UpdatedAt: domain.UTCTimestamp(now),
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 
 	depressionSpec := specialization.Specialization{
 		ID:        domain.NewSpecializationID(),
 		Name:      "depression",
-		CreatedAt: domain.UTCTimestamp(now),
-		UpdatedAt: domain.UTCTimestamp(now),
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 
 	// Insert specializations
@@ -367,8 +367,8 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			WhatsAppNumber:  "+1555001001",
 			SpeaksEnglish:   true,
 			Specializations: []specialization.Specialization{anxietySpec},
-			CreatedAt:       domain.UTCTimestamp(now),
-			UpdatedAt:       domain.UTCTimestamp(now),
+			CreatedAt:       now,
+			UpdatedAt:       now,
 		},
 		{
 			ID:              domain.NewTherapistID(),
@@ -378,8 +378,8 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			WhatsAppNumber:  "+1555001002",
 			SpeaksEnglish:   true,
 			Specializations: []specialization.Specialization{anxietySpec, depressionSpec},
-			CreatedAt:       domain.UTCTimestamp(now),
-			UpdatedAt:       domain.UTCTimestamp(now),
+			CreatedAt:       now,
+			UpdatedAt:       now,
 		},
 		{
 			ID:              domain.NewTherapistID(),
@@ -389,8 +389,8 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			WhatsAppNumber:  "+1555001003",
 			SpeaksEnglish:   false, // Non-English speaker for language filtering tests
 			Specializations: []specialization.Specialization{anxietySpec},
-			CreatedAt:       domain.UTCTimestamp(now),
-			UpdatedAt:       domain.UTCTimestamp(now),
+			CreatedAt:       now,
+			UpdatedAt:       now,
 		},
 		{
 			ID:              domain.NewTherapistID(),
@@ -400,8 +400,8 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			WhatsAppNumber:  "+1555001004",
 			SpeaksEnglish:   true,
 			Specializations: []specialization.Specialization{depressionSpec},
-			CreatedAt:       domain.UTCTimestamp(now),
-			UpdatedAt:       domain.UTCTimestamp(now),
+			CreatedAt:       now,
+			UpdatedAt:       now,
 		},
 	}
 
@@ -436,34 +436,34 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			ID:                domain.NewTimeSlotID(),
 			TherapistID:       therapists[0].ID, // Alice
 			DayOfWeek:         timeslot.DayOfWeekMonday,
-			StartTime:         "09:00",
-			DurationMinutes:   120, // 2 hours (9:00-11:00)
+			Start:             domain.NewTime24h("09:00"),
+			Duration:          120, // 2 hours (9:00-11:00)
 			PreSessionBuffer:  5,
 			PostSessionBuffer: 5,
-			CreatedAt:         domain.UTCTimestamp(now),
-			UpdatedAt:         domain.UTCTimestamp(now),
+			CreatedAt:         now,
+			UpdatedAt:         now,
 		},
 		{
 			ID:                domain.NewTimeSlotID(),
 			TherapistID:       therapists[1].ID, // Bob
 			DayOfWeek:         timeslot.DayOfWeekMonday,
-			StartTime:         "09:15",
-			DurationMinutes:   90, // 1.5 hours (9:15-10:45)
+			Start:             domain.NewTime24h("09:15"),
+			Duration:          90, // 1.5 hours (9:15-10:45)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
-			CreatedAt:         domain.UTCTimestamp(now),
-			UpdatedAt:         domain.UTCTimestamp(now),
+			CreatedAt:         now,
+			UpdatedAt:         now,
 		},
 		{
 			ID:                domain.NewTimeSlotID(),
 			TherapistID:       therapists[2].ID, // Carol
 			DayOfWeek:         timeslot.DayOfWeekMonday,
-			StartTime:         "09:15",
-			DurationMinutes:   45, // 45 minutes (9:15-10:00)
+			Start:             domain.NewTime24h("09:15"),
+			Duration:          45, // 45 minutes (9:15-10:00)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
-			CreatedAt:         domain.UTCTimestamp(now),
-			UpdatedAt:         domain.UTCTimestamp(now),
+			CreatedAt:         now,
+			UpdatedAt:         now,
 		},
 
 		// Tuesday - Non-standard time overlaps
@@ -472,23 +472,23 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			ID:                domain.NewTimeSlotID(),
 			TherapistID:       therapists[0].ID, // Alice
 			DayOfWeek:         timeslot.DayOfWeekTuesday,
-			StartTime:         "14:30",
-			DurationMinutes:   90, // 1.5 hours (14:30-16:00)
+			Start:             domain.NewTime24h("14:30"),
+			Duration:          90, // 1.5 hours (14:30-16:00)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
-			CreatedAt:         domain.UTCTimestamp(now),
-			UpdatedAt:         domain.UTCTimestamp(now),
+			CreatedAt:         now,
+			UpdatedAt:         now,
 		},
 		{
 			ID:                domain.NewTimeSlotID(),
 			TherapistID:       therapists[1].ID, // Bob
 			DayOfWeek:         timeslot.DayOfWeekTuesday,
-			StartTime:         "15:00",
-			DurationMinutes:   120, // 2 hours (15:00-17:00)
+			Start:             domain.NewTime24h("15:00"),
+			Duration:          120, // 2 hours (15:00-17:00)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
-			CreatedAt:         domain.UTCTimestamp(now),
-			UpdatedAt:         domain.UTCTimestamp(now),
+			CreatedAt:         now,
+			UpdatedAt:         now,
 		},
 
 		// Wednesday - Transition point testing
@@ -497,34 +497,34 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			ID:                domain.NewTimeSlotID(),
 			TherapistID:       therapists[1].ID, // Bob
 			DayOfWeek:         timeslot.DayOfWeekWednesday,
-			StartTime:         "10:00",
-			DurationMinutes:   120, // 2 hours (10:00-12:00)
+			Start:             domain.NewTime24h("10:00"),
+			Duration:          120, // 2 hours (10:00-12:00)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
-			CreatedAt:         domain.UTCTimestamp(now),
-			UpdatedAt:         domain.UTCTimestamp(now),
+			CreatedAt:         now,
+			UpdatedAt:         now,
 		},
 		{
 			ID:                domain.NewTimeSlotID(),
 			TherapistID:       therapists[3].ID, // David
 			DayOfWeek:         timeslot.DayOfWeekWednesday,
-			StartTime:         "11:00",
-			DurationMinutes:   180, // 3 hours (11:00-14:00)
+			Start:             domain.NewTime24h("11:00"),
+			Duration:          180, // 3 hours (11:00-14:00)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
-			CreatedAt:         domain.UTCTimestamp(now),
-			UpdatedAt:         domain.UTCTimestamp(now),
+			CreatedAt:         now,
+			UpdatedAt:         now,
 		},
 		{
 			ID:                domain.NewTimeSlotID(),
 			TherapistID:       therapists[2].ID, // Carol
 			DayOfWeek:         timeslot.DayOfWeekWednesday,
-			StartTime:         "13:00",
-			DurationMinutes:   120, // 2 hours (13:00-15:00)
+			Start:             domain.NewTime24h("13:00"),
+			Duration:          120, // 2 hours (13:00-15:00)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
-			CreatedAt:         domain.UTCTimestamp(now),
-			UpdatedAt:         domain.UTCTimestamp(now),
+			CreatedAt:         now,
+			UpdatedAt:         now,
 		},
 
 		// Thursday - Full day with multiple therapists
@@ -533,34 +533,34 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			ID:                domain.NewTimeSlotID(),
 			TherapistID:       therapists[0].ID, // Alice
 			DayOfWeek:         timeslot.DayOfWeekThursday,
-			StartTime:         "09:00",
-			DurationMinutes:   180, // 3 hours (9:00-12:00)
+			Start:             domain.NewTime24h("09:00"),
+			Duration:          180, // 3 hours (9:00-12:00)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
-			CreatedAt:         domain.UTCTimestamp(now),
-			UpdatedAt:         domain.UTCTimestamp(now),
+			CreatedAt:         now,
+			UpdatedAt:         now,
 		},
 		{
 			ID:                domain.NewTimeSlotID(),
 			TherapistID:       therapists[1].ID, // Bob
 			DayOfWeek:         timeslot.DayOfWeekThursday,
-			StartTime:         "10:00",
-			DurationMinutes:   360, // 6 hours (10:00-16:00)
+			Start:             domain.NewTime24h("10:00"),
+			Duration:          360, // 6 hours (10:00-16:00)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
-			CreatedAt:         domain.UTCTimestamp(now),
-			UpdatedAt:         domain.UTCTimestamp(now),
+			CreatedAt:         now,
+			UpdatedAt:         now,
 		},
 		{
 			ID:                domain.NewTimeSlotID(),
 			TherapistID:       therapists[2].ID, // Carol
 			DayOfWeek:         timeslot.DayOfWeekThursday,
-			StartTime:         "14:00",
-			DurationMinutes:   240, // 4 hours (14:00-18:00)
+			Start:             domain.NewTime24h("14:00"),
+			Duration:          240, // 4 hours (14:00-18:00)
 			PreSessionBuffer:  0,
 			PostSessionBuffer: 0,
-			CreatedAt:         domain.UTCTimestamp(now),
-			UpdatedAt:         domain.UTCTimestamp(now),
+			CreatedAt:         now,
+			UpdatedAt:         now,
 		},
 
 		// Friday - Booking interference testing
@@ -569,23 +569,23 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			ID:                domain.NewTimeSlotID(),
 			TherapistID:       therapists[0].ID, // Alice
 			DayOfWeek:         timeslot.DayOfWeekFriday,
-			StartTime:         "09:00",
-			DurationMinutes:   480, // 8 hours (9:00-17:00)
+			Start:             domain.NewTime24h("09:00"),
+			Duration:          480, // 8 hours (9:00-17:00)
 			PreSessionBuffer:  15,  // With buffers to test complex availability
 			PostSessionBuffer: 15,
-			CreatedAt:         domain.UTCTimestamp(now),
-			UpdatedAt:         domain.UTCTimestamp(now),
+			CreatedAt:         now,
+			UpdatedAt:         now,
 		},
 		{
 			ID:                domain.NewTimeSlotID(),
 			TherapistID:       therapists[1].ID, // Bob
 			DayOfWeek:         timeslot.DayOfWeekFriday,
-			StartTime:         "09:00",
-			DurationMinutes:   480, // 8 hours (9:00-17:00)
+			Start:             domain.NewTime24h("09:00"),
+			Duration:          480, // 8 hours (9:00-17:00)
 			PreSessionBuffer:  15,
 			PostSessionBuffer: 15,
-			CreatedAt:         domain.UTCTimestamp(now),
-			UpdatedAt:         domain.UTCTimestamp(now),
+			CreatedAt:         now,
+			UpdatedAt:         now,
 		},
 	}
 
@@ -594,7 +594,7 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 		_, err = database.Exec(`
 			INSERT INTO time_slots (id, therapist_id, day_of_week, start_time, duration_minutes, pre_session_buffer, post_session_buffer, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-		`, slot.ID, slot.TherapistID, slot.DayOfWeek, slot.StartTime, slot.DurationMinutes,
+		`, slot.ID, slot.TherapistID, slot.DayOfWeek, slot.Start, slot.Duration,
 			slot.PreSessionBuffer, slot.PostSessionBuffer, slot.CreatedAt, slot.UpdatedAt)
 		if err != nil {
 			t.Fatalf("Failed to insert time slot: %v", err)
@@ -607,15 +607,15 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			ID:             domain.NewClientID(),
 			Name:           "Test Client 1",
 			WhatsAppNumber: "+1555002001",
-			CreatedAt:      domain.UTCTimestamp(now),
-			UpdatedAt:      domain.UTCTimestamp(now),
+			CreatedAt:      now,
+			UpdatedAt:      now,
 		},
 		{
 			ID:             domain.NewClientID(),
 			Name:           "Test Client 2",
 			WhatsAppNumber: "+1555002002",
-			CreatedAt:      domain.UTCTimestamp(now),
-			UpdatedAt:      domain.UTCTimestamp(now),
+			CreatedAt:      now,
+			UpdatedAt:      now,
 		},
 	}
 
@@ -642,8 +642,8 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			ClientID:    clients[0].ID,
 			StartTime:   domain.UTCTimestamp(fridayDate.Add(11 * time.Hour)), // 11:00
 			State:       booking.BookingStateConfirmed,
-			CreatedAt:   domain.UTCTimestamp(now),
-			UpdatedAt:   domain.UTCTimestamp(now),
+			CreatedAt:   now,
+			UpdatedAt:   now,
 		},
 		// Bob has a booking at 14:00 on Friday
 		{
@@ -653,8 +653,8 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			ClientID:    clients[1].ID,
 			StartTime:   domain.UTCTimestamp(fridayDate.Add(14 * time.Hour)), // 14:00
 			State:       booking.BookingStateConfirmed,
-			CreatedAt:   domain.UTCTimestamp(now),
-			UpdatedAt:   domain.UTCTimestamp(now),
+			CreatedAt:   now,
+			UpdatedAt:   now,
 		},
 	}
 
@@ -679,7 +679,7 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 	}
 }
 
-func setupScheduleTestDB(t *testing.T) (ports.SQLDatabase, func()) {
+func setupScheduleTestDB(_ *testing.T) (ports.SQLDatabase, func()) {
 	// Use in-memory database for testing
 	dbFilename := ":memory:"
 

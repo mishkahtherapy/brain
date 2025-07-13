@@ -10,13 +10,12 @@ import (
 )
 
 type Input struct {
-	TherapistID       domain.TherapistID    `json:"therapistId"`
-	LocalDayOfWeek    string                `json:"dayOfWeek"`         // Local day "Monday"
-	LocalStartTime    string                `json:"startTime"`         // Local time "01:30"
-	DurationMinutes   int                   `json:"durationMinutes"`   // Duration in minutes
-	TimezoneOffset    domain.TimezoneOffset `json:"timezoneOffset"`    // Minutes from UTC (+180 for GMT+3)
-	PreSessionBuffer  int                   `json:"preSessionBuffer"`  // minutes
-	PostSessionBuffer int                   `json:"postSessionBuffer"` // minutes
+	TherapistID       domain.TherapistID     `json:"therapistId"`
+	LocalDayOfWeek    string                 `json:"dayOfWeek"`         // Local day "Monday"
+	LocalStartTime    domain.Time24h         `json:"startTime"`         // Local time "01:30"
+	DurationMinutes   domain.DurationMinutes `json:"durationMinutes"`   // Duration in minutes
+	PostSessionBuffer domain.DurationMinutes `json:"postSessionBuffer"` // minutes
+	PreSessionBuffer  domain.DurationMinutes `json:"preSessionBuffer"`  // minutes
 }
 
 type Usecase struct {
@@ -46,11 +45,10 @@ func (u *Usecase) Execute(input Input) (*timeslot.TimeSlot, error) {
 	newTimeslot := &timeslot.TimeSlot{
 		TherapistID:       input.TherapistID,
 		DayOfWeek:         timeslot.DayOfWeek(input.LocalDayOfWeek),
-		StartTime:         input.LocalStartTime,
-		DurationMinutes:   input.DurationMinutes,
-		PreSessionBuffer:  input.PreSessionBuffer,
-		PostSessionBuffer: input.PostSessionBuffer,
-		TimezoneOffset:    input.TimezoneOffset,
+		Start:             input.LocalStartTime,
+		Duration:          input.DurationMinutes,
+		PreSessionBuffer:  domain.DurationMinutes(input.PreSessionBuffer),
+		PostSessionBuffer: domain.DurationMinutes(input.PostSessionBuffer),
 		IsActive:          true,
 	}
 
@@ -110,11 +108,6 @@ func (u *Usecase) validateInput(input Input) error {
 		return err
 	}
 
-	// Validate timezone offset
-	if err := timeslot_usecase.ValidateTimezoneOffset(input.TimezoneOffset); err != nil {
-		return err
-	}
-
 	// Validate buffer times
 	if err := timeslot_usecase.ValidateBufferTimes(input.PreSessionBuffer, input.PostSessionBuffer); err != nil {
 		return err
@@ -125,7 +118,7 @@ func (u *Usecase) validateInput(input Input) error {
 
 func (u *Usecase) checkForOverlaps(newSlot timeslot.TimeSlot) error {
 	// Get all existing timeslots for this therapist
-	existingSlots, err := u.timeslotRepo.ListByTherapist(string(newSlot.TherapistID))
+	existingSlots, err := u.timeslotRepo.ListByTherapist(newSlot.TherapistID)
 	if err != nil {
 		return err
 	}

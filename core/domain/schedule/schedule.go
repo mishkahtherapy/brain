@@ -1,8 +1,6 @@
 package schedule
 
 import (
-	"time"
-
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/domain/specialization"
 )
@@ -16,9 +14,9 @@ type TherapistInfo struct {
 }
 
 type AvailableTimeRange struct {
-	DayOfWeek       string          `json:"dayOfWeek"`       // The day of the week for this availability
-	From            time.Time       `json:"from"`            // Start of available range
-	To              time.Time       `json:"to"`              // End of available range
-	DurationMinutes int             `json:"durationMinutes"` // Duration in minutes
-	Therapists      []TherapistInfo `json:"therapists"`      // List of therapists available in this time range
+	DayOfWeek       string              `json:"dayOfWeek"`       // The day of the week for this availability
+	From            domain.UTCTimestamp `json:"from"`            // Start of available range
+	To              domain.UTCTimestamp `json:"to"`              // End of available range
+	DurationMinutes int                 `json:"durationMinutes"` // Duration in minutes
+	Therapists      []TherapistInfo     `json:"therapists"`      // List of therapists available in this time range
 }

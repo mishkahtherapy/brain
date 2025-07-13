@@ -3,7 +3,9 @@ package timeslot_db
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/domain/timeslot"
@@ -29,11 +31,11 @@ var ErrFailedToCreateTimeSlot = errors.New("failed to create timeslot")
 var ErrFailedToUpdateTimeSlot = errors.New("failed to update timeslot")
 var ErrFailedToDeleteTimeSlot = errors.New("failed to delete timeslot")
 
-func NewTimeSlotRepository(db ports.SQLDatabase) *TimeSlotRepository {
+func NewTimeSlotRepository(db ports.SQLDatabase) ports.TimeSlotRepository {
 	return &TimeSlotRepository{db: db}
 }
 
-func (r *TimeSlotRepository) GetByID(id string) (*timeslot.TimeSlot, error) {
+func (r *TimeSlotRepository) GetByID(id domain.TimeSlotID) (*timeslot.TimeSlot, error) {
 	query := `
 		SELECT id, therapist_id, is_active, day_of_week, start_time, duration_minutes,
 		       pre_session_buffer, post_session_buffer, created_at, updated_at
@@ -47,8 +49,8 @@ func (r *TimeSlotRepository) GetByID(id string) (*timeslot.TimeSlot, error) {
 		&timeslot.TherapistID,
 		&timeslot.IsActive,
 		&timeslot.DayOfWeek,
-		&timeslot.StartTime,
-		&timeslot.DurationMinutes,
+		&timeslot.Start,
+		&timeslot.Duration,
 		&timeslot.PreSessionBuffer,
 		&timeslot.PostSessionBuffer,
 		&timeslot.CreatedAt,
@@ -100,11 +102,11 @@ func (r *TimeSlotRepository) Create(timeslot *timeslot.TimeSlot) error {
 		return ErrTimeSlotDayOfWeekIsRequired
 	}
 
-	if timeslot.StartTime == "" {
+	if timeslot.Start == "" {
 		return ErrTimeSlotStartTimeIsRequired
 	}
 
-	if timeslot.DurationMinutes <= 0 {
+	if timeslot.Duration <= 0 {
 		return ErrTimeSlotDurationIsRequired
 	}
 
@@ -128,8 +130,8 @@ func (r *TimeSlotRepository) Create(timeslot *timeslot.TimeSlot) error {
 		timeslot.TherapistID,
 		timeslot.IsActive,
 		timeslot.DayOfWeek,
-		timeslot.StartTime,
-		timeslot.DurationMinutes,
+		timeslot.Start,
+		timeslot.Duration,
 		timeslot.PreSessionBuffer,
 		timeslot.PostSessionBuffer,
 		timeslot.CreatedAt,
@@ -156,11 +158,11 @@ func (r *TimeSlotRepository) Update(timeslot *timeslot.TimeSlot) error {
 		return ErrTimeSlotDayOfWeekIsRequired
 	}
 
-	if timeslot.StartTime == "" {
+	if timeslot.Start == "" {
 		return ErrTimeSlotStartTimeIsRequired
 	}
 
-	if timeslot.DurationMinutes <= 0 {
+	if timeslot.Duration <= 0 {
 		return ErrTimeSlotDurationIsRequired
 	}
 
@@ -179,8 +181,8 @@ func (r *TimeSlotRepository) Update(timeslot *timeslot.TimeSlot) error {
 		timeslot.TherapistID,
 		timeslot.IsActive,
 		timeslot.DayOfWeek,
-		timeslot.StartTime,
-		timeslot.DurationMinutes,
+		timeslot.Start,
+		timeslot.Duration,
 		timeslot.PreSessionBuffer,
 		timeslot.PostSessionBuffer,
 		timeslot.UpdatedAt,
@@ -204,7 +206,7 @@ func (r *TimeSlotRepository) Update(timeslot *timeslot.TimeSlot) error {
 	return nil
 }
 
-func (r *TimeSlotRepository) Delete(id string) error {
+func (r *TimeSlotRepository) Delete(id domain.TimeSlotID) error {
 	if id == "" {
 		return ErrTimeSlotIDIsRequired
 	}
@@ -229,8 +231,21 @@ func (r *TimeSlotRepository) Delete(id string) error {
 	return nil
 }
 
-func (r *TimeSlotRepository) ListByTherapist(therapistID string) ([]*timeslot.TimeSlot, error) {
+func (r *TimeSlotRepository) ListByTherapist(therapistID domain.TherapistID) ([]*timeslot.TimeSlot, error) {
 	if therapistID == "" {
+		return nil, ErrTimeSlotTherapistIDIsRequired
+	}
+
+	result, err := r.BulkListByTherapist([]domain.TherapistID{therapistID})
+	if err != nil {
+		return nil, err
+	}
+
+	return result[therapistID], nil
+}
+
+func (r *TimeSlotRepository) BulkListByTherapist(therapistIDs []domain.TherapistID) (map[domain.TherapistID][]*timeslot.TimeSlot, error) {
+	if len(therapistIDs) == 0 {
 		return nil, ErrTimeSlotTherapistIDIsRequired
 	}
 
@@ -238,56 +253,68 @@ func (r *TimeSlotRepository) ListByTherapist(therapistID string) ([]*timeslot.Ti
 		SELECT id, therapist_id, is_active, day_of_week, start_time, duration_minutes,
 		       pre_session_buffer, post_session_buffer, created_at, updated_at
 		FROM time_slots
-		WHERE therapist_id = ?
+		WHERE therapist_id IN (%s)
 		ORDER BY day_of_week, start_time
 	`
-	rows, err := r.db.Query(query, therapistID)
+	placeholders := make([]string, len(therapistIDs))
+	values := make([]interface{}, len(therapistIDs))
+	for i, id := range therapistIDs {
+		placeholders[i] = "?"
+		values[i] = id
+	}
+	placeholdersStr := strings.Join(placeholders, ",")
+	query = fmt.Sprintf(query, placeholdersStr)
+
+	rows, err := r.db.Query(query, values...)
 	if err != nil {
 		slog.Error("error listing timeslots by therapist", "error", err)
 		return nil, ErrFailedToGetTimeSlots
 	}
 	defer rows.Close()
 
-	return r.scanTimeSlotsWithoutBookings(rows)
-}
-
-// scanTimeSlotsWithoutBookings scans timeslots without fetching booking IDs (for performance)
-func (r *TimeSlotRepository) scanTimeSlotsWithoutBookings(rows *sql.Rows) ([]*timeslot.TimeSlot, error) {
-	var timeslots []*timeslot.TimeSlot
+	timeslots := make(map[domain.TherapistID][]*timeslot.TimeSlot)
+	for _, id := range therapistIDs {
+		timeslots[id] = make([]*timeslot.TimeSlot, 0)
+	}
 
 	for rows.Next() {
-		timeslot := &timeslot.TimeSlot{}
-		err := rows.Scan(
-			&timeslot.ID,
-			&timeslot.TherapistID,
-			&timeslot.IsActive,
-			&timeslot.DayOfWeek,
-			&timeslot.StartTime,
-			&timeslot.DurationMinutes,
-			&timeslot.PreSessionBuffer,
-			&timeslot.PostSessionBuffer,
-			&timeslot.CreatedAt,
-			&timeslot.UpdatedAt,
-		)
+		timeslot, err := r.scanTimeslot(rows)
 		if err != nil {
 			slog.Error("error scanning timeslot", "error", err)
 			return nil, ErrFailedToGetTimeSlots
 		}
 
-		// Initialize empty slice for booking IDs
-		timeslot.BookingIDs = make([]domain.BookingID, 0)
-		timeslots = append(timeslots, timeslot)
+		timeslots[timeslot.TherapistID] = append(timeslots[timeslot.TherapistID], timeslot)
 	}
-
-	if err := rows.Err(); err != nil {
-		slog.Error("error iterating through timeslot rows", "error", err)
-		return nil, ErrFailedToGetTimeSlots
-	}
-
 	return timeslots, nil
 }
 
-func (r *TimeSlotRepository) BulkToggleByTherapistID(therapistID string, isActive bool) error {
+func (r *TimeSlotRepository) scanTimeslot(rows *sql.Rows) (*timeslot.TimeSlot, error) {
+	timeslot := &timeslot.TimeSlot{}
+	err := rows.Scan(
+		&timeslot.ID,
+		&timeslot.TherapistID,
+		&timeslot.IsActive,
+		&timeslot.DayOfWeek,
+		&timeslot.Start,
+		&timeslot.Duration,
+		&timeslot.PreSessionBuffer,
+		&timeslot.PostSessionBuffer,
+		&timeslot.CreatedAt,
+		&timeslot.UpdatedAt,
+	)
+	if err != nil {
+		slog.Error("error scanning timeslot", "error", err)
+		return nil, ErrFailedToGetTimeSlots
+	}
+
+	// Initialize empty slice for booking IDs
+	timeslot.BookingIDs = make([]domain.BookingID, 0)
+
+	return timeslot, nil
+}
+
+func (r *TimeSlotRepository) BulkToggleByTherapistID(therapistID domain.TherapistID, isActive bool) error {
 	if therapistID == "" {
 		return ErrTimeSlotTherapistIDIsRequired
 	}

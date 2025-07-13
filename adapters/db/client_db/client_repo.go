@@ -12,7 +12,7 @@ type ClientRepository struct {
 	db ports.SQLDatabase
 }
 
-func NewClientRepository(database ports.SQLDatabase) *ClientRepository {
+func NewClientRepository(database ports.SQLDatabase) ports.ClientRepository {
 	return &ClientRepository{
 		db: database,
 	}
