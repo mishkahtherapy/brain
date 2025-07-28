@@ -13,6 +13,7 @@ type Input struct {
 	TherapistID       domain.TherapistID     `json:"therapistId"`
 	LocalDayOfWeek    string                 `json:"dayOfWeek"`         // Local day "Monday"
 	LocalStartTime    domain.Time24h         `json:"startTime"`         // Local time "01:30"
+	IsActive          bool                   `json:"isActive"`          // Is active
 	DurationMinutes   domain.DurationMinutes `json:"durationMinutes"`   // Duration in minutes
 	PostSessionBuffer domain.DurationMinutes `json:"postSessionBuffer"` // minutes
 	PreSessionBuffer  domain.DurationMinutes `json:"preSessionBuffer"`  // minutes
@@ -49,7 +50,7 @@ func (u *Usecase) Execute(input Input) (*timeslot.TimeSlot, error) {
 		Duration:          input.DurationMinutes,
 		PreSessionBuffer:  domain.DurationMinutes(input.PreSessionBuffer),
 		PostSessionBuffer: domain.DurationMinutes(input.PostSessionBuffer),
-		IsActive:          true,
+		IsActive:          input.IsActive,
 	}
 
 	// Check for overlapping timeslots

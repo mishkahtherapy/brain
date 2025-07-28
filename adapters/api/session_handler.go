@@ -17,6 +17,8 @@ import (
 	"github.com/mishkahtherapy/brain/core/usecases/session/update_session_state"
 )
 
+const defaultSessionDuration = 60
+
 type SessionHandler struct {
 	createSessionUsecase           create_session.Usecase
 	getSessionUsecase              get_session.Usecase
@@ -93,6 +95,8 @@ func (h *SessionHandler) handleCreateSession(w http.ResponseWriter, r *http.Requ
 		rw.WriteBadRequest(err.Error())
 		return
 	}
+
+	input.Duration = defaultSessionDuration
 
 	session, err := h.createSessionUsecase.Execute(input)
 	if err != nil {
@@ -311,6 +315,11 @@ func (h *SessionHandler) handleListSessionsByTherapist(w http.ResponseWriter, r 
 			rw.WriteError(err, http.StatusInternalServerError)
 		}
 		return
+	}
+
+	// TODO: Remove this once we have a proper duration implementation
+	for _, session := range sessions {
+		session.Duration = defaultSessionDuration
 	}
 
 	if err := rw.WriteJSON(sessions, http.StatusOK); err != nil {

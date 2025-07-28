@@ -2,8 +2,13 @@ package client_db
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
+	"log/slog"
+	"strings"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/booking"
 	"github.com/mishkahtherapy/brain/core/domain/client"
 	"github.com/mishkahtherapy/brain/core/ports"
 )
@@ -11,6 +16,11 @@ import (
 type ClientRepository struct {
 	db ports.SQLDatabase
 }
+
+var (
+	ErrReadingClientBookings = errors.New("error reading client bookings")
+	ErrReadingClient         = errors.New("error reading client")
+)
 
 func NewClientRepository(database ports.SQLDatabase) ports.ClientRepository {
 	return &ClientRepository{
@@ -35,38 +45,52 @@ func (r *ClientRepository) Create(client *client.Client) error {
 	return err
 }
 
-func (r *ClientRepository) GetByID(id domain.ClientID) (*client.Client, error) {
+func (r *ClientRepository) BulkGetByID(ids []domain.ClientID) ([]*client.Client, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	placeholders := make([]string, len(ids))
+	values := make([]interface{}, len(ids))
+	for i := range ids {
+		placeholders[i] = "?"
+		values[i] = ids[i]
+	}
+	placeholdersStr := strings.Join(placeholders, ",")
+
 	query := `
 		SELECT id, name, whatsapp_number, timezone_offset, created_at, updated_at
 		FROM clients
-		WHERE id = ?
+		WHERE id IN (%s)
 	`
-	row := r.db.QueryRow(query, id)
+	query = fmt.Sprintf(query, placeholdersStr)
 
-	var client client.Client
-	err := row.Scan(
-		&client.ID,
-		&client.Name,
-		&client.WhatsAppNumber,
-		&client.TimezoneOffset,
-		&client.CreatedAt,
-		&client.UpdatedAt,
-	)
+	rows, err := r.db.Query(query, values...)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
+		slog.Error("error querying clients", "error", err, "ids", ids)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var clients []*client.Client
+	for rows.Next() {
+		var client client.Client
+		err := rows.Scan(
+			&client.ID,
+			&client.Name,
+			&client.WhatsAppNumber,
+			&client.TimezoneOffset,
+			&client.CreatedAt,
+			&client.UpdatedAt,
+		)
+		if err != nil {
+			slog.Error("error scanning client", "error", err)
+			return nil, ErrReadingClient
 		}
-		return nil, err
+		clients = append(clients, &client)
 	}
 
-	// Get booking IDs for this client
-	bookingIDs, err := r.getBookingIDsForClient(client.ID)
-	if err != nil {
-		return nil, err
-	}
-	client.BookingIDs = bookingIDs
-
-	return &client, nil
+	return clients, nil
 }
 
 func (r *ClientRepository) GetByWhatsAppNumber(whatsAppNumber domain.WhatsAppNumber) (*client.Client, error) {
@@ -94,11 +118,20 @@ func (r *ClientRepository) GetByWhatsAppNumber(whatsAppNumber domain.WhatsAppNum
 	}
 
 	// Get booking IDs for this client
-	bookingIDs, err := r.getBookingIDsForClient(client.ID)
+	bookingIDs, err := r.BulkGetClientBookings([]domain.ClientID{client.ID})
 	if err != nil {
 		return nil, err
 	}
-	client.BookingIDs = bookingIDs
+	if bookingIDs == nil {
+		return nil, ErrReadingClientBookings
+	}
+
+	clientBookings, ok := bookingIDs[client.ID]
+	if !ok {
+		return nil, ErrReadingClientBookings
+	}
+
+	client.Bookings = clientBookings
 
 	return &client, nil
 }
@@ -131,11 +164,14 @@ func (r *ClientRepository) List() ([]*client.Client, error) {
 		}
 
 		// Get booking IDs for this client
-		bookingIDs, err := r.getBookingIDsForClient(client.ID)
+		bookingIDs, err := r.BulkGetClientBookings([]domain.ClientID{client.ID})
 		if err != nil {
 			return nil, err
 		}
-		client.BookingIDs = bookingIDs
+
+		if clientBookings, ok := bookingIDs[client.ID]; ok {
+			client.Bookings = clientBookings
+		}
 
 		clients = append(clients, &client)
 	}
@@ -172,28 +208,51 @@ func (r *ClientRepository) UpdateTimezoneOffset(id domain.ClientID, offsetMinute
 	return err
 }
 
-func (r *ClientRepository) getBookingIDsForClient(clientID domain.ClientID) ([]domain.BookingID, error) {
+func (r *ClientRepository) BulkGetClientBookings(
+	clientIDs []domain.ClientID,
+) (map[domain.ClientID][]booking.Booking, error) {
+	if len(clientIDs) == 0 {
+		return nil, nil
+	}
+
+	placeholders := make([]string, len(clientIDs))
+	values := make([]interface{}, len(clientIDs))
+	for i := range clientIDs {
+		placeholders[i] = "?"
+		values[i] = clientIDs[i]
+	}
+	placeholdersStr := strings.Join(placeholders, ",")
 	query := `
-		SELECT id
+		SELECT id, timeslot_id, therapist_id, start_time, duration_minutes, state
 		FROM bookings
-		WHERE client_id = ?
+		WHERE client_id IN (%s)
 		ORDER BY created_at DESC
 	`
-	rows, err := r.db.Query(query, clientID)
+	query = fmt.Sprintf(query, placeholdersStr)
+
+	rows, err := r.db.Query(query, values...)
 	if err != nil {
-		return nil, err
+		return nil, ErrReadingClientBookings
 	}
 	defer rows.Close()
 
-	var bookingIDs []domain.BookingID
+	bookings := make(map[domain.ClientID][]booking.Booking)
 	for rows.Next() {
-		var bookingID domain.BookingID
-		err := rows.Scan(&bookingID)
+		var booking booking.Booking
+		err := rows.Scan(
+			&booking.ID,
+			&booking.TimeSlotID,
+			&booking.TherapistID,
+			&booking.StartTime,
+			&booking.Duration,
+			&booking.State,
+		)
 		if err != nil {
-			return nil, err
+			slog.Error("error scanning booking", "error", err)
+			return nil, ErrReadingClientBookings
 		}
-		bookingIDs = append(bookingIDs, bookingID)
+		bookings[booking.ClientID] = append(bookings[booking.ClientID], booking)
 	}
 
-	return bookingIDs, nil
+	return bookings, nil
 }

@@ -132,6 +132,7 @@ func (h *TimeslotHandler) handleCreateTimeslot(w http.ResponseWriter, r *http.Re
 		DayOfWeek string                 `json:"dayOfWeek"` // Local day
 		Start     domain.Time24h         `json:"start"`     // Local time
 		Duration  domain.DurationMinutes `json:"duration"`  // Duration in minutes
+		IsActive  bool                   `json:"isActive"`  // Is active
 		// TimezoneOffset    domain.TimezoneOffset  `json:"timezoneOffset"`    // Minutes from UTC
 		PreSessionBuffer  domain.DurationMinutes `json:"preSessionBuffer"`  // minutes
 		PostSessionBuffer domain.DurationMinutes `json:"postSessionBuffer"` // minutes

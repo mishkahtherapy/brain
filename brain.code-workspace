@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../mishkah-mono"
+		},
+		{
+			"path": "../operator-app"
+		}
+	],
+	"settings": {}
+}

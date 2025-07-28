@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "name": "brian",
+  "name": "brain",
   "type": "collection",
   "ignore": [
     "node_modules",

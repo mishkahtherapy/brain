@@ -3,6 +3,7 @@ package client_handler
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/core/domain"
@@ -94,14 +95,18 @@ func (h *ClientHandler) handleGetAllClients(w http.ResponseWriter, r *http.Reque
 func (h *ClientHandler) handleGetClient(w http.ResponseWriter, r *http.Request) {
 	rw := api.NewResponseWriter(w)
 
-	// Read client id from path
-	id := domain.ClientID(r.PathValue("id"))
-	if id == "" {
+	idQuery := strings.Split(r.URL.Query().Get("ids"), ",")
+	if len(idQuery) == 0 {
 		rw.WriteBadRequest("Missing client ID")
 		return
 	}
 
-	client, err := h.getClientUsecase.Execute(id)
+	ids := make([]domain.ClientID, len(idQuery))
+	for i, id := range idQuery {
+		ids[i] = domain.ClientID(id)
+	}
+
+	client, err := h.getClientUsecase.Execute(ids)
 	if err != nil {
 		if err == common.ErrClientNotFound {
 			rw.WriteNotFound(err.Error())

@@ -23,6 +23,7 @@
 go.work
 
 brain
+brain-api
 
 *.db
 

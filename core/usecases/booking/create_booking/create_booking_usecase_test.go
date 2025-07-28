@@ -77,8 +77,10 @@ func (r *inMemoryTherapistRepo) FindBySpecializationAndLanguage(string, bool) ([
 
 type inMemoryClientRepo struct{}
 
-func (r *inMemoryClientRepo) GetByID(id domain.ClientID) (*client.Client, error) {
-	return &client.Client{ID: id, WhatsAppNumber: "+111"}, nil
+func (r *inMemoryClientRepo) BulkGetByID(ids []domain.ClientID) ([]*client.Client, error) {
+	return []*client.Client{
+		{ID: ids[0], WhatsAppNumber: "+111"},
+	}, nil
 }
 func (r *inMemoryClientRepo) GetByWhatsAppNumber(domain.WhatsAppNumber) (*client.Client, error) {
 	return nil, nil
@@ -170,11 +172,10 @@ func TestCreateBooking_ConflictDetection(t *testing.T) {
 			name:     "no conflict - empty schedule",
 			existing: nil,
 			newInput: Input{
-				TherapistID:    therapistID,
-				ClientID:       clientID,
-				TimeSlotID:     tsMorning.ID,
-				StartTime:      mustParse(t, "2025-07-07T09:00:00Z"),
-				TimezoneOffset: 0,
+				TherapistID: therapistID,
+				ClientID:    clientID,
+				TimeSlotID:  tsMorning.ID,
+				StartTime:   mustParse(t, "2025-07-07T09:00:00Z"),
 			},
 			expectConflict: false,
 		},
@@ -190,11 +191,10 @@ func TestCreateBooking_ConflictDetection(t *testing.T) {
 				},
 			},
 			newInput: Input{
-				TherapistID:    therapistID,
-				ClientID:       clientID,
-				TimeSlotID:     tsMorning.ID,
-				StartTime:      mustParse(t, "2025-07-07T09:00:00Z"),
-				TimezoneOffset: 0,
+				TherapistID: therapistID,
+				ClientID:    clientID,
+				TimeSlotID:  tsMorning.ID,
+				StartTime:   mustParse(t, "2025-07-07T09:00:00Z"),
 			},
 			expectConflict: true,
 		},
@@ -210,11 +210,10 @@ func TestCreateBooking_ConflictDetection(t *testing.T) {
 				},
 			},
 			newInput: Input{
-				TherapistID:    therapistID,
-				ClientID:       clientID,
-				TimeSlotID:     tsMorning.ID,
-				StartTime:      mustParse(t, "2025-07-07T10:05:00Z"), // starts within 15-min buffer
-				TimezoneOffset: 0,
+				TherapistID: therapistID,
+				ClientID:    clientID,
+				TimeSlotID:  tsMorning.ID,
+				StartTime:   mustParse(t, "2025-07-07T10:05:00Z"), // starts within 15-min buffer
 			},
 			expectConflict: true,
 		},
@@ -230,11 +229,10 @@ func TestCreateBooking_ConflictDetection(t *testing.T) {
 				},
 			},
 			newInput: Input{
-				TherapistID:    therapistID,
-				ClientID:       clientID,
-				TimeSlotID:     tsLateMorning.ID,
-				StartTime:      mustParse(t, "2025-07-07T10:00:00Z"), // overlaps 10:00-10:30
-				TimezoneOffset: 0,
+				TherapistID: therapistID,
+				ClientID:    clientID,
+				TimeSlotID:  tsLateMorning.ID,
+				StartTime:   mustParse(t, "2025-07-07T10:00:00Z"), // overlaps 10:00-10:30
 			},
 			expectConflict: true,
 		},
@@ -250,11 +248,10 @@ func TestCreateBooking_ConflictDetection(t *testing.T) {
 				},
 			},
 			newInput: Input{
-				TherapistID:    therapistID,
-				ClientID:       clientID,
-				TimeSlotID:     tsMorning.ID,
-				StartTime:      mustParse(t, "2025-07-07T10:15:00Z"), // exactly after 15-min buffer
-				TimezoneOffset: 0,
+				TherapistID: therapistID,
+				ClientID:    clientID,
+				TimeSlotID:  tsMorning.ID,
+				StartTime:   mustParse(t, "2025-07-07T10:15:00Z"), // exactly after 15-min buffer
 			},
 			expectConflict: false,
 		},

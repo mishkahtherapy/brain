@@ -17,11 +17,11 @@ var (
 )
 
 type Input struct {
-	TherapistID    domain.TherapistID    `json:"therapistId"`
-	ClientID       domain.ClientID       `json:"clientId"`
-	TimeSlotID     domain.TimeSlotID     `json:"timeSlotId"`
-	StartTime      domain.UTCTimestamp   `json:"startTime"`
-	TimezoneOffset domain.TimezoneOffset `json:"timezoneOffset"`
+	TherapistID domain.TherapistID  `json:"therapistId"`
+	ClientID    domain.ClientID     `json:"clientId"`
+	TimeSlotID  domain.TimeSlotID   `json:"timeSlotId"`
+	StartTime   domain.UTCTimestamp `json:"startTime"`
+	// TimezoneOffset domain.TimezoneOffset `json:"timezoneOffset"`
 }
 
 type Usecase struct {
@@ -58,7 +58,7 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 	}
 
 	// Check if client exists
-	client, err := u.clientRepo.GetByID(input.ClientID)
+	client, err := u.clientRepo.BulkGetByID([]domain.ClientID{input.ClientID})
 	if err != nil || client == nil {
 		return nil, common.ErrClientNotFound
 	}
@@ -122,15 +122,15 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 	// Create booking with Pending state and timezone (no conversion, just store as hint)
 	now := domain.NewUTCTimestamp()
 	createdBooking := &booking.Booking{
-		ID:             domain.NewBookingID(),
-		TherapistID:    input.TherapistID,
-		ClientID:       input.ClientID,
-		TimeSlotID:     input.TimeSlotID,
-		StartTime:      input.StartTime,      // Always in UTC
-		TimezoneOffset: input.TimezoneOffset, // Store as frontend hint, no conversion
-		State:          booking.BookingStatePending,
-		CreatedAt:      now,
-		UpdatedAt:      now,
+		ID:          domain.NewBookingID(),
+		TherapistID: input.TherapistID,
+		ClientID:    input.ClientID,
+		TimeSlotID:  input.TimeSlotID,
+		StartTime:   input.StartTime, // Always in UTC
+		// TimezoneOffset: input.TimezoneOffset, // Store as frontend hint, no conversion
+		State:     booking.BookingStatePending,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 
 	err = u.bookingRepo.Create(createdBooking)

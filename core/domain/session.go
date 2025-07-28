@@ -33,10 +33,11 @@ type Session struct {
 	ClientID    ClientID        `json:"clientId"`
 	TimeSlotID  TimeSlotID      `json:"timeSlotId"`
 	StartTime   UTCTimestamp    `json:"startTime"`
+	Duration    DurationMinutes `json:"duration"`
 	PaidAmount  int             `json:"paidAmount"` // USD cents
 	Language    SessionLanguage `json:"language"`
 	State       SessionState    `json:"state"`
-	Notes       string          `json:"notes"`
+	Notes       string          `json:"notes"` // delays, special notes, ...etc.
 	MeetingURL  string          `json:"meetingUrl,omitempty"`
 	CreatedAt   UTCTimestamp    `json:"createdAt"`
 	UpdatedAt   UTCTimestamp    `json:"updatedAt"`

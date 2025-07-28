@@ -14,24 +14,24 @@ INSERT INTO
     )
 VALUES (
         'therapist_001',
-        'Dr. Sarah Johnson',
-        'sarah.johnson@therapy.com',
+        'Neira Ellaboudy',
+        'neira.ellaboudy@mishkah.com',
         '+1555001234',
         '+1234567890',
         TRUE
     ),
     (
         'therapist_002',
-        'Dr. Michael Chen',
-        'michael.chen@therapy.com',
+        'Najla Kalbouneh',
+        'najla.kalbouneh@mishkah.com',
         '+1555005678',
         '+1987654321',
         TRUE
     ),
     (
         'therapist_003',
-        'Dr. Emily Davis',
-        'emily.davis@therapy.com',
+        'Zeinab Hussein',
+        'zeinab.hussein@mishkah.com',
         '+1555098765',
         '+1122334455',
         TRUE
@@ -78,7 +78,7 @@ VALUES (
         'therapist_001',
         'Monday',
         '09:00',
-        60,
+        130,
         4320,
         30
     ), -- Cairo: 12:00-1:00 PM Monday (effective: 11:30-1:15 PM)
@@ -87,7 +87,7 @@ VALUES (
         'therapist_001',
         'Monday',
         '11:45',
-        60,
+        250,
         4320,
         30
     ), -- Cairo: 2:45-3:45 PM Monday (effective: 2:15-4:00 PM)
@@ -96,7 +96,7 @@ VALUES (
         'therapist_001',
         'Tuesday',
         '14:00',
-        60,
+        90,
         4320,
         30
     ), -- Cairo: 5:00-6:00 PM Tuesday
@@ -105,7 +105,7 @@ VALUES (
         'therapist_002',
         'Wednesday',
         '09:00',
-        60,
+        320,
         4320,
         30
     ), -- Cairo: 12:00-1:00 PM Wednesday
@@ -114,7 +114,7 @@ VALUES (
         'therapist_002',
         'Monday',
         '09:00',
-        60,
+        85,
         4320,
         30
     ),
@@ -137,7 +137,6 @@ INSERT INTO
         client_id,
         start_time,
         duration_minutes,
-        timezone_offset,
         state
     )
 VALUES (
@@ -147,7 +146,6 @@ VALUES (
         'client_001',
         '2024-01-15 09:00:00',
         60,
-        -300,
         'confirmed'
     ),
     (
@@ -157,7 +155,6 @@ VALUES (
         'client_002',
         '2024-01-15 11:45:00',
         60,
-        -60,
         'pending'
     ),
     (
@@ -167,7 +164,6 @@ VALUES (
         'client_001',
         '2024-01-16 14:00:00',
         60,
-        300,
         'confirmed'
     );
 
@@ -184,6 +180,7 @@ INSERT INTO
         language,
         state,
         notes,
+        duration_minutes,
         meeting_url
     )
 VALUES (
@@ -197,12 +194,13 @@ VALUES (
         'english',
         'done',
         'Notes for session 1',
+        60,
         'https://meet.google.com/abc123'
     ),
     (
         'session_002',
         'booking_002',
-        'therapist_001',
+        'therapist_002',
         'client_002',
         'slot_002',
         '2024-01-15 11:45:00',
@@ -210,6 +208,7 @@ VALUES (
         'english',
         'done',
         'Notes for session 2',
+        60,
         'https://meet.google.com/def456'
     ),
     (
@@ -223,11 +222,26 @@ VALUES (
         'english',
         'done',
         'Notes for session 3',
+        60,
         'https://meet.google.com/ghi789'
     ),
     (
         'session_004',
         'booking_004',
+        'therapist_001',
+        'client_001',
+        'slot_003',
+        '2024-01-16 14:00:00',
+        10000,
+        'english',
+        'done',
+        'Notes for session 3',
+        60,
+        'https://meet.google.com/ghi789'
+    ),
+    (
+        'session_005',
+        'booking_005',
         'therapist_001',
         'client_002',
         'slot_001',
@@ -236,11 +250,12 @@ VALUES (
         'english',
         'done',
         'Notes for session 4',
+        60,
         'https://meet.google.com/jkl012'
     ),
     (
-        'session_005',
-        'booking_005',
+        'session_006',
+        'booking_006',
         'therapist_001',
         'client_001',
         'slot_001',
@@ -249,84 +264,91 @@ VALUES (
         'english',
         'done',
         'Notes for session 5',
+        60,
         'https://meet.google.com/mno345'
-    ),
-    (
-        'session_006',
-        'booking_006',
-        'therapist_002',
-        'client_002',
-        'slot_004',
-        '2026-01-17 09:00:00',
-        10000,
-        'english',
-        'done',
-        'Notes for session 6',
-        'https://meet.google.com/pqr678'
     ),
     (
         'session_007',
         'booking_007',
-        'therapist_001',
-        'client_001',
-        'slot_003',
-        '2026-01-20 14:00:00',
+        'therapist_002',
+        'client_002',
+        'slot_004',
+        '2026-01-17 09:45:00',
         10000,
         'english',
         'done',
-        'Notes for session 7',
-        'https://meet.google.com/stu901'
+        'Notes for session 6',
+        60,
+        'https://meet.google.com/pqr678'
     ),
     (
         'session_008',
         'booking_008',
-        'therapist_002',
-        'client_002',
-        'slot_004',
-        '2026-01-24 09:00:00',
+        'therapist_001',
+        'client_001',
+        'slot_003',
+        '2026-01-20 17:00:00',
         10000,
         'english',
         'done',
-        'Notes for session 8',
-        'https://meet.google.com/vwx234'
+        'Notes for session 7',
+        60,
+        'https://meet.google.com/stu901'
     ),
     (
         'session_009',
         'booking_009',
-        'therapist_001',
-        'client_001',
-        'slot_001',
-        '2026-01-29 09:00:00',
+        'therapist_002',
+        'client_002',
+        'slot_004',
+        '2026-01-24 10:00:00',
         10000,
         'english',
         'done',
-        'Notes for session 9',
-        'https://meet.google.com/yz5678'
+        'Notes for session 8',
+        60,
+        'https://meet.google.com/vwx234'
     ),
     (
         'session_010',
         'booking_010',
         'therapist_001',
+        'client_001',
+        'slot_001',
+        '2026-01-29 10:00:00',
+        10000,
+        'english',
+        'done',
+        'Notes for session 9',
+        60,
+        'https://meet.google.com/yz5678'
+    ),
+    (
+            'session_011',
+        'booking_011',
+        'therapist_001',
         'client_002',
         'slot_002',
-        '2026-01-29 10:30:00',
+        '2026-01-29 11:30:00',
         10000,
         'english',
         'done',
         'Notes for session 10',
+        60,
         'https://meet.google.com/abc901'
     ),
     (
-        'session_011',
-        'booking_011',
+        'session_012',
+        'booking_012',
         'therapist_002',
         'client_001',
         'slot_004',
-        '2026-02-05 09:00:00',
+        '2026-02-05 19:40:00',
         10000,
         'english',
         'done',
         'Notes for session 11',
+        60,
         'https://meet.google.com/def234'
     );
 

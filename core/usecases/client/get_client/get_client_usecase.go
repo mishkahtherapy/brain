@@ -17,15 +17,15 @@ func NewUsecase(clientRepo ports.ClientRepository) *Usecase {
 	}
 }
 
-func (u *Usecase) Execute(id domain.ClientID) (*client.Client, error) {
-	client, err := u.clientRepo.GetByID(id)
+func (u *Usecase) Execute(ids []domain.ClientID) ([]*client.Client, error) {
+	clients, err := u.clientRepo.BulkGetByID(ids)
 	if err != nil {
 		return nil, err
 	}
 
-	if client == nil {
+	if len(clients) == 0 {
 		return nil, common.ErrClientNotFound
 	}
 
-	return client, nil
+	return clients, nil
 }

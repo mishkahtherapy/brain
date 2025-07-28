@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/mishkahtherapy/brain/core/domain"
+	"github.com/mishkahtherapy/brain/core/domain/booking"
 	"github.com/mishkahtherapy/brain/core/domain/client"
 	"github.com/mishkahtherapy/brain/core/ports"
 	timeslot_usecase "github.com/mishkahtherapy/brain/core/usecases/timeslot"
@@ -54,7 +55,7 @@ func (u *Usecase) Execute(input Input) (*client.Client, error) {
 		Name:           strings.TrimSpace(input.Name),
 		WhatsAppNumber: input.WhatsAppNumber,
 		TimezoneOffset: input.TimezoneOffset,
-		BookingIDs:     []domain.BookingID{},
+		Bookings:       []booking.Booking{},
 		CreatedAt:      domain.NewUTCTimestamp(),
 		UpdatedAt:      domain.NewUTCTimestamp(),
 	}

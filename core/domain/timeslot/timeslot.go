@@ -18,14 +18,30 @@ const (
 	DayOfWeekSunday    DayOfWeek = "Sunday"
 )
 
+func MapToDayOfWeek(dayOfWeek time.Weekday) DayOfWeek {
+	days := map[time.Weekday]DayOfWeek{
+		time.Monday:    DayOfWeekMonday,
+		time.Tuesday:   DayOfWeekTuesday,
+		time.Wednesday: DayOfWeekWednesday,
+		time.Thursday:  DayOfWeekThursday,
+		time.Friday:    DayOfWeekFriday,
+		time.Saturday:  DayOfWeekSaturday,
+		time.Sunday:    DayOfWeekSunday,
+	}
+
+	return days[dayOfWeek]
+}
+
 type TimeSlot struct {
-	ID                domain.TimeSlotID      `json:"id"`
-	TherapistID       domain.TherapistID     `json:"therapistId"`
-	IsActive          bool                   `json:"isActive"`
-	DayOfWeek         DayOfWeek              `json:"dayOfWeek"`         // UTC day
-	Start             domain.Time24h         `json:"start"`             // UTC time e.g. "22:30"
-	Duration          domain.DurationMinutes `json:"duration"`          // Duration in minutes e.g. 60
-	PreSessionBuffer  domain.DurationMinutes `json:"preSessionBuffer"`  // minutes (advance notice), used only when preparing schedule.
+	ID          domain.TimeSlotID      `json:"id"`
+	TherapistID domain.TherapistID     `json:"therapistId"`
+	IsActive    bool                   `json:"isActive"`
+	DayOfWeek   DayOfWeek              `json:"dayOfWeek"` // UTC day
+	Start       domain.Time24h         `json:"start"`     // UTC time e.g. "22:30"
+	Duration    domain.DurationMinutes `json:"duration"`  // Duration in minutes e.g. 60
+	// TODO: rename to AdvanceNotice
+	PreSessionBuffer domain.DurationMinutes `json:"preSessionBuffer"` // minutes (advance notice), used only when preparing schedule.
+	// TODO: rename to AfterSessionBreakTime
 	PostSessionBuffer domain.DurationMinutes `json:"postSessionBuffer"` // minutes (break after session).
 	BookingIDs        []domain.BookingID     `json:"bookingIds"`
 	CreatedAt         domain.UTCTimestamp    `json:"createdAt"`

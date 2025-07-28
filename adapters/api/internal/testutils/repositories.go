@@ -59,16 +59,24 @@ func NewTestClientRepository(db ports.SQLDatabase) ports.ClientRepository {
 	return &TestClientRepository{db: db}
 }
 
-func (r *TestClientRepository) GetByID(id domain.ClientID) (*client.Client, error) {
-	query := `SELECT id, name, whatsapp_number, created_at, updated_at FROM clients WHERE id = ?`
-	row := r.db.QueryRow(query, id)
-
-	var client client.Client
-	err := row.Scan(&client.ID, &client.Name, &client.WhatsAppNumber, &client.CreatedAt, &client.UpdatedAt)
+func (r *TestClientRepository) BulkGetByID(ids []domain.ClientID) ([]*client.Client, error) {
+	query := `SELECT id, name, whatsapp_number, created_at, updated_at FROM clients WHERE id IN (?)`
+	rows, err := r.db.Query(query, ids)
 	if err != nil {
 		return nil, err
 	}
-	return &client, nil
+	defer rows.Close()
+
+	var clients []*client.Client
+	for rows.Next() {
+		var c client.Client
+		err := rows.Scan(&c.ID, &c.Name, &c.WhatsAppNumber, &c.CreatedAt, &c.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+		clients = append(clients, &c)
+	}
+	return clients, nil
 }
 
 func (r *TestClientRepository) Create(client *client.Client) error { return nil }

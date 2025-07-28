@@ -35,7 +35,7 @@ func (u *Usecase) Execute(input Input) error {
 	}
 
 	// Check if client exists
-	client, err := u.clientRepo.GetByID(input.ClientID)
+	client, err := u.clientRepo.BulkGetByID([]domain.ClientID{input.ClientID})
 	if err != nil {
 		return err
 	}

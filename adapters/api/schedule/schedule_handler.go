@@ -2,9 +2,11 @@ package schedule_handler
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/mishkahtherapy/brain/adapters/api"
+	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/usecases/schedule/get_schedule"
 )
 
@@ -25,10 +27,17 @@ func (h *ScheduleHandler) RegisterRoutes(mux *http.ServeMux) {
 func (h *ScheduleHandler) handleGetSchedule(w http.ResponseWriter, r *http.Request) {
 	rw := api.NewResponseWriter(w)
 
-	// Parse specialization parameter (required)
-	specialization := r.URL.Query().Get("specialization")
-	if specialization == "" {
-		rw.WriteBadRequest("specialization tag is required")
+	// Parse specializationsParam parameter (required)
+	specializationsParam := r.URL.Query().Get("specialization")
+	therapistIdsParam := r.URL.Query().Get("therapistIds")
+
+	if specializationsParam == "" && therapistIdsParam == "" {
+		rw.WriteBadRequest("specialization or therapistIds is required")
+		return
+	}
+
+	if specializationsParam != "" && therapistIdsParam != "" {
+		rw.WriteBadRequest("specialization and therapistIds cannot be used together")
 		return
 	}
 
@@ -69,12 +78,33 @@ func (h *ScheduleHandler) handleGetSchedule(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	therapistIds := []domain.TherapistID{}
+	if therapistIdsParam != "" {
+		therapistIdStrings := strings.Split(strings.TrimSpace(therapistIdsParam), ",")
+		for _, id := range therapistIdStrings {
+			therapistIds = append(therapistIds, domain.TherapistID(id))
+		}
+	}
+
+	specializations := []string{}
+	if specializationsParam != "" {
+		specializationStrings := strings.Split(strings.TrimSpace(specializationsParam), ",")
+		specializations = append(specializations, specializationStrings...)
+	}
+
 	// Create input for usecase
 	input := get_schedule.Input{
-		SpecializationTag: specialization,
-		MustSpeakEnglish:  english,
-		StartDate:         startDate,
-		EndDate:           endDate,
+		MustSpeakEnglish: english,
+		StartDate:        startDate,
+		EndDate:          endDate,
+	}
+
+	if len(specializations) > 0 {
+		input.SpecializationTag = specializations[0]
+	}
+
+	if len(therapistIds) > 0 {
+		input.TherapistIDs = therapistIds
 	}
 
 	// Execute usecase
@@ -82,7 +112,9 @@ func (h *ScheduleHandler) handleGetSchedule(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
-		case get_schedule.ErrSpecializationTagIsRequired:
+		case get_schedule.ErrSpecializationTagOrTherapistIDsIsRequired:
+			rw.WriteBadRequest(err.Error())
+		case get_schedule.ErrSpecializationTagAndTherapistIDsCannotBeUsedTogether:
 			rw.WriteBadRequest(err.Error())
 		case get_schedule.ErrInvalidDateRange:
 			rw.WriteBadRequest(err.Error())

@@ -21,6 +21,7 @@ import (
 	"github.com/mishkahtherapy/brain/adapters/db/specialization_db"
 	"github.com/mishkahtherapy/brain/adapters/db/therapist_db"
 	"github.com/mishkahtherapy/brain/adapters/db/timeslot_db"
+	"github.com/mishkahtherapy/brain/config"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/cancel_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/confirm_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/create_booking"
@@ -66,11 +67,13 @@ func main() {
 	}))
 	slog.SetDefault(logger)
 
-	// Initialize database
-	dbConfig := db.DatabaseConfig{
-		DBFilename: "./brain.db", // SQLite database file
-		SchemaFile: "./schema.sql",
+	err := config.LoadEnvFileIfExists(".env")
+	if err != nil {
+		slog.Error("Error loading env file", "error", err)
 	}
+
+	// Initialize database
+	dbConfig := config.GetDBConfig()
 	database := db.NewDatabase(dbConfig)
 	defer database.Close()
 
@@ -225,8 +228,17 @@ func main() {
 		w.Write([]byte(`{"status":"healthy","service":"therapist-api"}`))
 	})
 
-	// Add CORS middleware
-	handler := loggingMiddleware(corsMiddleware(mux))
+	var middleWareStack []func(http.Handler) http.Handler
+	var handler http.Handler
+	if config.IsDevelopment() {
+		// Add CORS middleware
+		middleWareStack = append(middleWareStack, corsMiddleware)
+	}
+
+	handler = loggingMiddleware(mux)
+	for _, middleware := range middleWareStack {
+		handler = middleware(handler)
+	}
 
 	// Start server
 	port := getEnvOrDefault("PORT", "8090")
@@ -248,7 +260,15 @@ func loggingMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(rw, r)
 
 		duration := time.Since(start)
-		slog.Info("HTTP", "method", r.Method, "path", r.URL.Path, "status", rw.status, "duration", duration.String())
+		slog.Info(
+			"HTTP",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", rw.status,
+			"duration", duration.String(),
+			"user_agent", r.UserAgent(),
+			"remote_addr", r.RemoteAddr,
+		)
 	})
 }
 

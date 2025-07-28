@@ -15,6 +15,7 @@ type Input struct {
 	ClientID    domain.ClientID        `json:"clientId"`
 	TimeSlotID  domain.TimeSlotID      `json:"timeSlotId"`
 	StartTime   domain.UTCTimestamp    `json:"startTime"`
+	Duration    domain.DurationMinutes `json:"duration"`
 	PaidAmount  int                    `json:"paidAmount"` // USD cents
 	Language    domain.SessionLanguage `json:"language"`
 }
@@ -65,7 +66,7 @@ func (u *Usecase) Execute(input Input) (*domain.Session, error) {
 	}
 
 	// Verify the client exists
-	client, err := u.clientRepo.GetByID(input.ClientID)
+	client, err := u.clientRepo.BulkGetByID([]domain.ClientID{input.ClientID})
 	if err != nil || client == nil {
 		return nil, common.ErrClientNotFound
 	}
@@ -85,6 +86,7 @@ func (u *Usecase) Execute(input Input) (*domain.Session, error) {
 		ClientID:    input.ClientID,
 		TimeSlotID:  input.TimeSlotID,
 		StartTime:   input.StartTime,
+		Duration:    input.Duration,
 		PaidAmount:  input.PaidAmount,
 		Language:    input.Language,
 		State:       domain.SessionStatePlanned,

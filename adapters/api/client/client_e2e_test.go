@@ -79,8 +79,8 @@ func TestClientE2E(t *testing.T) {
 		if createdClient.ID == "" {
 			t.Error("Expected ID to be set")
 		}
-		if len(createdClient.BookingIDs) != 0 {
-			t.Errorf("Expected empty booking IDs, got %v", createdClient.BookingIDs)
+		if len(createdClient.Bookings) != 0 {
+			t.Errorf("Expected empty booking IDs, got %v", createdClient.Bookings)
 		}
 		if createdClient.CreatedAt == (domain.UTCTimestamp{}) {
 			t.Error("Expected CreatedAt to be set")

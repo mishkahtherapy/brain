@@ -116,6 +116,7 @@ CREATE TABLE sessions (
     client_id VARCHAR(128) NOT NULL,
     timeslot_id VARCHAR(128) NOT NULL,
     start_time DATETIME NOT NULL,
+    duration_minutes INTEGER NOT NULL, -- Duration in minutes
     paid_amount INTEGER NOT NULL, -- USD cents
     language VARCHAR(10) NOT NULL CHECK (
         language IN ('arabic', 'english')
@@ -168,7 +169,7 @@ CREATE INDEX idx_bookings_therapist_start_time ON bookings (therapist_id, start_
 
 CREATE INDEX idx_bookings_state ON bookings (state);
 
-CREATE INDEX idx_bookings_timezone_offset ON bookings (timezone_offset);
+-- CREATE INDEX idx_bookings_timezone_offset ON bookings (timezone_offset);
 
 -- Session queries
 CREATE INDEX idx_sessions_booking ON sessions (booking_id);

@@ -410,6 +410,67 @@ func (r *TherapistRepository) FindBySpecializationAndLanguage(specializationName
 	return therapists, nil
 }
 
+func (r *TherapistRepository) FindByIDs(therapistIDs []domain.TherapistID) ([]*therapist.Therapist, error) {
+	if len(therapistIDs) == 0 {
+		return nil, nil
+	}
+
+	query := `
+		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, created_at, updated_at
+		FROM therapists
+		WHERE id IN (%s)
+	`
+
+	placeholders := make([]string, 0)
+	values := make([]interface{}, 0)
+
+	for _, therapistID := range therapistIDs {
+		placeholders = append(placeholders, "?")
+		values = append(values, therapistID)
+	}
+
+	query = fmt.Sprintf(query, strings.Join(placeholders, ", "))
+	rows, err := r.db.Query(query, values...)
+	if err != nil {
+		slog.Error("error finding therapists by ids", "error", err)
+		return nil, ErrFailedToGetTherapists
+	}
+	defer rows.Close()
+
+	therapists := make([]*therapist.Therapist, 0)
+	for rows.Next() {
+		therapist := &therapist.Therapist{}
+		err := rows.Scan(
+			&therapist.ID,
+			&therapist.Name,
+			&therapist.Email,
+			&therapist.PhoneNumber,
+			&therapist.WhatsAppNumber,
+			&therapist.SpeaksEnglish,
+			&therapist.CreatedAt,
+			&therapist.UpdatedAt,
+		)
+		if err != nil {
+			slog.Error("error scanning therapist", "error", err)
+			return nil, ErrFailedToGetTherapists
+		}
+
+		therapists = append(therapists, therapist)
+	}
+
+	// Load specializations for each therapist
+	specializations, err := r.bulkGetTherapistSpecializations(therapistIDs)
+	if err != nil {
+		return nil, ErrFailedToGetTherapists
+	}
+
+	for _, therapist := range therapists {
+		therapist.Specializations = specializations[therapist.ID]
+	}
+
+	return therapists, nil
+}
+
 // Helper methods for managing therapist specializations
 
 func (r *TherapistRepository) insertTherapistSpecializations(tx ports.SQLTx, therapistID domain.TherapistID, specializationIDs []domain.SpecializationID) error {

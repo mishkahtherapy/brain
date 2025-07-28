@@ -27,8 +27,9 @@ type Usecase struct {
 	bookingRepo   ports.BookingRepository
 }
 
-var ErrSpecializationTagIsRequired = errors.New("specialization tag is required")
+var ErrSpecializationTagOrTherapistIDsIsRequired = errors.New("specialization tag or therapist ids is required")
 var ErrInvalidDateRange = errors.New("invalid date range")
+var ErrSpecializationTagAndTherapistIDsCannotBeUsedTogether = errors.New("specialization tag and therapist ids cannot be used together")
 
 var timeRangeMinimumDurationMinutes = 60
 
@@ -46,8 +47,12 @@ func NewUsecase(
 
 func (u *Usecase) Execute(input Input) ([]schedule.AvailableTimeRange, error) {
 	// Validate input
-	if input.SpecializationTag == "" {
-		return nil, ErrSpecializationTagIsRequired
+	if input.SpecializationTag == "" && len(input.TherapistIDs) == 0 {
+		return nil, ErrSpecializationTagOrTherapistIDsIsRequired
+	}
+
+	if input.SpecializationTag != "" && len(input.TherapistIDs) > 0 {
+		return nil, ErrSpecializationTagAndTherapistIDsCannotBeUsedTogether
 	}
 
 	if input.EndDate.Before(input.StartDate) {
@@ -63,8 +68,15 @@ func (u *Usecase) Execute(input Input) ([]schedule.AvailableTimeRange, error) {
 		input.EndDate = input.StartDate.AddDate(0, 0, 14) // Default to 2 weeks ahead
 	}
 
-	// 1. Find therapists matching the criteria
-	therapists, err := u.therapistRepo.FindBySpecializationAndLanguage(input.SpecializationTag, input.MustSpeakEnglish)
+	var therapists []*therapist.Therapist
+	var err error
+
+	if len(input.TherapistIDs) > 0 {
+		therapists, err = u.therapistRepo.FindByIDs(input.TherapistIDs)
+	} else {
+		therapists, err = u.therapistRepo.FindBySpecializationAndLanguage(input.SpecializationTag, input.MustSpeakEnglish)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -146,6 +158,10 @@ func (u *Usecase) calculateAvailableTimeRanges(
 
 			// For each time slot on this day
 			for _, slot := range timeSlots {
+
+				if slot.DayOfWeek != timeslot.MapToDayOfWeek(current.Weekday()) {
+					continue
+				}
 
 				// Calculate the specific time slot for this date
 				slotStart, slotEnd := slot.ApplyToDate(current)
@@ -231,8 +247,9 @@ func calculateAvailableRangesBetweenBookings(
 
 	for _, booking := range bookings {
 		bookingStartTime := domain.UTCTimestamp(booking.StartTime)
-		bookingEndTime := bookingStartTime.Add(time.Hour) // Assuming 1-hour sessions
+		bookingEndTime := bookingStartTime.Add(time.Duration(booking.Duration) * time.Minute)
 
+		// FIXME: This is wrong. This is only used for eliminating timeslots.
 		bufferedStartTime := bookingStartTime.Add(-time.Duration(preBuffer) * time.Minute)
 		bufferedEndTime := bookingEndTime.Add(time.Duration(postBuffer) * time.Minute)
 
@@ -344,7 +361,7 @@ func applyLineSweepAlgorithm(availabilities []therapistAvailability) []schedule.
 			therapistInfos := []schedule.TherapistInfo{}
 			for _, t := range activeTherapists {
 				therapistInfos = append(therapistInfos, schedule.TherapistInfo{
-					ID:              t.Therapist.ID,
+					TherapistID:     t.Therapist.ID,
 					Name:            t.Therapist.Name,
 					Specializations: t.Therapist.Specializations,
 					SpeaksEnglish:   t.Therapist.SpeaksEnglish,
@@ -355,17 +372,13 @@ func applyLineSweepAlgorithm(availabilities []therapistAvailability) []schedule.
 			// Only add ranges with at least 60 minutes duration
 			duration := int(point.Time.Sub(lastTime).Minutes())
 			if duration >= timeRangeMinimumDurationMinutes {
-				// Determine the date (just the date part of the time)
-				date := time.Date(
-					lastTime.Year(),
-					lastTime.Month(),
-					lastTime.Day(),
-					0, 0, 0, 0,
-					time.UTC,
-				)
+
+				// Sort therapists by name
+				sort.Slice(therapistInfos, func(i, j int) bool {
+					return therapistInfos[i].Name < therapistInfos[j].Name
+				})
 
 				result = append(result, schedule.AvailableTimeRange{
-					DayOfWeek:       date.Weekday().String(),
 					From:            lastTime,
 					To:              point.Time,
 					DurationMinutes: duration,

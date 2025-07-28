@@ -15,4 +15,5 @@ type TherapistRepository interface {
 	Delete(id domain.TherapistID) error
 	List() ([]*therapist.Therapist, error)
 	FindBySpecializationAndLanguage(specializationName string, mustSpeakEnglish bool) ([]*therapist.Therapist, error)
+	FindByIDs(therapistIDs []domain.TherapistID) ([]*therapist.Therapist, error)
 }
