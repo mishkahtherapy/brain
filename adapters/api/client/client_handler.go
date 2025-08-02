@@ -44,7 +44,7 @@ func (h *ClientHandler) SetUsecases(
 
 func (h *ClientHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/clients", h.handleCreateClient)
-	mux.HandleFunc("GET /api/v1/clients", h.handleGetAllClients)
+	mux.HandleFunc("GET /api/v1/clients/search", h.handleSearchClients)
 	mux.HandleFunc("GET /api/v1/clients/{id}", h.handleGetClient)
 }
 
@@ -78,10 +78,40 @@ func (h *ClientHandler) handleCreateClient(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func (h *ClientHandler) handleGetAllClients(w http.ResponseWriter, r *http.Request) {
+func (h *ClientHandler) handleSearchClients(w http.ResponseWriter, r *http.Request) {
 	rw := api.NewResponseWriter(w)
 
-	clients, err := h.getAllClientsUsecase.Execute()
+	whatsApp := r.URL.Query().Get("whatsApp")
+	idParams := r.URL.Query().Get("ids")
+
+	ids := make([]domain.ClientID, 0)
+	for id := range strings.SplitSeq(idParams, ",") {
+		trimmedId := strings.TrimSpace(id)
+		if trimmedId == "" {
+			continue
+		}
+		ids = append(ids, domain.ClientID(trimmedId))
+	}
+
+	if len(ids) == 0 && whatsApp == "" {
+		rw.WriteBadRequest("Missing search parameters")
+		return
+	}
+
+	if len(ids) > 0 && whatsApp != "" {
+		rw.WriteBadRequest("Cannot search by both WhatsApp number and client IDs")
+		return
+	}
+
+	if whatsApp != "" && !domain.WhatsAppNumber(whatsApp).IsValid() {
+		rw.WriteBadRequest("Invalid WhatsApp number")
+		return
+	}
+
+	clients, err := h.getAllClientsUsecase.Execute(get_all_clients.Input{
+		WhatsApp: domain.WhatsAppNumber(whatsApp),
+		Ids:      ids,
+	})
 	if err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 		return

@@ -26,7 +26,7 @@ VALUES (
         'najla.kalbouneh@mishkah.com',
         '+1555005678',
         '+1987654321',
-        TRUE
+        FALSE
     ),
     (
         'therapist_003',

@@ -28,6 +28,7 @@ var ErrFailedToGetTherapists = errors.New("failed to get therapists")
 var ErrFailedToCreateTherapist = errors.New("failed to create therapist")
 var ErrFailedToUpdateTherapist = errors.New("failed to update therapist")
 var ErrFailedToUpdateTherapistSpecializations = errors.New("failed to update therapist specializations")
+var ErrDeviceIDIsRequired = errors.New("device id is required")
 
 func NewTherapistRepository(db ports.SQLDatabase) ports.TherapistRepository {
 	return &TherapistRepository{db: db}
@@ -188,6 +189,72 @@ func (r *TherapistRepository) UpdateSpecializations(therapistID domain.Therapist
 	}
 
 	return nil
+}
+
+func (r *TherapistRepository) UpdateDevice(therapistID domain.TherapistID, deviceID domain.DeviceID) error {
+	if therapistID == "" {
+		return ErrTherapistIDIsRequired
+	}
+
+	if deviceID == "" {
+		return ErrDeviceIDIsRequired
+	}
+
+	query := `UPDATE therapists SET device_id = ? WHERE id = ?`
+	_, err := r.db.Exec(query, deviceID, therapistID)
+	if err != nil {
+		slog.Error("error updating therapist device", "error", err)
+		return ErrFailedToUpdateTherapist
+	}
+
+	return nil
+}
+
+func (r *TherapistRepository) GetDevice(therapistID domain.TherapistID) (domain.DeviceID, error) {
+	query := `SELECT device_id FROM therapists WHERE id = ? LIMIT 1`
+	row := r.db.QueryRow(query, therapistID)
+	var deviceID domain.DeviceID
+	err := row.Scan(&deviceID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", ErrTherapistNotFound
+		}
+		slog.Error("error getting therapist device", "error", err)
+		return "", ErrFailedToGetTherapists
+	}
+	return deviceID, err
+}
+
+func (r *TherapistRepository) BulkGetDevices(therapistIDs []domain.TherapistID) (map[domain.TherapistID]domain.DeviceID, error) {
+	query := `SELECT id, device_id FROM therapists WHERE id IN (%s)`
+
+	placeholders := make([]string, 0)
+	values := make([]interface{}, 0)
+
+	for _, therapistID := range therapistIDs {
+		placeholders = append(placeholders, "?")
+		values = append(values, therapistID)
+	}
+
+	query = fmt.Sprintf(query, strings.Join(placeholders, ", "))
+	rows, err := r.db.Query(query, values...)
+	if err != nil {
+		slog.Error("error getting therapist devices", "error", err)
+		return nil, ErrFailedToGetTherapists
+	}
+
+	devices := make(map[domain.TherapistID]domain.DeviceID)
+	for rows.Next() {
+		var therapistID domain.TherapistID
+		var deviceID domain.DeviceID
+		err := rows.Scan(&therapistID, &deviceID)
+		if err != nil {
+			slog.Error("error scanning therapist device", "error", err)
+			return nil, ErrFailedToGetTherapists
+		}
+		devices[therapistID] = deviceID
+	}
+	return devices, nil
 }
 
 func (r *TherapistRepository) GetByID(id domain.TherapistID) (*therapist.Therapist, error) {

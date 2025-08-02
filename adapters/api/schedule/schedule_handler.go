@@ -28,7 +28,7 @@ func (h *ScheduleHandler) handleGetSchedule(w http.ResponseWriter, r *http.Reque
 	rw := api.NewResponseWriter(w)
 
 	// Parse specializationsParam parameter (required)
-	specializationsParam := r.URL.Query().Get("specialization")
+	specializationsParam := r.URL.Query().Get("specializations")
 	therapistIdsParam := r.URL.Query().Get("therapistIds")
 
 	if specializationsParam == "" && therapistIdsParam == "" {

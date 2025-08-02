@@ -1,0 +1,21 @@
+meta {
+  name: Update Device
+  type: http
+  seq: 6
+}
+
+put {
+  url: {{API_URL}}/therapists/:therapistId/device
+  body: json
+  auth: inherit
+}
+
+params:path {
+  therapistId: 123123
+}
+
+body:json {
+  {
+    "deviceId": "asdas4d56a465sd"
+  }
+}

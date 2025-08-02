@@ -11,6 +11,7 @@ import (
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/get_all_therapists"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/get_therapist"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/new_therapist"
+	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_device"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_info"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_specializations"
 )
@@ -21,6 +22,7 @@ type TherapistHandler struct {
 	getTherapistUsecase                   get_therapist.Usecase
 	updateTherapistInfoUsecase            update_therapist_info.Usecase
 	updateTherapistSpecializationsUsecase update_therapist_specializations.Usecase
+	updateTherapistDeviceUsecase          update_therapist_device.Usecase
 }
 
 func NewTherapistHandler(
@@ -29,6 +31,7 @@ func NewTherapistHandler(
 	getUsecase get_therapist.Usecase,
 	updateInfoUsecase update_therapist_info.Usecase,
 	updateSpecializationsUsecase update_therapist_specializations.Usecase,
+	updateTherapistDeviceUsecase update_therapist_device.Usecase,
 ) *TherapistHandler {
 	return &TherapistHandler{
 		newTherapistUsecase:                   newUsecase,
@@ -36,6 +39,7 @@ func NewTherapistHandler(
 		getTherapistUsecase:                   getUsecase,
 		updateTherapistInfoUsecase:            updateInfoUsecase,
 		updateTherapistSpecializationsUsecase: updateSpecializationsUsecase,
+		updateTherapistDeviceUsecase:          updateTherapistDeviceUsecase,
 	}
 }
 
@@ -45,12 +49,14 @@ func (h *TherapistHandler) SetUsecases(
 	getUsecase get_therapist.Usecase,
 	updateInfoUsecase update_therapist_info.Usecase,
 	updateSpecializationsUsecase update_therapist_specializations.Usecase,
+	updateTherapistDeviceUsecase update_therapist_device.Usecase,
 ) {
 	h.newTherapistUsecase = newUsecase
 	h.getAllTherapistsUsecase = getAllUsecase
 	h.getTherapistUsecase = getUsecase
 	h.updateTherapistInfoUsecase = updateInfoUsecase
 	h.updateTherapistSpecializationsUsecase = updateSpecializationsUsecase
+	h.updateTherapistDeviceUsecase = updateTherapistDeviceUsecase
 }
 
 func (h *TherapistHandler) RegisterRoutes(mux *http.ServeMux) {
@@ -59,6 +65,7 @@ func (h *TherapistHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/therapists/{id}", h.handleGetTherapist)
 	mux.HandleFunc("PUT /api/v1/therapists/{id}", h.handleUpdateTherapistInfo)
 	mux.HandleFunc("PUT /api/v1/therapists/{id}/specializations", h.handleUpdateTherapistSpecializations)
+	mux.HandleFunc("PUT /api/v1/therapists/{id}/device", h.handleUpdateTherapistDevice)
 }
 
 func (h *TherapistHandler) handleNewTherapist(w http.ResponseWriter, r *http.Request) {
@@ -241,4 +248,38 @@ func (h *TherapistHandler) handleUpdateTherapistSpecializations(w http.ResponseW
 	if err := rw.WriteJSON(therapist, http.StatusOK); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
+}
+
+func (h *TherapistHandler) handleUpdateTherapistDevice(w http.ResponseWriter, r *http.Request) {
+	rw := api.NewResponseWriter(w)
+
+	// Read therapist id from path
+	therapistID := domain.TherapistID(r.PathValue("id"))
+	if therapistID == "" {
+		rw.WriteBadRequest("Missing therapist ID")
+		return
+	}
+
+	// Parse request body to get device ID
+	var requestBody struct {
+		DeviceID domain.DeviceID `json:"deviceId"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		rw.WriteBadRequest(err.Error())
+		return
+	}
+
+	input := update_therapist_device.Input{
+		TherapistID: therapistID,
+		DeviceID:    requestBody.DeviceID,
+	}
+
+	err := h.updateTherapistDeviceUsecase.Execute(input)
+	if err != nil {
+		rw.WriteError(err, http.StatusInternalServerError)
+		return
+	}
+
+	rw.WriteJSON(nil, http.StatusOK)
 }

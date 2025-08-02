@@ -13,6 +13,7 @@ CREATE TABLE therapists (
     phone_number VARCHAR(20), -- Business/office phone number
     whatsapp_number VARCHAR(20), -- International format support, nullable
     speaks_english BOOLEAN NOT NULL DEFAULT FALSE,
+    device_id VARCHAR(255), -- nullable, Firebase ID
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

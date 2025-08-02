@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../operator-app"
+		},
+		{
+			"path": "../deployment"
 		}
 	],
 	"settings": {}

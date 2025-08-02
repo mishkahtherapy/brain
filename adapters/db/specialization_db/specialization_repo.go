@@ -56,7 +56,12 @@ func (r *SpecializationRepository) Create(specialization *specialization.Special
 		specialization.CreatedAt,
 		specialization.UpdatedAt,
 	)
-	return err
+	if err != nil {
+		slog.Error("error creating specialization", "error", err)
+		return err
+	}
+
+	return nil
 }
 
 func (r *SpecializationRepository) BulkGetByIds(ids []domain.SpecializationID) (map[domain.SpecializationID]*specialization.Specialization, error) {

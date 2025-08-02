@@ -9,6 +9,7 @@ import (
 
 type ClientID string
 type TherapistID string
+type DeviceID string
 type TimeSlotID string
 type BookingID string
 type SessionID string

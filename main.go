@@ -48,6 +48,7 @@ import (
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/get_all_therapists"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/get_therapist"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/new_therapist"
+	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_device"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_info"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_specializations"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/bulk_toggle_therapist_timeslots"
@@ -77,7 +78,7 @@ func main() {
 	database := db.NewDatabase(dbConfig)
 	defer database.Close()
 
-	slog.Info("Database initialized successfully")
+	slog.Info("Database initialized successfully", slog.Group("db", "name", dbConfig.DBFilename, "schema", dbConfig.SchemaFile))
 
 	// Initialize repositories
 	specializationRepo := specialization_db.NewSpecializationRepository(database)
@@ -98,6 +99,7 @@ func main() {
 	getTherapistUsecase := get_therapist.NewUsecase(therapistRepo)
 	updateTherapistInfoUsecase := update_therapist_info.NewUsecase(therapistRepo)
 	updateTherapistSpecializationsUsecase := update_therapist_specializations.NewUsecase(therapistRepo, specializationRepo)
+	updateTherapistDeviceUsecase := update_therapist_device.NewUsecase(therapistRepo)
 
 	// Initialize timeslot usecases
 	createTherapistTimeslotUsecase := create_therapist_timeslot.NewUsecase(therapistRepo, timeSlotRepo)
@@ -148,6 +150,7 @@ func main() {
 		*getTherapistUsecase,
 		*updateTherapistInfoUsecase,
 		*updateTherapistSpecializationsUsecase,
+		*updateTherapistDeviceUsecase,
 	)
 
 	clientHandler := clientHandler.NewClientHandler(

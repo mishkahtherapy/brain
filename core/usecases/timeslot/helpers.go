@@ -7,6 +7,8 @@ import (
 	"github.com/mishkahtherapy/brain/core/domain/timeslot"
 )
 
+const MIN_POST_SESSION_BUFFER_MINUTES = 15
+
 // Helper function to validate day of week
 func IsValidDayOfWeek(day timeslot.DayOfWeek) bool {
 	validDays := []timeslot.DayOfWeek{
@@ -75,7 +77,7 @@ func ValidateBufferTimes(preSessionBuffer, postSessionBuffer domain.DurationMinu
 		return timeslot.ErrPreSessionBufferNegative
 	}
 
-	if postSessionBuffer < 30 {
+	if postSessionBuffer < MIN_POST_SESSION_BUFFER_MINUTES {
 		return timeslot.ErrPostSessionBufferTooLow
 	}
 

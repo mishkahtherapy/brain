@@ -151,6 +151,7 @@ func (h *TimeslotHandler) handleCreateTimeslot(w http.ResponseWriter, r *http.Re
 		DurationMinutes:   requestBody.Duration,
 		PreSessionBuffer:  requestBody.PreSessionBuffer,
 		PostSessionBuffer: requestBody.PostSessionBuffer,
+		IsActive:          requestBody.IsActive,
 	}
 
 	newTimeslot, err := h.createTimeslotUsecase.Execute(input)
