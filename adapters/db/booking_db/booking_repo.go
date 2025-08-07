@@ -2,7 +2,6 @@ package booking_db
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -17,29 +16,13 @@ type BookingRepository struct {
 	db ports.SQLDatabase
 }
 
-var ErrBookingNotFound = errors.New("booking not found")
-var ErrBookingAlreadyExists = errors.New("booking already exists")
-var ErrBookingIDIsRequired = errors.New("booking id is required")
-var ErrBookingTimeSlotIDIsRequired = errors.New("booking timeslot id is required")
-var ErrBookingTherapistIDIsRequired = errors.New("booking therapist id is required")
-var ErrBookingClientIDIsRequired = errors.New("booking client id is required")
-var ErrBookingStateIsRequired = errors.New("booking state is required")
-var ErrBookingStartTimeIsRequired = errors.New("booking start time is required")
-var ErrBookingCreatedAtIsRequired = errors.New("booking created at is required")
-var ErrBookingUpdatedAtIsRequired = errors.New("booking updated at is required")
-var ErrFailedToGetBookings = errors.New("failed to get bookings")
-var ErrFailedToCreateBooking = errors.New("failed to create booking")
-var ErrFailedToUpdateBooking = errors.New("failed to update booking")
-var ErrFailedToDeleteBooking = errors.New("failed to delete booking")
-var ErrInvalidDateRange = errors.New("invalid date range")
-
 func NewBookingRepository(db ports.SQLDatabase) ports.BookingRepository {
 	return &BookingRepository{db: db}
 }
 
 func (r *BookingRepository) GetByID(id domain.BookingID) (*booking.Booking, error) {
 	query := `
-		SELECT id, timeslot_id, therapist_id, client_id, start_time, state, created_at, updated_at
+		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at
 		FROM bookings
 		WHERE id = ?
 	`
@@ -51,56 +34,62 @@ func (r *BookingRepository) GetByID(id domain.BookingID) (*booking.Booking, erro
 		&booking.TherapistID,
 		&booking.ClientID,
 		&booking.StartTime,
+		&booking.Duration,
 		&booking.State,
 		&booking.CreatedAt,
 		&booking.UpdatedAt,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, ErrBookingNotFound
+			return nil, ports.ErrBookingNotFound
 		}
 		slog.Error("error getting booking by id", "error", err)
-		return nil, ErrFailedToGetBookings
+		return nil, ports.ErrFailedToGetBookings
 	}
 	return booking, nil
 }
 
 func (r *BookingRepository) Create(booking *booking.Booking) error {
 	if booking.ID == "" {
-		return ErrBookingIDIsRequired
+		return ports.ErrBookingIDIsRequired
 	}
 
 	if booking.TimeSlotID == "" {
-		return ErrBookingTimeSlotIDIsRequired
+		return ports.ErrBookingTimeSlotIDIsRequired
 	}
 
 	if booking.TherapistID == "" {
-		return ErrBookingTherapistIDIsRequired
+		return ports.ErrBookingTherapistIDIsRequired
 	}
 
 	if booking.ClientID == "" {
-		return ErrBookingClientIDIsRequired
+		return ports.ErrBookingClientIDIsRequired
 	}
 
 	if booking.State == "" {
-		return ErrBookingStateIsRequired
+		return ports.ErrBookingStateIsRequired
 	}
 
 	if booking.StartTime == (domain.UTCTimestamp{}) {
-		return ErrBookingStartTimeIsRequired
+		return ports.ErrBookingStartTimeIsRequired
 	}
 
 	if booking.CreatedAt == (domain.UTCTimestamp{}) {
-		return ErrBookingCreatedAtIsRequired
+		return ports.ErrBookingCreatedAtIsRequired
 	}
 
 	if booking.UpdatedAt == (domain.UTCTimestamp{}) {
-		return ErrBookingUpdatedAtIsRequired
+		return ports.ErrBookingUpdatedAtIsRequired
+	}
+
+	if booking.Duration == 0 {
+		return ports.ErrBookingDurationIsRequired
 	}
 
 	query := `
-		INSERT INTO bookings (id, timeslot_id, therapist_id, client_id, start_time, state, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO bookings (
+			id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	_, err := r.db.Exec(
 		query,
@@ -109,49 +98,50 @@ func (r *BookingRepository) Create(booking *booking.Booking) error {
 		booking.TherapistID,
 		booking.ClientID,
 		booking.StartTime,
+		booking.Duration,
 		booking.State,
 		booking.CreatedAt,
 		booking.UpdatedAt,
 	)
 	if err != nil {
 		slog.Error("error creating booking", "error", err)
-		return ErrFailedToCreateBooking
+		return ports.ErrFailedToCreateBooking
 	}
 	return nil
 }
 
 func (r *BookingRepository) Update(booking *booking.Booking) error {
 	if booking.ID == "" {
-		return ErrBookingIDIsRequired
+		return ports.ErrBookingIDIsRequired
 	}
 
 	if booking.TimeSlotID == "" {
-		return ErrBookingTimeSlotIDIsRequired
+		return ports.ErrBookingTimeSlotIDIsRequired
 	}
 
 	if booking.TherapistID == "" {
-		return ErrBookingTherapistIDIsRequired
+		return ports.ErrBookingTherapistIDIsRequired
 	}
 
 	if booking.ClientID == "" {
-		return ErrBookingClientIDIsRequired
+		return ports.ErrBookingClientIDIsRequired
 	}
 
 	if booking.State == "" {
-		return ErrBookingStateIsRequired
+		return ports.ErrBookingStateIsRequired
 	}
 
 	if booking.StartTime == (domain.UTCTimestamp{}) {
-		return ErrBookingStartTimeIsRequired
+		return ports.ErrBookingStartTimeIsRequired
 	}
 
 	if booking.UpdatedAt == (domain.UTCTimestamp{}) {
-		return ErrBookingUpdatedAtIsRequired
+		return ports.ErrBookingUpdatedAtIsRequired
 	}
 
 	query := `
 		UPDATE bookings 
-		SET timeslot_id = ?, therapist_id = ?, client_id = ?, start_time = ?, state = ?, updated_at = ?
+		SET timeslot_id = ?, therapist_id = ?, client_id = ?, start_time = ?, duration_minutes = ?, state = ?, updated_at = ?
 		WHERE id = ?
 	`
 	result, err := r.db.Exec(
@@ -160,23 +150,24 @@ func (r *BookingRepository) Update(booking *booking.Booking) error {
 		booking.TherapistID,
 		booking.ClientID,
 		booking.StartTime,
+		booking.Duration,
 		booking.State,
 		booking.UpdatedAt,
 		booking.ID,
 	)
 	if err != nil {
 		slog.Error("error updating booking", "error", err)
-		return ErrFailedToUpdateBooking
+		return ports.ErrFailedToUpdateBooking
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		slog.Error("error getting rows affected after update", "error", err)
-		return ErrFailedToUpdateBooking
+		return ports.ErrFailedToUpdateBooking
 	}
 
 	if rowsAffected == 0 {
-		return ErrBookingNotFound
+		return ports.ErrBookingNotFound
 	}
 
 	return nil
@@ -184,24 +175,24 @@ func (r *BookingRepository) Update(booking *booking.Booking) error {
 
 func (r *BookingRepository) Delete(id domain.BookingID) error {
 	if id == "" {
-		return ErrBookingIDIsRequired
+		return ports.ErrBookingIDIsRequired
 	}
 
 	query := `DELETE FROM bookings WHERE id = ?`
 	result, err := r.db.Exec(query, id)
 	if err != nil {
 		slog.Error("error deleting booking", "error", err)
-		return ErrFailedToDeleteBooking
+		return ports.ErrFailedToDeleteBooking
 	}
 
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
 		slog.Error("error getting rows affected after delete", "error", err)
-		return ErrFailedToDeleteBooking
+		return ports.ErrFailedToDeleteBooking
 	}
 
 	if rowsAffected == 0 {
-		return ErrBookingNotFound
+		return ports.ErrBookingNotFound
 	}
 
 	return nil
@@ -209,11 +200,11 @@ func (r *BookingRepository) Delete(id domain.BookingID) error {
 
 func (r *BookingRepository) ListByTherapist(therapistID domain.TherapistID) ([]*booking.Booking, error) {
 	if therapistID == "" {
-		return nil, ErrBookingTherapistIDIsRequired
+		return nil, ports.ErrBookingTherapistIDIsRequired
 	}
 
 	query := `
-		SELECT id, timeslot_id, therapist_id, client_id, start_time, state, created_at, updated_at
+		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at
 		FROM bookings
 		WHERE therapist_id = ?
 		ORDER BY start_time ASC
@@ -221,7 +212,7 @@ func (r *BookingRepository) ListByTherapist(therapistID domain.TherapistID) ([]*
 	rows, err := r.db.Query(query, therapistID)
 	if err != nil {
 		slog.Error("error listing bookings by therapist", "error", err)
-		return nil, ErrFailedToGetBookings
+		return nil, ports.ErrFailedToGetBookings
 	}
 	defer rows.Close()
 
@@ -230,11 +221,11 @@ func (r *BookingRepository) ListByTherapist(therapistID domain.TherapistID) ([]*
 
 func (r *BookingRepository) ListByClient(clientID domain.ClientID) ([]*booking.Booking, error) {
 	if clientID == "" {
-		return nil, ErrBookingClientIDIsRequired
+		return nil, ports.ErrBookingClientIDIsRequired
 	}
 
 	query := `
-		SELECT id, timeslot_id, therapist_id, client_id, start_time, state, created_at, updated_at
+		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at
 		FROM bookings
 		WHERE client_id = ?
 		ORDER BY start_time ASC
@@ -242,7 +233,7 @@ func (r *BookingRepository) ListByClient(clientID domain.ClientID) ([]*booking.B
 	rows, err := r.db.Query(query, clientID)
 	if err != nil {
 		slog.Error("error listing bookings by client", "error", err)
-		return nil, ErrFailedToGetBookings
+		return nil, ports.ErrFailedToGetBookings
 	}
 	defer rows.Close()
 
@@ -251,11 +242,11 @@ func (r *BookingRepository) ListByClient(clientID domain.ClientID) ([]*booking.B
 
 func (r *BookingRepository) ListByState(state booking.BookingState) ([]*booking.Booking, error) {
 	if state == "" {
-		return nil, ErrBookingStateIsRequired
+		return nil, ports.ErrBookingStateIsRequired
 	}
 
 	query := `
-		SELECT id, timeslot_id, therapist_id, client_id, start_time, state, created_at, updated_at
+		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at
 		FROM bookings
 		WHERE state = ?
 		ORDER BY start_time ASC
@@ -263,7 +254,7 @@ func (r *BookingRepository) ListByState(state booking.BookingState) ([]*booking.
 	rows, err := r.db.Query(query, state)
 	if err != nil {
 		slog.Error("error listing bookings by state", "error", err)
-		return nil, ErrFailedToGetBookings
+		return nil, ports.ErrFailedToGetBookings
 	}
 	defer rows.Close()
 
@@ -272,15 +263,15 @@ func (r *BookingRepository) ListByState(state booking.BookingState) ([]*booking.
 
 func (r *BookingRepository) ListByTherapistAndState(therapistID domain.TherapistID, state booking.BookingState) ([]*booking.Booking, error) {
 	if therapistID == "" {
-		return nil, ErrBookingTherapistIDIsRequired
+		return nil, ports.ErrBookingTherapistIDIsRequired
 	}
 
 	if state == "" {
-		return nil, ErrBookingStateIsRequired
+		return nil, ports.ErrBookingStateIsRequired
 	}
 
 	query := `
-		SELECT id, timeslot_id, therapist_id, client_id, start_time, state, created_at, updated_at
+		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at
 		FROM bookings
 		WHERE therapist_id = ? AND state = ?
 		ORDER BY start_time ASC
@@ -288,7 +279,7 @@ func (r *BookingRepository) ListByTherapistAndState(therapistID domain.Therapist
 	rows, err := r.db.Query(query, therapistID, state)
 	if err != nil {
 		slog.Error("error listing bookings by therapist and state", "error", err)
-		return nil, ErrFailedToGetBookings
+		return nil, ports.ErrFailedToGetBookings
 	}
 	defer rows.Close()
 
@@ -297,15 +288,15 @@ func (r *BookingRepository) ListByTherapistAndState(therapistID domain.Therapist
 
 func (r *BookingRepository) ListByClientAndState(clientID domain.ClientID, state booking.BookingState) ([]*booking.Booking, error) {
 	if clientID == "" {
-		return nil, ErrBookingClientIDIsRequired
+		return nil, ports.ErrBookingClientIDIsRequired
 	}
 
 	if state == "" {
-		return nil, ErrBookingStateIsRequired
+		return nil, ports.ErrBookingStateIsRequired
 	}
 
 	query := `
-		SELECT id, timeslot_id, therapist_id, client_id, start_time, state, created_at, updated_at
+		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at
 		FROM bookings
 		WHERE client_id = ? AND state = ?
 		ORDER BY start_time ASC
@@ -313,7 +304,7 @@ func (r *BookingRepository) ListByClientAndState(clientID domain.ClientID, state
 	rows, err := r.db.Query(query, clientID, state)
 	if err != nil {
 		slog.Error("error listing bookings by client and state", "error", err)
-		return nil, ErrFailedToGetBookings
+		return nil, ports.ErrFailedToGetBookings
 	}
 	defer rows.Close()
 
@@ -331,13 +322,14 @@ func (r *BookingRepository) scanBookings(rows *sql.Rows) ([]*booking.Booking, er
 			&booking.TherapistID,
 			&booking.ClientID,
 			&booking.StartTime,
+			&booking.Duration,
 			&booking.State,
 			&booking.CreatedAt,
 			&booking.UpdatedAt,
 		)
 		if err != nil {
 			slog.Error("error scanning booking", "error", err)
-			return nil, ErrFailedToGetBookings
+			return nil, ports.ErrFailedToGetBookings
 		}
 		bookings = append(bookings, booking)
 	}
@@ -351,16 +343,16 @@ func (r *BookingRepository) BulkListByTherapistForDateRange(
 	endDate time.Time,
 ) (map[domain.TherapistID][]*booking.Booking, error) {
 	if len(therapistIDs) == 0 {
-		return nil, ErrBookingTherapistIDIsRequired
+		return nil, ports.ErrBookingTherapistIDIsRequired
 	}
 
 	// Start and end dates are days, not times.
 	if startDate.Hour() != 0 || startDate.Minute() != 0 || startDate.Second() != 0 {
-		return nil, ErrInvalidDateRange
+		return nil, ports.ErrInvalidDateRange
 	}
 
 	if endDate.Hour() != 0 || endDate.Minute() != 0 || endDate.Second() != 0 {
-		return nil, ErrInvalidDateRange
+		return nil, ports.ErrInvalidDateRange
 	}
 
 	// Calculate endTimeForBookingStartedBeforeRange (startDate - 1 hour)
@@ -368,7 +360,7 @@ func (r *BookingRepository) BulkListByTherapistForDateRange(
 	// Example: a booking at 11.30PM that ends at 12.30AM next day is not captured.
 
 	query := `
-	       SELECT id, timeslot_id, therapist_id, client_id, start_time, state, created_at, updated_at
+	       SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at
 	       FROM bookings
 	       WHERE state = ?
 	       AND (
@@ -412,7 +404,7 @@ func (r *BookingRepository) BulkListByTherapistForDateRange(
 			"startDate", startDate,
 			"endDate", endDate,
 		)
-		return nil, ErrFailedToGetBookings
+		return nil, ports.ErrFailedToGetBookings
 	}
 	defer rows.Close()
 
@@ -425,13 +417,14 @@ func (r *BookingRepository) BulkListByTherapistForDateRange(
 			&booking.TherapistID,
 			&booking.ClientID,
 			&booking.StartTime,
+			&booking.Duration,
 			&booking.State,
 			&booking.CreatedAt,
 			&booking.UpdatedAt,
 		)
 		if err != nil {
 			slog.Error("error scanning booking", "error", err)
-			return nil, ErrFailedToGetBookings
+			return nil, ports.ErrFailedToGetBookings
 		}
 		bookings[booking.TherapistID] = append(bookings[booking.TherapistID], booking)
 	}
@@ -444,7 +437,7 @@ func (r *BookingRepository) BulkListByTherapistForDateRange(
 // further filtered by the given booking state.
 func (r *BookingRepository) Search(startDate, endDate time.Time, state *booking.BookingState) ([]*booking.Booking, error) {
 	query := `
-		SELECT id, timeslot_id, therapist_id, client_id, start_time, state, created_at, updated_at
+		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at
 		FROM bookings
 		WHERE 1=1
 	`
@@ -473,7 +466,7 @@ func (r *BookingRepository) Search(startDate, endDate time.Time, state *booking.
 	rows, err := r.db.Query(query, params...)
 	if err != nil {
 		slog.Error("error searching bookings", "error", err)
-		return nil, ErrFailedToGetBookings
+		return nil, ports.ErrFailedToGetBookings
 	}
 	defer rows.Close()
 

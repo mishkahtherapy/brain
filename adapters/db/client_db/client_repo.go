@@ -122,17 +122,11 @@ func (r *ClientRepository) GetByWhatsAppNumber(whatsAppNumber domain.WhatsAppNum
 	if err != nil {
 		return nil, err
 	}
-	if bookingIDs == nil {
-		return nil, ErrReadingClientBookings
+
+	client.Bookings = bookingIDs[client.ID]
+	if client.Bookings == nil {
+		client.Bookings = []booking.Booking{}
 	}
-
-	clientBookings, ok := bookingIDs[client.ID]
-	if !ok {
-		return nil, ErrReadingClientBookings
-	}
-
-	client.Bookings = clientBookings
-
 	return &client, nil
 }
 
@@ -169,8 +163,9 @@ func (r *ClientRepository) List() ([]*client.Client, error) {
 			return nil, err
 		}
 
-		if clientBookings, ok := bookingIDs[client.ID]; ok {
-			client.Bookings = clientBookings
+		client.Bookings = bookingIDs[client.ID]
+		if client.Bookings == nil {
+			client.Bookings = []booking.Booking{}
 		}
 
 		clients = append(clients, &client)
@@ -232,6 +227,9 @@ func (r *ClientRepository) BulkGetClientBookings(
 
 	rows, err := r.db.Query(query, values...)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 		return nil, ErrReadingClientBookings
 	}
 	defer rows.Close()

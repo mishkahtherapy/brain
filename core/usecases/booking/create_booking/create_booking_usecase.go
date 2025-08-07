@@ -17,10 +17,11 @@ var (
 )
 
 type Input struct {
-	TherapistID domain.TherapistID  `json:"therapistId"`
-	ClientID    domain.ClientID     `json:"clientId"`
-	TimeSlotID  domain.TimeSlotID   `json:"timeSlotId"`
-	StartTime   domain.UTCTimestamp `json:"startTime"`
+	TherapistID domain.TherapistID     `json:"therapistId"`
+	ClientID    domain.ClientID        `json:"clientId"`
+	TimeSlotID  domain.TimeSlotID      `json:"timeSlotId"`
+	StartTime   domain.UTCTimestamp    `json:"startTime"`
+	Duration    domain.DurationMinutes `json:"duration"`
 	// TimezoneOffset domain.TimezoneOffset `json:"timezoneOffset"`
 }
 
@@ -127,6 +128,7 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 		ClientID:    input.ClientID,
 		TimeSlotID:  input.TimeSlotID,
 		StartTime:   input.StartTime, // Always in UTC
+		Duration:    input.Duration,
 		// TimezoneOffset: input.TimezoneOffset, // Store as frontend hint, no conversion
 		State:     booking.BookingStatePending,
 		CreatedAt: now,

@@ -97,12 +97,11 @@ func (h *BookingHandler) handleCreateBooking(w http.ResponseWriter, r *http.Requ
 			create_booking.ErrTimezoneIsRequired,
 			create_booking.ErrInvalidTimezone,
 			domain.ErrTimezoneIsRequired,
+			common.ErrTherapistNotFound,
+			common.ErrClientNotFound,
+			common.ErrTimeSlotNotFound,
 			domain.ErrInvalidTimezone:
 			rw.WriteBadRequest(err.Error())
-		case common.ErrTherapistNotFound,
-			common.ErrClientNotFound,
-			common.ErrTimeSlotNotFound:
-			rw.WriteNotFound(err.Error())
 		case common.ErrTimeSlotAlreadyBooked:
 			rw.WriteError(err, http.StatusConflict)
 		default:
