@@ -59,7 +59,7 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 	}
 
 	// Check if client exists
-	client, err := u.clientRepo.BulkGetByID([]domain.ClientID{input.ClientID})
+	client, err := u.clientRepo.FindByIDs([]domain.ClientID{input.ClientID})
 	if err != nil || client == nil {
 		return nil, common.ErrClientNotFound
 	}

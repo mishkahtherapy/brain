@@ -45,7 +45,7 @@ func (r *ClientRepository) Create(client *client.Client) error {
 	return err
 }
 
-func (r *ClientRepository) BulkGetByID(ids []domain.ClientID) ([]*client.Client, error) {
+func (r *ClientRepository) FindByIDs(ids []domain.ClientID) ([]*client.Client, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}

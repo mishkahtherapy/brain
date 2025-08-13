@@ -121,7 +121,7 @@ func main() {
 	cancelBookingUsecase := cancel_booking.NewUsecase(bookingRepo)
 	listBookingsByTherapistUsecase := list_bookings_by_therapist.NewUsecase(bookingRepo)
 	listBookingsByClientUsecase := list_bookings_by_client.NewUsecase(bookingRepo)
-	searchBookingsUsecase := search_bookings.NewUsecase(bookingRepo)
+	searchBookingsUsecase := search_bookings.NewUsecase(bookingRepo, therapistRepo, clientRepo)
 
 	// Initialize session usecases
 	createSessionUsecase := create_session.NewUsecase(sessionRepo, bookingRepo, therapistRepo, clientRepo, timeSlotRepo)

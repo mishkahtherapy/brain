@@ -29,6 +29,8 @@ func (u *Usecase) Execute(input Input) ([]*booking.Booking, error) {
 	var bookings []*booking.Booking
 	var err error
 
+	// TODO: validate therapist exists.
+
 	// If state filter is provided, use the specific method
 	if input.State != nil {
 		bookings, err = u.bookingRepo.ListByTherapistAndState(input.TherapistID, *input.State)

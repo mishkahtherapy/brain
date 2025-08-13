@@ -18,7 +18,7 @@ func NewUsecase(clientRepo ports.ClientRepository) *Usecase {
 }
 
 func (u *Usecase) Execute(ids []domain.ClientID) ([]*client.Client, error) {
-	clients, err := u.clientRepo.BulkGetByID(ids)
+	clients, err := u.clientRepo.FindByIDs(ids)
 	if err != nil {
 		return nil, err
 	}

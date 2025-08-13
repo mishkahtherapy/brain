@@ -143,7 +143,7 @@ func (u *Usecase) calculateAvailableTimeRanges(
 ) []schedule.AvailableTimeRange {
 
 	allAvailabilities := []therapistAvailability{}
-
+	nowUTC := domain.NewUTCTimestamp()
 	// For each therapist, calculate their available time ranges
 	for _, therapist := range therapists {
 		therapistID := therapist.ID
@@ -154,25 +154,31 @@ func (u *Usecase) calculateAvailableTimeRanges(
 		bookingMap := makeBookingMap(bookings)
 
 		// For each day in the date range
-		for current := startDate; !current.After(endDate); current = current.AddDate(0, 0, 1) {
+		for renderedSlotDay := startDate; !renderedSlotDay.After(endDate); renderedSlotDay = renderedSlotDay.AddDate(0, 0, 1) {
 
 			// For each time slot on this day
 			for _, slot := range timeSlots {
 
-				if slot.DayOfWeek != timeslot.MapToDayOfWeek(current.Weekday()) {
+				if slot.DayOfWeek != timeslot.MapToDayOfWeek(renderedSlotDay.Weekday()) {
+					continue
+				}
+
+				// If we're now past slot's pre-session buffer, skip.
+				preSessionBuffer := time.Duration(slot.PreSessionBuffer) * time.Minute
+				if nowUTC.Time().After(renderedSlotDay.Add(-1 * preSessionBuffer)) {
 					continue
 				}
 
 				// Calculate the specific time slot for this date
-				slotStart, slotEnd := slot.ApplyToDate(current)
+				slotStart, slotEnd := slot.ApplyToDate(renderedSlotDay)
 
 				// If the slot is in the past, skip it
-				if slotEnd.Before(domain.NewUTCTimestamp()) {
+				if slotEnd.Before(nowUTC) {
 					continue
 				}
 
 				// Get bookings for this slot on this day
-				dayBookings := getBookingsForSlot(bookingMap, slot.ID, current)
+				dayBookings := getBookingsForSlot(bookingMap, slot.ID, renderedSlotDay)
 
 				// If no bookings, add the entire slot as available
 				if len(dayBookings) == 0 {

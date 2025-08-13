@@ -14,6 +14,7 @@ CREATE TABLE therapists (
     whatsapp_number VARCHAR(20), -- International format support, nullable
     speaks_english BOOLEAN NOT NULL DEFAULT FALSE,
     device_id VARCHAR(255), -- nullable, Firebase ID
+    timezone_offset INTEGER NOT NULL DEFAULT 0, -- Frontend hint for timezone adjustments (minutes east of UTC)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

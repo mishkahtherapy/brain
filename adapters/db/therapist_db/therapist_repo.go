@@ -257,9 +257,24 @@ func (r *TherapistRepository) BulkGetDevices(therapistIDs []domain.TherapistID) 
 	return devices, nil
 }
 
+func (r *TherapistRepository) UpdateTimezoneOffset(therapistID domain.TherapistID, timezoneOffset domain.TimezoneOffset) error {
+	if therapistID == "" {
+		return ErrTherapistIDIsRequired
+	}
+
+	query := `UPDATE therapists SET timezone_offset = ? WHERE id = ?`
+	_, err := r.db.Exec(query, timezoneOffset, therapistID)
+	if err != nil {
+		slog.Error("error updating therapist timezone offset", "error", err)
+		return ErrFailedToUpdateTherapist
+	}
+
+	return nil
+}
+
 func (r *TherapistRepository) GetByID(id domain.TherapistID) (*therapist.Therapist, error) {
 	query := `
-		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, created_at, updated_at
+		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, timezone_offset, created_at, updated_at
 		FROM therapists
 		WHERE id = ?
 	`
@@ -272,6 +287,7 @@ func (r *TherapistRepository) GetByID(id domain.TherapistID) (*therapist.Therapi
 		&therapist.PhoneNumber,
 		&therapist.WhatsAppNumber,
 		&therapist.SpeaksEnglish,
+		&therapist.TimezoneOffset,
 		&therapist.CreatedAt,
 		&therapist.UpdatedAt,
 	)
@@ -295,7 +311,7 @@ func (r *TherapistRepository) GetByID(id domain.TherapistID) (*therapist.Therapi
 
 func (r *TherapistRepository) GetByEmail(email domain.Email) (*therapist.Therapist, error) {
 	query := `
-		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, created_at, updated_at
+		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, timezone_offset, created_at, updated_at
 		FROM therapists
 		WHERE email = ?
 	`
@@ -308,6 +324,7 @@ func (r *TherapistRepository) GetByEmail(email domain.Email) (*therapist.Therapi
 		&therapist.PhoneNumber,
 		&therapist.WhatsAppNumber,
 		&therapist.SpeaksEnglish,
+		&therapist.TimezoneOffset,
 		&therapist.CreatedAt,
 		&therapist.UpdatedAt,
 	)
@@ -331,7 +348,7 @@ func (r *TherapistRepository) GetByEmail(email domain.Email) (*therapist.Therapi
 
 func (r *TherapistRepository) GetByWhatsAppNumber(whatsappNumber domain.WhatsAppNumber) (*therapist.Therapist, error) {
 	query := `
-		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, created_at, updated_at
+		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, timezone_offset, created_at, updated_at
 		FROM therapists
 		WHERE whatsapp_number = ?
 	`
@@ -344,6 +361,7 @@ func (r *TherapistRepository) GetByWhatsAppNumber(whatsappNumber domain.WhatsApp
 		&therapist.PhoneNumber,
 		&therapist.WhatsAppNumber,
 		&therapist.SpeaksEnglish,
+		&therapist.TimezoneOffset,
 		&therapist.CreatedAt,
 		&therapist.UpdatedAt,
 	)
@@ -374,7 +392,7 @@ func (r *TherapistRepository) Delete(id domain.TherapistID) error {
 
 func (r *TherapistRepository) List() ([]*therapist.Therapist, error) {
 	query := `
-		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, created_at, updated_at
+		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, timezone_offset, created_at, updated_at
 		FROM therapists
 		ORDER BY name ASC
 	`
@@ -395,6 +413,7 @@ func (r *TherapistRepository) List() ([]*therapist.Therapist, error) {
 			&therapist.PhoneNumber,
 			&therapist.WhatsAppNumber,
 			&therapist.SpeaksEnglish,
+			&therapist.TimezoneOffset,
 			&therapist.CreatedAt,
 			&therapist.UpdatedAt,
 		)
@@ -418,7 +437,7 @@ func (r *TherapistRepository) List() ([]*therapist.Therapist, error) {
 
 func (r *TherapistRepository) FindBySpecializationAndLanguage(specializationName string, mustSpeakEnglish bool) ([]*therapist.Therapist, error) {
 	query := `
-	       SELECT DISTINCT t.id, t.name, t.email, t.phone_number, t.whatsapp_number, t.speaks_english, t.created_at, t.updated_at
+	       SELECT DISTINCT t.id, t.name, t.email, t.phone_number, t.whatsapp_number, t.speaks_english, t.timezone_offset, t.created_at, t.updated_at
 	       FROM therapists t
 	       JOIN therapist_specializations ts ON t.id = ts.therapist_id
 	       JOIN specializations s ON ts.specialization_id = s.id
@@ -452,6 +471,7 @@ func (r *TherapistRepository) FindBySpecializationAndLanguage(specializationName
 			&therapist.PhoneNumber,
 			&therapist.WhatsAppNumber,
 			&therapist.SpeaksEnglish,
+			&therapist.TimezoneOffset,
 			&therapist.CreatedAt,
 			&therapist.UpdatedAt,
 		)
@@ -483,7 +503,7 @@ func (r *TherapistRepository) FindByIDs(therapistIDs []domain.TherapistID) ([]*t
 	}
 
 	query := `
-		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, created_at, updated_at
+		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, timezone_offset, created_at, updated_at
 		FROM therapists
 		WHERE id IN (%s)
 	`
@@ -514,6 +534,7 @@ func (r *TherapistRepository) FindByIDs(therapistIDs []domain.TherapistID) ([]*t
 			&therapist.PhoneNumber,
 			&therapist.WhatsAppNumber,
 			&therapist.SpeaksEnglish,
+			&therapist.TimezoneOffset,
 			&therapist.CreatedAt,
 			&therapist.UpdatedAt,
 		)

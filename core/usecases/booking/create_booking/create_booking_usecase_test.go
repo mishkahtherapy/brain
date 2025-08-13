@@ -45,7 +45,7 @@ func (r *inMemoryBookingRepo) BulkListByTherapistForDateRange([]domain.Therapist
 }
 
 // Search satisfies the new method in the BookingRepository interface for tests.
-func (r *inMemoryBookingRepo) Search(startDate, endDate time.Time, state *booking.BookingState) ([]*booking.Booking, error) {
+func (r *inMemoryBookingRepo) Search(startDate, endDate time.Time, states []booking.BookingState) ([]*booking.Booking, error) {
 	// Return all in-memory bookings ignoring filters for simplicity in unit tests.
 	return r.bookings, nil
 }
@@ -55,6 +55,13 @@ type inMemoryTherapistRepo struct{}
 func (r *inMemoryTherapistRepo) GetByID(id domain.TherapistID) (*therapist.Therapist, error) {
 	// return non-nil dummy therapist
 	return &therapist.Therapist{ID: id, Name: "Dr Test"}, nil
+}
+func (r *inMemoryTherapistRepo) FindByIDs([]domain.TherapistID) ([]*therapist.Therapist, error) {
+	return nil, nil
+}
+
+func (r *inMemoryTherapistRepo) UpdateDevice(domain.TherapistID, domain.DeviceID) error {
+	return nil
 }
 
 // other methods stubbed

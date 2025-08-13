@@ -186,8 +186,8 @@ func TestBookingE2E(t *testing.T) {
 		testUtils.AssertBookingCreated(t, rec, testData.TherapistID, testData.ClientID, testData.TimeSlotID)
 
 		// Verify timezone is stored correctly
-		if createdBooking.TimezoneOffset != -300 {
-			t.Errorf("Expected timezone %d, got %d", -300, createdBooking.TimezoneOffset)
+		if createdBooking.ClientTimezoneOffset != -300 {
+			t.Errorf("Expected timezone %d, got %d", -300, createdBooking.ClientTimezoneOffset)
 		}
 
 		// Step 2: Get the booking
@@ -266,8 +266,8 @@ func TestBookingE2E(t *testing.T) {
 		testUtils.AssertBookingCreated(t, rec, isolatedData.TherapistID, isolatedData.ClientID, isolatedData.TimeSlotID)
 
 		// Verify the created booking has correct timezone
-		if createdBooking.TimezoneOffset != -60 {
-			t.Errorf("Expected timezone %d, got %d", -60, createdBooking.TimezoneOffset)
+		if createdBooking.ClientTimezoneOffset != -60 {
+			t.Errorf("Expected timezone %d, got %d", -60, createdBooking.ClientTimezoneOffset)
 		}
 	})
 

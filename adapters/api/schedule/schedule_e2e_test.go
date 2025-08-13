@@ -664,7 +664,7 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 			INSERT INTO bookings (id, timeslot_id, therapist_id, client_id, start_time, timezone_offset, state, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`, booking.ID, booking.TimeSlotID, booking.TherapistID, booking.ClientID,
-			booking.StartTime, booking.TimezoneOffset, booking.State, booking.CreatedAt, booking.UpdatedAt)
+			booking.StartTime, booking.ClientTimezoneOffset, booking.State, booking.CreatedAt, booking.UpdatedAt)
 		if err != nil {
 			t.Fatalf("Failed to insert booking: %v", err)
 		}

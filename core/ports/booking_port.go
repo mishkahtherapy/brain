@@ -40,5 +40,5 @@ type BookingRepository interface {
 		state booking.BookingState,
 		startDate, endDate time.Time,
 	) (map[domain.TherapistID][]*booking.Booking, error)
-	Search(startDate, endDate time.Time, state *booking.BookingState) ([]*booking.Booking, error)
+	Search(startDate, endDate time.Time, states []booking.BookingState) ([]*booking.Booking, error)
 }

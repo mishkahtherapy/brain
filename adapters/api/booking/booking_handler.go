@@ -3,6 +3,7 @@ package booking_handler
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/mishkahtherapy/brain/adapters/api"
@@ -121,6 +122,7 @@ func (h *BookingHandler) handleSearchBookings(w http.ResponseWriter, r *http.Req
 	// Parse optional start & end query params (YYYY-MM-DD expected)
 	startParam := r.URL.Query().Get("start")
 	endParam := r.URL.Query().Get("end")
+	stateParam := r.URL.Query().Get("state")
 
 	var startTime, endTime time.Time
 	var err error
@@ -152,22 +154,26 @@ func (h *BookingHandler) handleSearchBookings(w http.ResponseWriter, r *http.Req
 	}
 
 	// Optional state filter
-	var state *booking.BookingState
-	if stateParam := r.URL.Query().Get("state"); stateParam != "" {
-		bookingState := booking.BookingState(stateParam)
-		if bookingState != booking.BookingStatePending &&
-			bookingState != booking.BookingStateConfirmed &&
-			bookingState != booking.BookingStateCancelled {
-			rw.WriteBadRequest("Invalid state parameter. Must be one of: pending, confirmed, cancelled")
-			return
+	var states []booking.BookingState
+	if stateParam != "" {
+		bookingStates := []booking.BookingState{}
+		for _, state := range strings.Split(stateParam, ",") {
+			bookingState := booking.BookingState(state)
+			bookingStates = append(bookingStates, bookingState)
+			if bookingState != booking.BookingStatePending &&
+				bookingState != booking.BookingStateConfirmed &&
+				bookingState != booking.BookingStateCancelled {
+				rw.WriteBadRequest("Invalid state parameter. Must be one of: pending, confirmed, cancelled")
+				return
+			}
 		}
-		state = &bookingState
+		states = bookingStates
 	}
 
 	input := search_bookings.Input{
-		Start: startTime,
-		End:   endTime,
-		State: state,
+		Start:  startTime,
+		End:    endTime,
+		States: states,
 	}
 
 	bookings, err := h.searchBookingsUsecase.Execute(input)

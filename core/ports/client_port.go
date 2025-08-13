@@ -7,7 +7,7 @@ import (
 
 type ClientRepository interface {
 	Create(client *client.Client) error
-	BulkGetByID(ids []domain.ClientID) ([]*client.Client, error)
+	FindByIDs(ids []domain.ClientID) ([]*client.Client, error)
 	GetByWhatsAppNumber(whatsAppNumber domain.WhatsAppNumber) (*client.Client, error)
 	List() ([]*client.Client, error)
 	Update(client *client.Client) error

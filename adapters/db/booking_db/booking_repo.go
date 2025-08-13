@@ -435,7 +435,7 @@ func (r *BookingRepository) BulkListByTherapistForDateRange(
 // Search returns all bookings whose start_time is within the inclusive range
 // [startDate, endDate]. When state is provided (non-nil), the results are
 // further filtered by the given booking state.
-func (r *BookingRepository) Search(startDate, endDate time.Time, state *booking.BookingState) ([]*booking.Booking, error) {
+func (r *BookingRepository) Search(startDate, endDate time.Time, states []booking.BookingState) ([]*booking.Booking, error) {
 	query := `
 		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at
 		FROM bookings
@@ -449,16 +449,23 @@ func (r *BookingRepository) Search(startDate, endDate time.Time, state *booking.
 		params = append(params, startDate)
 	}
 
+	// Add states filter if provided
+	if len(states) > 0 {
+		placeholders := make([]string, len(states))
+		for i := range states {
+			placeholders[i] = "?"
+		}
+		placeholdersStr := strings.Join(placeholders, ",")
+		query += fmt.Sprintf(" AND state IN (%s)", placeholdersStr)
+		for _, state := range states {
+			params = append(params, state)
+		}
+	}
+
 	// Add end date filter if provided (not zero time)
 	if !endDate.IsZero() {
 		query += " AND start_time <= ?"
 		params = append(params, endDate)
-	}
-
-	// Add state filter if provided
-	if state != nil {
-		query += " AND state = ?"
-		params = append(params, *state)
 	}
 
 	query += " ORDER BY start_time ASC"

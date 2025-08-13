@@ -53,7 +53,7 @@ func (h *ScheduleHandler) handleGetSchedule(w http.ResponseWriter, r *http.Reque
 	startDateParam := r.URL.Query().Get("startDate")
 	if startDateParam != "" {
 		var err error
-		startDate, err = time.Parse("2006-01-02", startDateParam)
+		startDate, err = time.Parse(time.DateOnly, startDateParam)
 		if err != nil {
 			rw.WriteBadRequest("invalid startDate format: use YYYY-MM-DD")
 			return
@@ -65,7 +65,7 @@ func (h *ScheduleHandler) handleGetSchedule(w http.ResponseWriter, r *http.Reque
 	endDateParam := r.URL.Query().Get("endDate")
 	if endDateParam != "" {
 		var err error
-		endDate, err = time.Parse("2006-01-02", endDateParam)
+		endDate, err = time.Parse(time.DateOnly, endDateParam)
 		if err != nil {
 			rw.WriteBadRequest("invalid endDate format: use YYYY-MM-DD")
 			return

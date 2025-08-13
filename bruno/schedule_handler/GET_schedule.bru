@@ -5,14 +5,15 @@ meta {
 }
 
 get {
-  url: {{API_URL}}/schedule?tag=anxiety&english=true&startDate=2025-06-01&endDate=2025-06-30&asda=aqweqwe
+  url: {{API_URL}}/schedule?startDate=2025-08-16&endDate=2025-08-21&therapistIds=therapist_54fd90bf7442496a896752286cd8bdaa
   body: none
   auth: inherit
 }
 
 params:query {
-  tag: anxiety
-  english: true
-  startDate: 2025-06-01
-  endDate: 2025-06-30
+  startDate: 2025-08-16
+  endDate: 2025-08-21
+  therapistIds: therapist_54fd90bf7442496a896752286cd8bdaa
+  ~tag: anxiety
+  ~english: true
 }

@@ -7,11 +7,10 @@
 			"path": "../mishkah-mono"
 		},
 		{
-			"path": "../operator-app"
-		},
-		{
 			"path": "../deployment"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"kiroAgent.configureMCP": "Disabled"
+	}
 }

@@ -14,6 +14,7 @@ type Therapist struct {
 	SpeaksEnglish  bool                  `json:"speaksEnglish"`
 
 	Specializations []specialization.Specialization `json:"specializations"`
+	TimezoneOffset  domain.TimezoneOffset           `json:"timezoneOffset"`
 
 	CreatedAt domain.UTCTimestamp `json:"createdAt"`
 	UpdatedAt domain.UTCTimestamp `json:"updatedAt"`
