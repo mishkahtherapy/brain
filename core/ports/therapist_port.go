@@ -13,6 +13,7 @@ type TherapistRepository interface {
 	Update(therapist *therapist.Therapist) error
 	UpdateSpecializations(therapistID domain.TherapistID, specializationIDs []domain.SpecializationID) error
 	UpdateDevice(therapistID domain.TherapistID, deviceID domain.DeviceID) error
+	UpdateTimezoneOffset(therapistID domain.TherapistID, timezoneOffset domain.TimezoneOffset) error
 	Delete(id domain.TherapistID) error
 	List() ([]*therapist.Therapist, error)
 	FindBySpecializationAndLanguage(specializationName string, mustSpeakEnglish bool) ([]*therapist.Therapist, error)

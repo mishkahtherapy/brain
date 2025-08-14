@@ -13,9 +13,9 @@ import (
 var ErrFailedToCreateSession = errors.New("failed to create session for confirmed booking")
 
 type Input struct {
-	BookingID  domain.BookingID       `json:"bookingId"`
-	PaidAmount int                    `json:"paidAmount"` // USD cents
-	Language   domain.SessionLanguage `json:"language"`
+	BookingID     domain.BookingID
+	PaidAmountUSD int // USD cents
+	Language      domain.SessionLanguage
 }
 
 type Usecase struct {
@@ -35,7 +35,7 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 	if input.BookingID == "" {
 		return nil, common.ErrBookingIDIsRequired
 	}
-	if input.PaidAmount <= 0 {
+	if input.PaidAmountUSD <= 0 {
 		return nil, common.ErrPaidAmountIsRequired
 	}
 	if input.Language == "" {
@@ -71,7 +71,8 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 		ClientID:    existingBooking.ClientID,
 		TimeSlotID:  existingBooking.TimeSlotID,
 		StartTime:   existingBooking.StartTime,
-		PaidAmount:  input.PaidAmount,
+		Duration:    existingBooking.Duration,
+		PaidAmount:  input.PaidAmountUSD,
 		Language:    input.Language,
 		State:       domain.SessionStatePlanned,
 		Notes:       "",

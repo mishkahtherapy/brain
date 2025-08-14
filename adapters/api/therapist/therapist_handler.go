@@ -14,6 +14,7 @@ import (
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_device"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_info"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_specializations"
+	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_timezone_offset"
 )
 
 type TherapistHandler struct {
@@ -23,6 +24,7 @@ type TherapistHandler struct {
 	updateTherapistInfoUsecase            update_therapist_info.Usecase
 	updateTherapistSpecializationsUsecase update_therapist_specializations.Usecase
 	updateTherapistDeviceUsecase          update_therapist_device.Usecase
+	updateTherapistTimezoneOffsetUsecase  update_timezone_offset.Usecase
 }
 
 func NewTherapistHandler(
@@ -32,6 +34,7 @@ func NewTherapistHandler(
 	updateInfoUsecase update_therapist_info.Usecase,
 	updateSpecializationsUsecase update_therapist_specializations.Usecase,
 	updateTherapistDeviceUsecase update_therapist_device.Usecase,
+	updateTherapistTimezoneOffsetUsecase update_timezone_offset.Usecase,
 ) *TherapistHandler {
 	return &TherapistHandler{
 		newTherapistUsecase:                   newUsecase,
@@ -40,6 +43,7 @@ func NewTherapistHandler(
 		updateTherapistInfoUsecase:            updateInfoUsecase,
 		updateTherapistSpecializationsUsecase: updateSpecializationsUsecase,
 		updateTherapistDeviceUsecase:          updateTherapistDeviceUsecase,
+		updateTherapistTimezoneOffsetUsecase:  updateTherapistTimezoneOffsetUsecase,
 	}
 }
 
@@ -66,6 +70,7 @@ func (h *TherapistHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/v1/therapists/{id}", h.handleUpdateTherapistInfo)
 	mux.HandleFunc("PUT /api/v1/therapists/{id}/specializations", h.handleUpdateTherapistSpecializations)
 	mux.HandleFunc("PUT /api/v1/therapists/{id}/device", h.handleUpdateTherapistDevice)
+	mux.HandleFunc("PUT /api/v1/therapists/{id}/timezone-offset", h.handleUpdateTherapistTimezoneOffset)
 }
 
 func (h *TherapistHandler) handleNewTherapist(w http.ResponseWriter, r *http.Request) {
@@ -282,4 +287,46 @@ func (h *TherapistHandler) handleUpdateTherapistDevice(w http.ResponseWriter, r 
 	}
 
 	rw.WriteJSON(nil, http.StatusOK)
+}
+
+func (h *TherapistHandler) handleUpdateTherapistTimezoneOffset(w http.ResponseWriter, r *http.Request) {
+	rw := api.NewResponseWriter(w)
+
+	// Read therapist id from path
+	therapistID := domain.TherapistID(r.PathValue("id"))
+	if therapistID == "" {
+		rw.WriteBadRequest("Missing therapist ID")
+		return
+	}
+
+	// Parse request body to get timezone offset
+	var requestBody struct {
+		TimezoneOffset domain.TimezoneOffset `json:"timezoneOffset"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
+		rw.WriteBadRequest(err.Error())
+		return
+	}
+
+	input := update_timezone_offset.Input{
+		TherapistID:    therapistID,
+		TimezoneOffset: requestBody.TimezoneOffset,
+	}
+
+	therapist, err := h.updateTherapistTimezoneOffsetUsecase.Execute(input)
+
+	if err != nil {
+		switch err {
+		case update_timezone_offset.ErrTherapistNotFound:
+			rw.WriteNotFound(err.Error())
+		default:
+			rw.WriteError(err, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	if err := rw.WriteJSON(therapist, http.StatusOK); err != nil {
+		rw.WriteError(err, http.StatusInternalServerError)
+	}
 }

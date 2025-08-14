@@ -51,6 +51,7 @@ import (
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_device"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_info"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_specializations"
+	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_timezone_offset"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/bulk_toggle_therapist_timeslots"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/create_therapist_timeslot"
 	"github.com/mishkahtherapy/brain/core/usecases/timeslot/delete_therapist_timeslot"
@@ -100,6 +101,7 @@ func main() {
 	updateTherapistInfoUsecase := update_therapist_info.NewUsecase(therapistRepo)
 	updateTherapistSpecializationsUsecase := update_therapist_specializations.NewUsecase(therapistRepo, specializationRepo)
 	updateTherapistDeviceUsecase := update_therapist_device.NewUsecase(therapistRepo)
+	updateTherapistTimezoneOffsetUsecase := update_timezone_offset.NewUsecase(therapistRepo)
 
 	// Initialize timeslot usecases
 	createTherapistTimeslotUsecase := create_therapist_timeslot.NewUsecase(therapistRepo, timeSlotRepo)
@@ -151,6 +153,7 @@ func main() {
 		*updateTherapistInfoUsecase,
 		*updateTherapistSpecializationsUsecase,
 		*updateTherapistDeviceUsecase,
+		*updateTherapistTimezoneOffsetUsecase,
 	)
 
 	clientHandler := clientHandler.NewClientHandler(

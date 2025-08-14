@@ -231,8 +231,8 @@ func (h *BookingHandler) handleConfirmBooking(w http.ResponseWriter, r *http.Req
 
 	// Parse request body to get paid amount and language
 	var requestBody struct {
-		PaidAmount int                    `json:"paidAmount"`
-		Language   domain.SessionLanguage `json:"language"`
+		PaidAmountUSD int                    `json:"paidAmount"` // WhatsApp currency (smallest unit integer)
+		Language      domain.SessionLanguage `json:"language"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
@@ -241,9 +241,9 @@ func (h *BookingHandler) handleConfirmBooking(w http.ResponseWriter, r *http.Req
 	}
 
 	input := confirm_booking.Input{
-		BookingID:  id,
-		PaidAmount: requestBody.PaidAmount,
-		Language:   requestBody.Language,
+		BookingID:     id,
+		PaidAmountUSD: requestBody.PaidAmountUSD,
+		Language:      requestBody.Language,
 	}
 
 	booking, err := h.confirmBookingUsecase.Execute(input)

@@ -18,3 +18,10 @@ type SQLDatabase interface {
 	Begin() (SQLTx, error)
 	Close() error
 }
+
+// TODO: Apply transactions to repos
+type TransactionPort interface {
+	Begin() (SQLTx, error)
+	Commit() error
+	Rollback() error
+}
