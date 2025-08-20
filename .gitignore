@@ -8,6 +8,9 @@
 *.so
 *.dylib
 
+# Firebase credentials
+mishkah-therapist-notifier-7e1e24b6bae4.json
+
 .idea/
 data/raw/
 # Test binary, built with `go test -c`

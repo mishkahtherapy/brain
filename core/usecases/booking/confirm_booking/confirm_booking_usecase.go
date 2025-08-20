@@ -2,6 +2,9 @@ package confirm_booking
 
 import (
 	"errors"
+	"fmt"
+	"log/slog"
+	"time"
 
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/domain/booking"
@@ -19,14 +22,29 @@ type Input struct {
 }
 
 type Usecase struct {
-	bookingRepo ports.BookingRepository
-	sessionRepo ports.SessionRepository
+	bookingRepo         ports.BookingRepository
+	sessionRepo         ports.SessionRepository
+	therapistRepo       ports.TherapistRepository
+	notificationPort    ports.NotificationPort
+	notificationRepo    ports.NotificationRepository
+	therapistAppBaseURL string
 }
 
-func NewUsecase(bookingRepo ports.BookingRepository, sessionRepo ports.SessionRepository) *Usecase {
+func NewUsecase(
+	bookingRepo ports.BookingRepository,
+	sessionRepo ports.SessionRepository,
+	therapistRepo ports.TherapistRepository,
+	notificationPort ports.NotificationPort,
+	notificationRepo ports.NotificationRepository,
+	therapistAppBaseURL string,
+) *Usecase {
 	return &Usecase{
-		bookingRepo: bookingRepo,
-		sessionRepo: sessionRepo,
+		bookingRepo:         bookingRepo,
+		sessionRepo:         sessionRepo,
+		therapistRepo:       therapistRepo,
+		notificationPort:    notificationPort,
+		notificationRepo:    notificationRepo,
+		therapistAppBaseURL: therapistAppBaseURL,
 	}
 }
 
@@ -85,6 +103,41 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 	err = u.sessionRepo.CreateSession(session)
 	if err != nil {
 		return nil, ErrFailedToCreateSession
+	}
+
+	// Notify therapist
+	therapist, err := u.therapistRepo.GetByID(existingBooking.TherapistID)
+	if err != nil {
+		return nil, err
+	}
+
+	if therapist.DeviceID == "" {
+		slog.Info("therapist has no device id, skipping notification", "therapist_id", therapist.ID)
+		return existingBooking, nil
+	}
+
+	therapistTimezoneOffset := int(therapist.TimezoneOffset / 60)
+	timezoneLabel := fmt.Sprintf("UTC%+d", therapistTimezoneOffset)
+	therapistTimezone := time.FixedZone(timezoneLabel, therapistTimezoneOffset)
+	therapistTime := time.Date(existingBooking.StartTime.Year(), existingBooking.StartTime.Month(), existingBooking.StartTime.Day(), 0, 0, 0, 0, therapistTimezone)
+
+	notification := ports.Notification{
+		Title:    "Session Confirmed",
+		Body:     fmt.Sprintf("Your next session is confirmed on %s", therapistTime.Format(time.DateOnly)),
+		ImageURL: "https://therapist.mishkahtherapy.com/mishkah-logo.png",
+		// TODO: add session id to the link
+		Link: fmt.Sprintf("%s/sessions", u.therapistAppBaseURL),
+	}
+
+	firebaseNotificationId, err := u.notificationPort.SendNotification(therapist.DeviceID, notification)
+	if err != nil {
+		return nil, err
+	}
+
+	// Persist the notification
+	err = u.notificationRepo.CreateNotification(therapist.ID, *firebaseNotificationId, notification)
+	if err != nil {
+		return nil, err
 	}
 
 	return existingBooking, nil

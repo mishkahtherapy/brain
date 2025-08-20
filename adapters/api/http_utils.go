@@ -50,6 +50,10 @@ func (rw *ResponseWriter) WriteNoContent() {
 	rw.w.WriteHeader(http.StatusNoContent)
 }
 
+func (rw *ResponseWriter) WriteOK() {
+	rw.w.WriteHeader(http.StatusOK)
+}
+
 // WriteBadRequest writes a 400 Bad Request response
 func (rw *ResponseWriter) WriteBadRequest(message string) {
 	rw.w.Header().Set("Content-Type", "application/json")

@@ -1,0 +1,23 @@
+meta {
+  name: Send Notifications
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{API_URL}}/test/notification
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "deviceId": "dYmgo-rT_31azmmVFk2YOD:APA91bF4nVVt2IUQoawZRqlERHH7YSKyCVcTgaaMMpuRSf9uihRv0MmkqrAOnPSN8d9zdA5wQdTKmtrQGVEMPV3PMKMSxAXZemeY1VCHBbrpL-8amWMDiPk",
+    "notification": {
+      "title": "Test notification",
+      "body": "Your next session is ready",
+      "image": "https://therapist.mishkahtherapy.com/mishkah-logo.png",
+      "link": "https://therapist.mishkahtherapy.com/sessions"
+    }
+  }
+}

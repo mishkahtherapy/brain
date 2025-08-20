@@ -192,7 +192,7 @@ func (r *TherapistRepository) UpdateSpecializations(therapistID domain.Therapist
 	return nil
 }
 
-func (r *TherapistRepository) UpdateDevice(therapistID domain.TherapistID, deviceID domain.DeviceID) error {
+func (r *TherapistRepository) UpdateDevice(therapistID domain.TherapistID, deviceID domain.DeviceID, deviceIDUpdatedAt domain.UTCTimestamp) error {
 	if therapistID == "" {
 		return ErrTherapistIDIsRequired
 	}
@@ -201,8 +201,8 @@ func (r *TherapistRepository) UpdateDevice(therapistID domain.TherapistID, devic
 		return ErrDeviceIDIsRequired
 	}
 
-	query := `UPDATE therapists SET device_id = ? WHERE id = ?`
-	_, err := r.db.Exec(query, deviceID, therapistID)
+	query := `UPDATE therapists SET device_id = ?, device_id_updated_at = ? WHERE id = ?`
+	_, err := r.db.Exec(query, deviceID, deviceIDUpdatedAt, therapistID)
 	if err != nil {
 		slog.Error("error updating therapist device", "error", err)
 		return ErrFailedToUpdateTherapist
@@ -247,13 +247,15 @@ func (r *TherapistRepository) BulkGetDevices(therapistIDs []domain.TherapistID) 
 	devices := make(map[domain.TherapistID]domain.DeviceID)
 	for rows.Next() {
 		var therapistID domain.TherapistID
-		var deviceID domain.DeviceID
+		var deviceID sql.NullString
 		err := rows.Scan(&therapistID, &deviceID)
 		if err != nil {
 			slog.Error("error scanning therapist device", "error", err)
 			return nil, ErrFailedToGetTherapists
 		}
-		devices[therapistID] = deviceID
+		if deviceID.Valid {
+			devices[therapistID] = domain.DeviceID(deviceID.String)
+		}
 	}
 	return devices, nil
 }
@@ -275,12 +277,13 @@ func (r *TherapistRepository) UpdateTimezoneOffset(therapistID domain.TherapistI
 
 func (r *TherapistRepository) GetByID(id domain.TherapistID) (*therapist.Therapist, error) {
 	query := `
-		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, timezone_offset, created_at, updated_at
+		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, device_id, timezone_offset, created_at, updated_at
 		FROM therapists
 		WHERE id = ?
 	`
 	row := r.db.QueryRow(query, id)
 	therapist := &therapist.Therapist{}
+	var deviceID sql.NullString
 	err := row.Scan(
 		&therapist.ID,
 		&therapist.Name,
@@ -288,6 +291,7 @@ func (r *TherapistRepository) GetByID(id domain.TherapistID) (*therapist.Therapi
 		&therapist.PhoneNumber,
 		&therapist.WhatsAppNumber,
 		&therapist.SpeaksEnglish,
+		&deviceID,
 		&therapist.TimezoneOffset,
 		&therapist.CreatedAt,
 		&therapist.UpdatedAt,
@@ -298,6 +302,10 @@ func (r *TherapistRepository) GetByID(id domain.TherapistID) (*therapist.Therapi
 		}
 		slog.Error("error getting therapist by id", "error", err)
 		return nil, ErrFailedToGetTherapists
+	}
+
+	if deviceID.Valid {
+		therapist.DeviceID = domain.DeviceID(deviceID.String)
 	}
 
 	// Load specializations
@@ -325,6 +333,7 @@ func (r *TherapistRepository) GetByEmail(email domain.Email) (*therapist.Therapi
 		&therapist.PhoneNumber,
 		&therapist.WhatsAppNumber,
 		&therapist.SpeaksEnglish,
+		&therapist.DeviceID,
 		&therapist.TimezoneOffset,
 		&therapist.CreatedAt,
 		&therapist.UpdatedAt,
@@ -349,7 +358,7 @@ func (r *TherapistRepository) GetByEmail(email domain.Email) (*therapist.Therapi
 
 func (r *TherapistRepository) GetByWhatsAppNumber(whatsappNumber domain.WhatsAppNumber) (*therapist.Therapist, error) {
 	query := `
-		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, timezone_offset, created_at, updated_at
+		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, device_id, timezone_offset, created_at, updated_at
 		FROM therapists
 		WHERE whatsapp_number = ?
 	`
@@ -362,6 +371,7 @@ func (r *TherapistRepository) GetByWhatsAppNumber(whatsappNumber domain.WhatsApp
 		&therapist.PhoneNumber,
 		&therapist.WhatsAppNumber,
 		&therapist.SpeaksEnglish,
+		&therapist.DeviceID,
 		&therapist.TimezoneOffset,
 		&therapist.CreatedAt,
 		&therapist.UpdatedAt,
@@ -393,7 +403,7 @@ func (r *TherapistRepository) Delete(id domain.TherapistID) error {
 
 func (r *TherapistRepository) List() ([]*therapist.Therapist, error) {
 	query := `
-		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, timezone_offset, created_at, updated_at
+		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, device_id, timezone_offset, created_at, updated_at
 		FROM therapists
 		ORDER BY name ASC
 	`
@@ -405,6 +415,7 @@ func (r *TherapistRepository) List() ([]*therapist.Therapist, error) {
 	defer rows.Close()
 
 	therapists := make([]*therapist.Therapist, 0)
+	var deviceID sql.NullString
 	for rows.Next() {
 		therapist := &therapist.Therapist{}
 		err := rows.Scan(
@@ -414,6 +425,7 @@ func (r *TherapistRepository) List() ([]*therapist.Therapist, error) {
 			&therapist.PhoneNumber,
 			&therapist.WhatsAppNumber,
 			&therapist.SpeaksEnglish,
+			&deviceID,
 			&therapist.TimezoneOffset,
 			&therapist.CreatedAt,
 			&therapist.UpdatedAt,
@@ -421,6 +433,10 @@ func (r *TherapistRepository) List() ([]*therapist.Therapist, error) {
 		if err != nil {
 			slog.Error("error scanning therapist", "error", err)
 			return nil, ErrFailedToGetTherapists
+		}
+
+		if deviceID.Valid {
+			therapist.DeviceID = domain.DeviceID(deviceID.String)
 		}
 
 		// Load specializations for each therapist
@@ -438,7 +454,7 @@ func (r *TherapistRepository) List() ([]*therapist.Therapist, error) {
 
 func (r *TherapistRepository) FindBySpecializationAndLanguage(specializationName string, mustSpeakEnglish bool) ([]*therapist.Therapist, error) {
 	query := `
-	       SELECT DISTINCT t.id, t.name, t.email, t.phone_number, t.whatsapp_number, t.speaks_english, t.timezone_offset, t.created_at, t.updated_at
+	       SELECT DISTINCT t.id, t.name, t.email, t.phone_number, t.whatsapp_number, t.speaks_english, t.device_id, t.timezone_offset, t.created_at, t.updated_at
 	       FROM therapists t
 	       JOIN therapist_specializations ts ON t.id = ts.therapist_id
 	       JOIN specializations s ON ts.specialization_id = s.id
@@ -462,6 +478,7 @@ func (r *TherapistRepository) FindBySpecializationAndLanguage(specializationName
 
 	therapists := make([]*therapist.Therapist, 0)
 	therapistIDs := make([]domain.TherapistID, 0)
+	var deviceID sql.NullString
 
 	for rows.Next() {
 		therapist := &therapist.Therapist{}
@@ -472,6 +489,7 @@ func (r *TherapistRepository) FindBySpecializationAndLanguage(specializationName
 			&therapist.PhoneNumber,
 			&therapist.WhatsAppNumber,
 			&therapist.SpeaksEnglish,
+			&deviceID,
 			&therapist.TimezoneOffset,
 			&therapist.CreatedAt,
 			&therapist.UpdatedAt,
@@ -479,6 +497,10 @@ func (r *TherapistRepository) FindBySpecializationAndLanguage(specializationName
 		if err != nil {
 			slog.Error("error scanning therapist", "error", err)
 			return nil, ErrFailedToGetTherapists
+		}
+
+		if deviceID.Valid {
+			therapist.DeviceID = domain.DeviceID(deviceID.String)
 		}
 
 		therapists = append(therapists, therapist)
@@ -504,7 +526,7 @@ func (r *TherapistRepository) FindByIDs(therapistIDs []domain.TherapistID) ([]*t
 	}
 
 	query := `
-		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, timezone_offset, created_at, updated_at
+		SELECT id, name, email, phone_number, whatsapp_number, speaks_english, device_id, timezone_offset, created_at, updated_at
 		FROM therapists
 		WHERE id IN (%s)
 	`
@@ -526,6 +548,7 @@ func (r *TherapistRepository) FindByIDs(therapistIDs []domain.TherapistID) ([]*t
 	defer rows.Close()
 
 	therapists := make([]*therapist.Therapist, 0)
+	var deviceID sql.NullString
 	for rows.Next() {
 		therapist := &therapist.Therapist{}
 		err := rows.Scan(
@@ -535,6 +558,7 @@ func (r *TherapistRepository) FindByIDs(therapistIDs []domain.TherapistID) ([]*t
 			&therapist.PhoneNumber,
 			&therapist.WhatsAppNumber,
 			&therapist.SpeaksEnglish,
+			&deviceID,
 			&therapist.TimezoneOffset,
 			&therapist.CreatedAt,
 			&therapist.UpdatedAt,
@@ -542,6 +566,10 @@ func (r *TherapistRepository) FindByIDs(therapistIDs []domain.TherapistID) ([]*t
 		if err != nil {
 			slog.Error("error scanning therapist", "error", err)
 			return nil, ErrFailedToGetTherapists
+		}
+
+		if deviceID.Valid {
+			therapist.DeviceID = domain.DeviceID(deviceID.String)
 		}
 
 		therapists = append(therapists, therapist)

@@ -2,6 +2,7 @@ package create_booking
 
 import (
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/mishkahtherapy/brain/core/domain"
@@ -101,6 +102,7 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 
 		existingTimeSlot, ok := therapistTimeSlotMap[existingBooking.TimeSlotID]
 		if !ok {
+			slog.Error("timeslot not found", "existing_booking_id", existingBooking.ID, "existing_booking_time_slot_id", existingBooking.TimeSlotID)
 			// Timeslot not found; conservative conflict
 			return nil, common.ErrTimeSlotAlreadyBooked
 		}

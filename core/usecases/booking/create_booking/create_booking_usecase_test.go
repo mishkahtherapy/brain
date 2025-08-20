@@ -60,7 +60,7 @@ func (r *inMemoryTherapistRepo) FindByIDs([]domain.TherapistID) ([]*therapist.Th
 	return nil, nil
 }
 
-func (r *inMemoryTherapistRepo) UpdateDevice(domain.TherapistID, domain.DeviceID) error {
+func (r *inMemoryTherapistRepo) UpdateDevice(domain.TherapistID, domain.DeviceID, domain.UTCTimestamp) error {
 	return nil
 }
 
@@ -82,7 +82,15 @@ func (r *inMemoryTherapistRepo) FindBySpecializationAndLanguage(string, bool) ([
 	return nil, nil
 }
 
+func (r *inMemoryTherapistRepo) UpdateTimezoneOffset(domain.TherapistID, domain.TimezoneOffset) error {
+	return nil
+}
+
 type inMemoryClientRepo struct{}
+
+func (r *inMemoryClientRepo) FindByIDs([]domain.ClientID) ([]*client.Client, error) {
+	return nil, nil
+}
 
 func (r *inMemoryClientRepo) BulkGetByID(ids []domain.ClientID) ([]*client.Client, error) {
 	return []*client.Client{
@@ -128,6 +136,12 @@ func (r *inMemoryTimeSlotRepo) BulkListByTherapist(therapistIDs []domain.Therapi
 		out[s.TherapistID] = append(out[s.TherapistID], s)
 	}
 	return out, nil
+}
+
+type inMemoryNotificationPort struct{}
+
+func (r *inMemoryNotificationPort) SendSessionConfirmation(session domain.Session, therapistDeviceID domain.DeviceID) error {
+	return nil
 }
 
 // -----------------------------
@@ -270,6 +284,9 @@ func TestCreateBooking_ConflictDetection(t *testing.T) {
 
 			uc := NewUsecase(bookingRepo, therapistRepo, clientRepo, slotRepo)
 			_, err := uc.Execute(tc.newInput)
+			if err != nil {
+				t.Fatalf("expected success, got %v", err)
+			}
 
 			if tc.expectConflict {
 				if err != common.ErrTimeSlotAlreadyBooked {

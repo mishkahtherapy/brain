@@ -286,7 +286,7 @@ func (h *TherapistHandler) handleUpdateTherapistDevice(w http.ResponseWriter, r 
 		return
 	}
 
-	rw.WriteJSON(nil, http.StatusOK)
+	rw.WriteOK()
 }
 
 func (h *TherapistHandler) handleUpdateTherapistTimezoneOffset(w http.ResponseWriter, r *http.Request) {

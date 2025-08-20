@@ -16,12 +16,14 @@ type Input struct {
 }
 
 type Usecase struct {
-	therapistRepo ports.TherapistRepository
+	therapistRepo    ports.TherapistRepository
+	notificationPort ports.NotificationPort
 }
 
-func NewUsecase(therapistRepo ports.TherapistRepository) *Usecase {
+func NewUsecase(therapistRepo ports.TherapistRepository, notificationPort ports.NotificationPort) *Usecase {
 	return &Usecase{
-		therapistRepo: therapistRepo,
+		therapistRepo:    therapistRepo,
+		notificationPort: notificationPort,
 	}
 }
 
@@ -34,7 +36,18 @@ func (u *Usecase) Execute(input Input) error {
 		return ErrDeviceIDIsRequired
 	}
 
-	err := u.therapistRepo.UpdateDevice(input.TherapistID, input.DeviceID)
+	deviceIDUpdatedAt := domain.NewUTCTimestamp()
+	err := u.therapistRepo.UpdateDevice(input.TherapistID, input.DeviceID, deviceIDUpdatedAt)
+	if err != nil {
+		return err
+	}
+
+	notification := ports.Notification{
+		Title: "Device updated",
+		Body:  "Your device has been updated",
+	}
+	_, err = u.notificationPort.SendNotification(input.DeviceID, notification)
+
 	if err != nil {
 		return err
 	}

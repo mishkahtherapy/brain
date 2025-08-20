@@ -128,6 +128,22 @@ func (r *TestTimeSlotRepository) BulkListByTherapist(therapistIDs []domain.Thera
 	return nil, nil
 }
 
+type TestNotificationPort struct {
+	db ports.SQLDatabase
+}
+
+func (r *TestNotificationPort) SendNotification(deviceID domain.DeviceID, notification ports.Notification) (*ports.NotificationID, error) {
+	return nil, nil
+}
+
+type TestNotificationRepository struct {
+	db ports.SQLDatabase
+}
+
+func (r *TestNotificationRepository) CreateNotification(therapistID domain.TherapistID, firebaseNotificationID ports.NotificationID) error {
+	return nil
+}
+
 func TestBookingE2E(t *testing.T) {
 	// Setup test database
 	database, cleanup := setupBookingTestDB(t)
@@ -139,11 +155,13 @@ func TestBookingE2E(t *testing.T) {
 	clientRepo := &TestClientRepository{db: database}
 	timeSlotRepo := &TestTimeSlotRepository{db: database}
 	sessionRepo := &TestSessionRepository{db: database}
+	notificationPort := &TestNotificationPort{db: database}
+	notificationRepo := &TestNotificationRepository{db: database}
 
 	// Setup usecases
 	createBookingUsecase := create_booking.NewUsecase(bookingRepo, therapistRepo, clientRepo, timeSlotRepo)
 	getBookingUsecase := get_booking.NewUsecase(bookingRepo)
-	confirmBookingUsecase := confirm_booking.NewUsecase(bookingRepo, sessionRepo)
+	confirmBookingUsecase := confirm_booking.NewUsecase(bookingRepo, sessionRepo, therapistRepo, notificationPort, notificationRepo)
 	cancelBookingUsecase := cancel_booking.NewUsecase(bookingRepo)
 	listByTherapistUsecase := list_bookings_by_therapist.NewUsecase(bookingRepo)
 	listByClientUsecase := list_bookings_by_client.NewUsecase(bookingRepo)

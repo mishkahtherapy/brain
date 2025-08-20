@@ -14,6 +14,7 @@ CREATE TABLE therapists (
     whatsapp_number VARCHAR(20), -- International format support, nullable
     speaks_english BOOLEAN NOT NULL DEFAULT FALSE,
     device_id VARCHAR(255), -- nullable, Firebase ID
+    device_id_updated_at DATETIME, -- nullable, Firebase ID update timestamp
     timezone_offset INTEGER NOT NULL DEFAULT 0, -- Frontend hint for timezone adjustments (minutes east of UTC)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -140,6 +141,20 @@ CREATE TABLE sessions (
     CONSTRAINT fk_sessions_therapist FOREIGN KEY (therapist_id) REFERENCES therapists (id) ON DELETE CASCADE,
     CONSTRAINT fk_sessions_client FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE CASCADE,
     CONSTRAINT fk_sessions_timeslot FOREIGN KEY (timeslot_id) REFERENCES time_slots (id) ON DELETE CASCADE
+);
+
+CREATE TABLE push_notifications (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    therapist_id VARCHAR(128) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    body TEXT NOT NULL,
+    image_url VARCHAR(512),
+    firebase_notification_id VARCHAR(255) NOT NULL,
+    received_at DATETIME,
+    read_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_push_notifications_therapist FOREIGN KEY (therapist_id) REFERENCES therapists (id) ON DELETE CASCADE
 );
 
 -- =============================================================================

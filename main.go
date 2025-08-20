@@ -12,15 +12,18 @@ import (
 	clientHandler "github.com/mishkahtherapy/brain/adapters/api/client"
 	scheduleHandler "github.com/mishkahtherapy/brain/adapters/api/schedule"
 	specializationHandler "github.com/mishkahtherapy/brain/adapters/api/specialization"
+	"github.com/mishkahtherapy/brain/adapters/api/test"
 	therapistHandler "github.com/mishkahtherapy/brain/adapters/api/therapist"
 	timeslotHandler "github.com/mishkahtherapy/brain/adapters/api/timeslot"
 	"github.com/mishkahtherapy/brain/adapters/db"
 	"github.com/mishkahtherapy/brain/adapters/db/booking_db"
 	"github.com/mishkahtherapy/brain/adapters/db/client_db"
+	"github.com/mishkahtherapy/brain/adapters/db/notification_db"
 	"github.com/mishkahtherapy/brain/adapters/db/session_db"
 	"github.com/mishkahtherapy/brain/adapters/db/specialization_db"
 	"github.com/mishkahtherapy/brain/adapters/db/therapist_db"
 	"github.com/mishkahtherapy/brain/adapters/db/timeslot_db"
+	firebase_notifier "github.com/mishkahtherapy/brain/adapters/firebase"
 	"github.com/mishkahtherapy/brain/config"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/cancel_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/confirm_booking"
@@ -77,6 +80,7 @@ func main() {
 	// Initialize database
 	dbConfig := config.GetDBConfig()
 	database := db.NewDatabase(dbConfig)
+	notificationConfig := config.GetNotificationConfig()
 	defer database.Close()
 
 	slog.Info("Database initialized successfully", slog.Group("db", "name", dbConfig.DBFilename, "schema", dbConfig.SchemaFile))
@@ -88,6 +92,8 @@ func main() {
 	bookingRepo := booking_db.NewBookingRepository(database)
 	sessionRepo := session_db.NewSessionRepository(database)
 	timeSlotRepo := timeslot_db.NewTimeSlotRepository(database)
+	notificationPort := firebase_notifier.NewFirebaseNotifier(notificationConfig.FirebaseServiceAccountPath)
+	notificationRepo := notification_db.NewNotificationRepository(database)
 
 	// Initialize specialization usecases
 	newSpecializationUsecase := new_specialization.NewUsecase(specializationRepo)
@@ -100,7 +106,7 @@ func main() {
 	getTherapistUsecase := get_therapist.NewUsecase(therapistRepo)
 	updateTherapistInfoUsecase := update_therapist_info.NewUsecase(therapistRepo)
 	updateTherapistSpecializationsUsecase := update_therapist_specializations.NewUsecase(therapistRepo, specializationRepo)
-	updateTherapistDeviceUsecase := update_therapist_device.NewUsecase(therapistRepo)
+	updateTherapistDeviceUsecase := update_therapist_device.NewUsecase(therapistRepo, notificationPort)
 	updateTherapistTimezoneOffsetUsecase := update_timezone_offset.NewUsecase(therapistRepo)
 
 	// Initialize timeslot usecases
@@ -119,7 +125,7 @@ func main() {
 	// Initialize booking usecases
 	createBookingUsecase := create_booking.NewUsecase(bookingRepo, therapistRepo, clientRepo, timeSlotRepo)
 	getBookingUsecase := get_booking.NewUsecase(bookingRepo)
-	confirmBookingUsecase := confirm_booking.NewUsecase(bookingRepo, sessionRepo)
+	confirmBookingUsecase := confirm_booking.NewUsecase(bookingRepo, sessionRepo, therapistRepo, notificationPort, notificationRepo, notificationConfig.TherapistAppBaseURL)
 	cancelBookingUsecase := cancel_booking.NewUsecase(bookingRepo)
 	listBookingsByTherapistUsecase := list_bookings_by_therapist.NewUsecase(bookingRepo)
 	listBookingsByClientUsecase := list_bookings_by_client.NewUsecase(bookingRepo)
@@ -200,6 +206,8 @@ func main() {
 		*listTherapistTimeslotsUsecase,
 	)
 
+	testHandler := test.NewTestHandler(notificationPort, notificationRepo)
+
 	// Setup HTTP routes
 	mux := http.NewServeMux()
 
@@ -226,6 +234,10 @@ func main() {
 
 	// Register timeslot routes
 	timeslotHandler.RegisterRoutes(mux)
+
+	if config.IsDevelopment() {
+		testHandler.RegisterRoutes(mux)
+	}
 
 	// Add health check endpoint
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
