@@ -74,8 +74,8 @@ CREATE TABLE time_slots (
     ), -- UTC day
     start_time TIME NOT NULL, -- UTC time (e.g., '22:30' for 1:30 AM Cairo time)
     duration_minutes INTEGER NOT NULL, -- Duration in minutes (e.g., 60, 120, 480)
-    pre_session_buffer INTEGER NOT NULL DEFAULT 0, -- minutes (advance notice requirement)
-    post_session_buffer INTEGER NOT NULL DEFAULT 0, -- minutes (break time after session)
+    advance_notice INTEGER NOT NULL DEFAULT 0, -- minutes (advance notice requirement)
+    after_session_break_time INTEGER NOT NULL DEFAULT 0, -- minutes (break time after session)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_time_slots_therapist FOREIGN KEY (therapist_id) REFERENCES therapists (id) ON DELETE CASCADE,
@@ -84,8 +84,8 @@ CREATE TABLE time_slots (
         AND duration_minutes <= 1440
     ), -- Max 24 hours
     CONSTRAINT check_positive_buffers CHECK (
-        pre_session_buffer >= 0
-        AND post_session_buffer >= 0
+        advance_notice >= 0
+        AND after_session_break_time >= 0
     )
 );
 
@@ -97,6 +97,7 @@ CREATE TABLE bookings (
     client_id VARCHAR(128) NOT NULL,
     start_time DATETIME NOT NULL, -- Specific start datetime for this booking
     duration_minutes INTEGER NOT NULL, -- Duration in minutes (e.g., 60, 120, 480)
+    client_timezone_offset INTEGER NOT NULL, -- Frontend hint for timezone adjustments (minutes ahead of UTC)
     state VARCHAR(20) DEFAULT 'pending' CHECK (
         state IN (
             'pending',
@@ -120,6 +121,7 @@ CREATE TABLE sessions (
     timeslot_id VARCHAR(128) NOT NULL,
     start_time DATETIME NOT NULL,
     duration_minutes INTEGER NOT NULL, -- Duration in minutes
+    client_timezone_offset INTEGER NOT NULL, -- Frontend hint for timezone adjustments (minutes ahead of UTC)
     paid_amount INTEGER NOT NULL, -- USD cents
     language VARCHAR(10) NOT NULL CHECK (
         language IN ('arabic', 'english')
@@ -227,8 +229,8 @@ CREATE INDEX idx_availability_search ON time_slots (
 --     ts.day_of_week,
 --     ts.start_time,
 --     ts.end_time,
---     ts.pre_session_buffer,
---     ts.post_session_buffer
+--     ts.advance_notice,
+--     ts.after_session_break_time
 -- FROM time_slots ts
 -- JOIN therapists t ON ts.therapist_id = t.id;
 
@@ -241,8 +243,8 @@ CREATE INDEX idx_availability_search ON time_slots (
 --     ts.day_of_week,
 --     ts.start_time as slot_start_time,
 --     ts.end_time as slot_end_time,
---     ts.pre_session_buffer,
---     ts.post_session_buffer,
+--     ts.advance_notice,
+--     ts.after_session_break_time,
 --     b.id as booking_id,
 --     b.start_time as booking_start_time,
 --     datetime(b.start_time, '+1 hour') as booking_end_time,

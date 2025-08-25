@@ -11,14 +11,14 @@ import (
 )
 
 type Input struct {
-	TherapistID       domain.TherapistID     `json:"therapistId"`
-	TimeslotID        domain.TimeSlotID      `json:"timeslotId"`
-	DayOfWeek         timeslot.DayOfWeek     `json:"dayOfWeek"`
-	Start             domain.Time24h         `json:"start"`             // "09:00"
-	Duration          domain.DurationMinutes `json:"duration"`          // Duration in minutes
-	PreSessionBuffer  domain.DurationMinutes `json:"preSessionBuffer"`  // minutes
-	PostSessionBuffer domain.DurationMinutes `json:"postSessionBuffer"` // minutes
-	IsActive          bool                   `json:"isActive"`
+	TherapistID           domain.TherapistID                  `json:"therapistId"`
+	TimeslotID            domain.TimeSlotID                   `json:"timeslotId"`
+	DayOfWeek             timeslot.DayOfWeek                  `json:"dayOfWeek"`
+	Start                 domain.Time24h                      `json:"start"`                 // "09:00"
+	Duration              domain.DurationMinutes              `json:"duration"`              // Duration in minutes
+	AdvanceNotice         domain.AdvanceNoticeMinutes         `json:"advanceNotice"`         // minutes
+	AfterSessionBreakTime domain.AfterSessionBreakTimeMinutes `json:"afterSessionBreakTime"` // minutes
+	IsActive              bool                                `json:"isActive"`
 }
 
 type Usecase struct {
@@ -66,17 +66,17 @@ func (u *Usecase) Execute(input Input) (*timeslot.TimeSlot, error) {
 
 	// Update the timeslot
 	updatedTimeslot := &timeslot.TimeSlot{
-		ID:                input.TimeslotID,
-		TherapistID:       input.TherapistID,
-		DayOfWeek:         input.DayOfWeek,
-		Start:             input.Start,
-		Duration:          input.Duration,
-		PreSessionBuffer:  input.PreSessionBuffer,
-		PostSessionBuffer: input.PostSessionBuffer,
-		IsActive:          input.IsActive,
-		BookingIDs:        existingTimeslot.BookingIDs, // Preserve existing bookings
-		CreatedAt:         existingTimeslot.CreatedAt,  // Preserve creation time
-		UpdatedAt:         domain.UTCTimestamp(time.Now().UTC()),
+		ID:                    input.TimeslotID,
+		TherapistID:           input.TherapistID,
+		DayOfWeek:             input.DayOfWeek,
+		Start:                 input.Start,
+		Duration:              input.Duration,
+		AdvanceNotice:         input.AdvanceNotice,
+		AfterSessionBreakTime: input.AfterSessionBreakTime,
+		IsActive:              input.IsActive,
+		BookingIDs:            existingTimeslot.BookingIDs, // Preserve existing bookings
+		CreatedAt:             existingTimeslot.CreatedAt,  // Preserve creation time
+		UpdatedAt:             domain.UTCTimestamp(time.Now().UTC()),
 	}
 
 	// Save to repository
@@ -125,7 +125,10 @@ func (u *Usecase) validateInput(input Input) error {
 	}
 
 	// Validate buffer times
-	if err := timeslot_usecase.ValidateBufferTimes(input.PreSessionBuffer, input.PostSessionBuffer); err != nil {
+	if err := timeslot_usecase.ValidateBufferTimes(
+		input.AdvanceNotice,
+		input.AfterSessionBreakTime,
+	); err != nil {
 		return err
 	}
 
@@ -141,13 +144,13 @@ func (u *Usecase) checkForOverlaps(input Input) error {
 
 	// Create a temporary timeslot for the update
 	newSlot := timeslot.TimeSlot{
-		ID:                input.TimeslotID,
-		TherapistID:       input.TherapistID,
-		DayOfWeek:         input.DayOfWeek,
-		Start:             input.Start,
-		Duration:          input.Duration,
-		PreSessionBuffer:  input.PreSessionBuffer,
-		PostSessionBuffer: input.PostSessionBuffer,
+		ID:                    input.TimeslotID,
+		TherapistID:           input.TherapistID,
+		DayOfWeek:             input.DayOfWeek,
+		Start:                 input.Start,
+		Duration:              input.Duration,
+		AdvanceNotice:         input.AdvanceNotice,
+		AfterSessionBreakTime: input.AfterSessionBreakTime,
 	}
 
 	// Check for conflicts and insufficient gaps

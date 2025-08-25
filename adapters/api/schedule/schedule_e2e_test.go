@@ -268,7 +268,7 @@ func TestScheduleE2E(t *testing.T) {
 				i+1,
 				avail.From.Format(domain.Time24hLayout),
 				avail.To.Format(domain.Time24hLayout),
-				avail.DurationMinutes,
+				avail.Duration,
 				len(avail.Therapists))
 		}
 	})
@@ -433,169 +433,169 @@ func insertScheduleTestData(t *testing.T, database ports.SQLDatabase) *ScheduleT
 		// Monday - Complex 3-therapist overlap scenario
 		// Alice: 9:00-11:00, Bob: 9:15-10:45, Carol: 9:15-10:00
 		{
-			ID:                domain.NewTimeSlotID(),
-			TherapistID:       therapists[0].ID, // Alice
-			DayOfWeek:         timeslot.DayOfWeekMonday,
-			Start:             domain.NewTime24h("09:00"),
-			Duration:          120, // 2 hours (9:00-11:00)
-			PreSessionBuffer:  5,
-			PostSessionBuffer: 5,
-			CreatedAt:         now,
-			UpdatedAt:         now,
+			ID:                    domain.NewTimeSlotID(),
+			TherapistID:           therapists[0].ID, // Alice
+			DayOfWeek:             timeslot.DayOfWeekMonday,
+			Start:                 domain.NewTime24h("09:00"),
+			Duration:              120, // 2 hours (9:00-11:00)
+			AdvanceNotice:         5,
+			AfterSessionBreakTime: 5,
+			CreatedAt:             now,
+			UpdatedAt:             now,
 		},
 		{
-			ID:                domain.NewTimeSlotID(),
-			TherapistID:       therapists[1].ID, // Bob
-			DayOfWeek:         timeslot.DayOfWeekMonday,
-			Start:             domain.NewTime24h("09:15"),
-			Duration:          90, // 1.5 hours (9:15-10:45)
-			PreSessionBuffer:  0,
-			PostSessionBuffer: 0,
-			CreatedAt:         now,
-			UpdatedAt:         now,
+			ID:                    domain.NewTimeSlotID(),
+			TherapistID:           therapists[1].ID, // Bob
+			DayOfWeek:             timeslot.DayOfWeekMonday,
+			Start:                 domain.NewTime24h("09:15"),
+			Duration:              90, // 1.5 hours (9:15-10:45)
+			AdvanceNotice:         0,
+			AfterSessionBreakTime: 0,
+			CreatedAt:             now,
+			UpdatedAt:             now,
 		},
 		{
-			ID:                domain.NewTimeSlotID(),
-			TherapistID:       therapists[2].ID, // Carol
-			DayOfWeek:         timeslot.DayOfWeekMonday,
-			Start:             domain.NewTime24h("09:15"),
-			Duration:          45, // 45 minutes (9:15-10:00)
-			PreSessionBuffer:  0,
-			PostSessionBuffer: 0,
-			CreatedAt:         now,
-			UpdatedAt:         now,
+			ID:                    domain.NewTimeSlotID(),
+			TherapistID:           therapists[2].ID, // Carol
+			DayOfWeek:             timeslot.DayOfWeekMonday,
+			Start:                 domain.NewTime24h("09:15"),
+			Duration:              45, // 45 minutes (9:15-10:00)
+			AdvanceNotice:         0,
+			AfterSessionBreakTime: 0,
+			CreatedAt:             now,
+			UpdatedAt:             now,
 		},
 
 		// Tuesday - Non-standard time overlaps
 		// Alice: 14:30-16:00, Bob: 15:00-17:00
 		{
-			ID:                domain.NewTimeSlotID(),
-			TherapistID:       therapists[0].ID, // Alice
-			DayOfWeek:         timeslot.DayOfWeekTuesday,
-			Start:             domain.NewTime24h("14:30"),
-			Duration:          90, // 1.5 hours (14:30-16:00)
-			PreSessionBuffer:  0,
-			PostSessionBuffer: 0,
-			CreatedAt:         now,
-			UpdatedAt:         now,
+			ID:                    domain.NewTimeSlotID(),
+			TherapistID:           therapists[0].ID, // Alice
+			DayOfWeek:             timeslot.DayOfWeekTuesday,
+			Start:                 domain.NewTime24h("14:30"),
+			Duration:              90, // 1.5 hours (14:30-16:00)
+			AdvanceNotice:         0,
+			AfterSessionBreakTime: 0,
+			CreatedAt:             now,
+			UpdatedAt:             now,
 		},
 		{
-			ID:                domain.NewTimeSlotID(),
-			TherapistID:       therapists[1].ID, // Bob
-			DayOfWeek:         timeslot.DayOfWeekTuesday,
-			Start:             domain.NewTime24h("15:00"),
-			Duration:          120, // 2 hours (15:00-17:00)
-			PreSessionBuffer:  0,
-			PostSessionBuffer: 0,
-			CreatedAt:         now,
-			UpdatedAt:         now,
+			ID:                    domain.NewTimeSlotID(),
+			TherapistID:           therapists[1].ID, // Bob
+			DayOfWeek:             timeslot.DayOfWeekTuesday,
+			Start:                 domain.NewTime24h("15:00"),
+			Duration:              120, // 2 hours (15:00-17:00)
+			AdvanceNotice:         0,
+			AfterSessionBreakTime: 0,
+			CreatedAt:             now,
+			UpdatedAt:             now,
 		},
 
 		// Wednesday - Transition point testing
 		// Bob: 10:00-12:00, David: 11:00-14:00, Carol: 13:00-15:00
 		{
-			ID:                domain.NewTimeSlotID(),
-			TherapistID:       therapists[1].ID, // Bob
-			DayOfWeek:         timeslot.DayOfWeekWednesday,
-			Start:             domain.NewTime24h("10:00"),
-			Duration:          120, // 2 hours (10:00-12:00)
-			PreSessionBuffer:  0,
-			PostSessionBuffer: 0,
-			CreatedAt:         now,
-			UpdatedAt:         now,
+			ID:                    domain.NewTimeSlotID(),
+			TherapistID:           therapists[1].ID, // Bob
+			DayOfWeek:             timeslot.DayOfWeekWednesday,
+			Start:                 domain.NewTime24h("10:00"),
+			Duration:              120, // 2 hours (10:00-12:00)
+			AdvanceNotice:         0,
+			AfterSessionBreakTime: 0,
+			CreatedAt:             now,
+			UpdatedAt:             now,
 		},
 		{
-			ID:                domain.NewTimeSlotID(),
-			TherapistID:       therapists[3].ID, // David
-			DayOfWeek:         timeslot.DayOfWeekWednesday,
-			Start:             domain.NewTime24h("11:00"),
-			Duration:          180, // 3 hours (11:00-14:00)
-			PreSessionBuffer:  0,
-			PostSessionBuffer: 0,
-			CreatedAt:         now,
-			UpdatedAt:         now,
+			ID:                    domain.NewTimeSlotID(),
+			TherapistID:           therapists[3].ID, // David
+			DayOfWeek:             timeslot.DayOfWeekWednesday,
+			Start:                 domain.NewTime24h("11:00"),
+			Duration:              180, // 3 hours (11:00-14:00)
+			AdvanceNotice:         0,
+			AfterSessionBreakTime: 0,
+			CreatedAt:             now,
+			UpdatedAt:             now,
 		},
 		{
-			ID:                domain.NewTimeSlotID(),
-			TherapistID:       therapists[2].ID, // Carol
-			DayOfWeek:         timeslot.DayOfWeekWednesday,
-			Start:             domain.NewTime24h("13:00"),
-			Duration:          120, // 2 hours (13:00-15:00)
-			PreSessionBuffer:  0,
-			PostSessionBuffer: 0,
-			CreatedAt:         now,
-			UpdatedAt:         now,
+			ID:                    domain.NewTimeSlotID(),
+			TherapistID:           therapists[2].ID, // Carol
+			DayOfWeek:             timeslot.DayOfWeekWednesday,
+			Start:                 domain.NewTime24h("13:00"),
+			Duration:              120, // 2 hours (13:00-15:00)
+			AdvanceNotice:         0,
+			AfterSessionBreakTime: 0,
+			CreatedAt:             now,
+			UpdatedAt:             now,
 		},
 
 		// Thursday - Full day with multiple therapists
 		// Alice: 9:00-12:00, Bob: 10:00-16:00, Carol: 14:00-18:00
 		{
-			ID:                domain.NewTimeSlotID(),
-			TherapistID:       therapists[0].ID, // Alice
-			DayOfWeek:         timeslot.DayOfWeekThursday,
-			Start:             domain.NewTime24h("09:00"),
-			Duration:          180, // 3 hours (9:00-12:00)
-			PreSessionBuffer:  0,
-			PostSessionBuffer: 0,
-			CreatedAt:         now,
-			UpdatedAt:         now,
+			ID:                    domain.NewTimeSlotID(),
+			TherapistID:           therapists[0].ID, // Alice
+			DayOfWeek:             timeslot.DayOfWeekThursday,
+			Start:                 domain.NewTime24h("09:00"),
+			Duration:              180, // 3 hours (9:00-12:00)
+			AdvanceNotice:         0,
+			AfterSessionBreakTime: 0,
+			CreatedAt:             now,
+			UpdatedAt:             now,
 		},
 		{
-			ID:                domain.NewTimeSlotID(),
-			TherapistID:       therapists[1].ID, // Bob
-			DayOfWeek:         timeslot.DayOfWeekThursday,
-			Start:             domain.NewTime24h("10:00"),
-			Duration:          360, // 6 hours (10:00-16:00)
-			PreSessionBuffer:  0,
-			PostSessionBuffer: 0,
-			CreatedAt:         now,
-			UpdatedAt:         now,
+			ID:                    domain.NewTimeSlotID(),
+			TherapistID:           therapists[1].ID, // Bob
+			DayOfWeek:             timeslot.DayOfWeekThursday,
+			Start:                 domain.NewTime24h("10:00"),
+			Duration:              360, // 6 hours (10:00-16:00)
+			AdvanceNotice:         0,
+			AfterSessionBreakTime: 0,
+			CreatedAt:             now,
+			UpdatedAt:             now,
 		},
 		{
-			ID:                domain.NewTimeSlotID(),
-			TherapistID:       therapists[2].ID, // Carol
-			DayOfWeek:         timeslot.DayOfWeekThursday,
-			Start:             domain.NewTime24h("14:00"),
-			Duration:          240, // 4 hours (14:00-18:00)
-			PreSessionBuffer:  0,
-			PostSessionBuffer: 0,
-			CreatedAt:         now,
-			UpdatedAt:         now,
+			ID:                    domain.NewTimeSlotID(),
+			TherapistID:           therapists[2].ID, // Carol
+			DayOfWeek:             timeslot.DayOfWeekThursday,
+			Start:                 domain.NewTime24h("14:00"),
+			Duration:              240, // 4 hours (14:00-18:00)
+			AdvanceNotice:         0,
+			AfterSessionBreakTime: 0,
+			CreatedAt:             now,
+			UpdatedAt:             now,
 		},
 
 		// Friday - Booking interference testing
 		// Alice: 9:00-17:00, Bob: 9:00-17:00 (will have bookings to create holes)
 		{
-			ID:                domain.NewTimeSlotID(),
-			TherapistID:       therapists[0].ID, // Alice
-			DayOfWeek:         timeslot.DayOfWeekFriday,
-			Start:             domain.NewTime24h("09:00"),
-			Duration:          480, // 8 hours (9:00-17:00)
-			PreSessionBuffer:  15,  // With buffers to test complex availability
-			PostSessionBuffer: 15,
-			CreatedAt:         now,
-			UpdatedAt:         now,
+			ID:                    domain.NewTimeSlotID(),
+			TherapistID:           therapists[0].ID, // Alice
+			DayOfWeek:             timeslot.DayOfWeekFriday,
+			Start:                 domain.NewTime24h("09:00"),
+			Duration:              480, // 8 hours (9:00-17:00)
+			AdvanceNotice:         15,  // With buffers to test complex availability
+			AfterSessionBreakTime: 15,
+			CreatedAt:             now,
+			UpdatedAt:             now,
 		},
 		{
-			ID:                domain.NewTimeSlotID(),
-			TherapistID:       therapists[1].ID, // Bob
-			DayOfWeek:         timeslot.DayOfWeekFriday,
-			Start:             domain.NewTime24h("09:00"),
-			Duration:          480, // 8 hours (9:00-17:00)
-			PreSessionBuffer:  15,
-			PostSessionBuffer: 15,
-			CreatedAt:         now,
-			UpdatedAt:         now,
+			ID:                    domain.NewTimeSlotID(),
+			TherapistID:           therapists[1].ID, // Bob
+			DayOfWeek:             timeslot.DayOfWeekFriday,
+			Start:                 domain.NewTime24h("09:00"),
+			Duration:              480, // 8 hours (9:00-17:00)
+			AdvanceNotice:         15,
+			AfterSessionBreakTime: 15,
+			CreatedAt:             now,
+			UpdatedAt:             now,
 		},
 	}
 
 	// Insert time slots using new duration-based schema
 	for _, slot := range timeSlots {
 		_, err = database.Exec(`
-			INSERT INTO time_slots (id, therapist_id, day_of_week, start_time, duration_minutes, pre_session_buffer, post_session_buffer, created_at, updated_at)
+			INSERT INTO time_slots (id, therapist_id, day_of_week, start_time, duration_minutes, advance_notice, after_session_break_time, created_at, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`, slot.ID, slot.TherapistID, slot.DayOfWeek, slot.Start, slot.Duration,
-			slot.PreSessionBuffer, slot.PostSessionBuffer, slot.CreatedAt, slot.UpdatedAt)
+			slot.AdvanceNotice, slot.AfterSessionBreakTime, slot.CreatedAt, slot.UpdatedAt)
 		if err != nil {
 			t.Fatalf("Failed to insert time slot: %v", err)
 		}

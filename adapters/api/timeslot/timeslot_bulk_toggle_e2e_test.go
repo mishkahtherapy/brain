@@ -255,13 +255,13 @@ func createMultipleTimeslots(t *testing.T, mux *http.ServeMux, therapistID domai
 
 	for i := 0; i < count; i++ {
 		timeslotData := map[string]interface{}{
-			"therapistId":       string(therapistID),
-			"dayOfWeek":         days[i%len(days)],
-			"startTime":         fmt.Sprintf("%02d:00", 9+i*2), // Use different times: 09:00, 11:00, 13:00
-			"durationMinutes":   60,
-			"timezoneOffset":    0, // UTC
-			"preSessionBuffer":  15,
-			"postSessionBuffer": 30, // Fix: Must be at least 30 minutes
+			"therapistId":           string(therapistID),
+			"dayOfWeek":             days[i%len(days)],
+			"startTime":             fmt.Sprintf("%02d:00", 9+i*2), // Use different times: 09:00, 11:00, 13:00
+			"durationMinutes":       60,
+			"timezoneOffset":        0, // UTC
+			"advanceNotice":         15,
+			"afterSessionBreakTime": 30, // Fix: Must be at least 30 minutes
 		}
 		timeslotBody, _ := json.Marshal(timeslotData)
 

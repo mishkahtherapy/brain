@@ -7,7 +7,7 @@ import (
 )
 
 type SessionRepository interface {
-	CreateSession(session *domain.Session) error
+	CreateSession(tx SQLTx, session *domain.Session) error
 	GetSessionByID(id domain.SessionID) (*domain.Session, error)
 	UpdateSessionState(id domain.SessionID, state domain.SessionState) error
 	UpdateSessionNotes(id domain.SessionID, notes string) error

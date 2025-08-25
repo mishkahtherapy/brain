@@ -58,12 +58,12 @@ func TestTimeslotE2E(t *testing.T) {
 	t.Run("Complete timeslot workflow", func(t *testing.T) {
 		// Step 1: Create a timeslot
 		timeslotData := map[string]interface{}{
-			"therapistId":       string(testTherapistID),
-			"dayOfWeek":         "Monday",
-			"startTime":         "14:00",
-			"durationMinutes":   180,
-			"preSessionBuffer":  15,
-			"postSessionBuffer": 30,
+			"therapistId":           string(testTherapistID),
+			"dayOfWeek":             "Monday",
+			"startTime":             "14:00",
+			"durationMinutes":       180,
+			"advanceNotice":         15,
+			"afterSessionBreakTime": 30,
 		}
 		timeslotBody, _ := json.Marshal(timeslotData)
 
@@ -90,11 +90,11 @@ func TestTimeslotE2E(t *testing.T) {
 		if createdTimeslot.Duration != 180 {
 			t.Errorf("Expected duration %d, got %d", 180, createdTimeslot.Duration)
 		}
-		if createdTimeslot.PreSessionBuffer != 15 {
-			t.Errorf("Expected pre-session buffer %d, got %d", 15, createdTimeslot.PreSessionBuffer)
+		if createdTimeslot.AdvanceNotice != 15 {
+			t.Errorf("Expected pre-session buffer %d, got %d", 15, createdTimeslot.AdvanceNotice)
 		}
-		if createdTimeslot.PostSessionBuffer != 30 {
-			t.Errorf("Expected post-session buffer %d, got %d", 30, createdTimeslot.PostSessionBuffer)
+		if createdTimeslot.AfterSessionBreakTime != 30 {
+			t.Errorf("Expected post-session buffer %d, got %d", 30, createdTimeslot.AfterSessionBreakTime)
 		}
 		if createdTimeslot.ID == "" {
 			t.Error("Expected ID to be set")
@@ -132,13 +132,13 @@ func TestTimeslotE2E(t *testing.T) {
 
 		// Step 5: Update the timeslot
 		updateData := map[string]interface{}{
-			"dayOfWeek":         "Wednesday",
-			"startTime":         "15:00",
-			"durationMinutes":   180,
-			"timezoneOffset":    testTimezoneOffset,
-			"preSessionBuffer":  10,
-			"postSessionBuffer": 30,
-			"isActive":          true,
+			"dayOfWeek":             "Wednesday",
+			"startTime":             "15:00",
+			"durationMinutes":       180,
+			"timezoneOffset":        testTimezoneOffset,
+			"advanceNotice":         10,
+			"afterSessionBreakTime": 30,
+			"isActive":              true,
 		}
 		updateBody, _ := json.Marshal(updateData)
 
@@ -169,8 +169,8 @@ func TestTimeslotE2E(t *testing.T) {
 		if updatedTimeslot.Duration != 180 {
 			t.Errorf("Expected updated duration %d, got %d", 180, updatedTimeslot.Duration)
 		}
-		if updatedTimeslot.PostSessionBuffer != 30 {
-			t.Errorf("Expected updated post-session buffer %d, got %d", 30, updatedTimeslot.PostSessionBuffer)
+		if updatedTimeslot.AfterSessionBreakTime != 30 {
+			t.Errorf("Expected updated post-session buffer %d, got %d", 30, updatedTimeslot.AfterSessionBreakTime)
 		}
 		if !updatedTimeslot.IsActive {
 			t.Error("Expected timeslot to be active after update")
@@ -226,13 +226,13 @@ func TestTimeslotE2E(t *testing.T) {
 	t.Run("Business rule validation", func(t *testing.T) {
 		// Test 30-minute minimum post-session buffer rule
 		invalidBufferData := map[string]interface{}{
-			"therapistId":       string(testTherapistID),
-			"dayOfWeek":         "Friday",
-			"startTime":         "09:00",
-			"durationMinutes":   480, // 8 hours
-			"timezoneOffset":    testTimezoneOffset,
-			"preSessionBuffer":  15,
-			"postSessionBuffer": 20, // Invalid: less than 30 minutes
+			"therapistId":           string(testTherapistID),
+			"dayOfWeek":             "Friday",
+			"startTime":             "09:00",
+			"durationMinutes":       480, // 8 hours
+			"timezoneOffset":        testTimezoneOffset,
+			"advanceNotice":         15,
+			"afterSessionBreakTime": 20, // Invalid: less than 30 minutes
 		}
 		invalidBufferBody, _ := json.Marshal(invalidBufferData)
 
@@ -248,13 +248,13 @@ func TestTimeslotE2E(t *testing.T) {
 
 		// Test negative pre-session buffer
 		negativeBufferData := map[string]interface{}{
-			"therapistId":       string(testTherapistID),
-			"dayOfWeek":         "Friday",
-			"startTime":         "09:00",
-			"durationMinutes":   480,
-			"timezoneOffset":    testTimezoneOffset,
-			"preSessionBuffer":  -5, // Invalid: negative
-			"postSessionBuffer": 30,
+			"therapistId":           string(testTherapistID),
+			"dayOfWeek":             "Friday",
+			"startTime":             "09:00",
+			"durationMinutes":       480,
+			"timezoneOffset":        testTimezoneOffset,
+			"advanceNotice":         -5, // Invalid: negative
+			"afterSessionBreakTime": 30,
 		}
 		negativeBufferBody, _ := json.Marshal(negativeBufferData)
 
@@ -271,13 +271,13 @@ func TestTimeslotE2E(t *testing.T) {
 		// Test overlapping timeslots
 		// First create a valid timeslot
 		firstTimeslotData := map[string]interface{}{
-			"therapistId":       string(testTherapistID),
-			"dayOfWeek":         "Saturday",
-			"startTime":         "10:00",
-			"durationMinutes":   240, // 4 hours (10:00-14:00)
-			"timezoneOffset":    testTimezoneOffset,
-			"preSessionBuffer":  0,
-			"postSessionBuffer": 30,
+			"therapistId":           string(testTherapistID),
+			"dayOfWeek":             "Saturday",
+			"startTime":             "10:00",
+			"durationMinutes":       240, // 4 hours (10:00-14:00)
+			"timezoneOffset":        testTimezoneOffset,
+			"advanceNotice":         0,
+			"afterSessionBreakTime": 30,
 		}
 		firstTimeslotBody, _ := json.Marshal(firstTimeslotData)
 
@@ -293,13 +293,13 @@ func TestTimeslotE2E(t *testing.T) {
 
 		// Now try to create an overlapping timeslot
 		overlappingData := map[string]interface{}{
-			"therapistId":       string(testTherapistID),
-			"dayOfWeek":         "Saturday",
-			"startTime":         "12:00", // Overlaps with existing Saturday 10:00-14:00
-			"durationMinutes":   240,     // 4 hours (12:00-16:00)
-			"timezoneOffset":    testTimezoneOffset,
-			"preSessionBuffer":  0,
-			"postSessionBuffer": 30,
+			"therapistId":           string(testTherapistID),
+			"dayOfWeek":             "Saturday",
+			"startTime":             "12:00", // Overlaps with existing Saturday 10:00-14:00
+			"durationMinutes":       240,     // 4 hours (12:00-16:00)
+			"timezoneOffset":        testTimezoneOffset,
+			"advanceNotice":         0,
+			"afterSessionBreakTime": 30,
 		}
 		overlappingBody, _ := json.Marshal(overlappingData)
 
@@ -317,13 +317,13 @@ func TestTimeslotE2E(t *testing.T) {
 	t.Run("Duration validation", func(t *testing.T) {
 		// Test zero duration
 		zeroDurationData := map[string]interface{}{
-			"therapistId":       string(testTherapistID),
-			"dayOfWeek":         "Sunday",
-			"startTime":         "09:00",
-			"durationMinutes":   0, // Invalid: zero duration
-			"timezoneOffset":    testTimezoneOffset,
-			"preSessionBuffer":  0,
-			"postSessionBuffer": 30,
+			"therapistId":           string(testTherapistID),
+			"dayOfWeek":             "Sunday",
+			"startTime":             "09:00",
+			"durationMinutes":       0, // Invalid: zero duration
+			"timezoneOffset":        testTimezoneOffset,
+			"advanceNotice":         0,
+			"afterSessionBreakTime": 30,
 		}
 		zeroDurationBody, _ := json.Marshal(zeroDurationData)
 
@@ -339,13 +339,13 @@ func TestTimeslotE2E(t *testing.T) {
 
 		// Test negative duration
 		negativeDurationData := map[string]interface{}{
-			"therapistId":       string(testTherapistID),
-			"dayOfWeek":         "Sunday",
-			"startTime":         "09:00",
-			"durationMinutes":   -60, // Invalid: negative duration
-			"timezoneOffset":    testTimezoneOffset,
-			"preSessionBuffer":  0,
-			"postSessionBuffer": 30,
+			"therapistId":           string(testTherapistID),
+			"dayOfWeek":             "Sunday",
+			"startTime":             "09:00",
+			"durationMinutes":       -60, // Invalid: negative duration
+			"timezoneOffset":        testTimezoneOffset,
+			"advanceNotice":         0,
+			"afterSessionBreakTime": 30,
 		}
 		negativeDurationBody, _ := json.Marshal(negativeDurationData)
 
@@ -361,13 +361,13 @@ func TestTimeslotE2E(t *testing.T) {
 
 		// Test duration over 24 hours
 		overDayDurationData := map[string]interface{}{
-			"therapistId":       string(testTherapistID),
-			"dayOfWeek":         "Sunday",
-			"startTime":         "09:00",
-			"durationMinutes":   1500, // Invalid: over 24 hours (1440 minutes)
-			"timezoneOffset":    testTimezoneOffset,
-			"preSessionBuffer":  0,
-			"postSessionBuffer": 30,
+			"therapistId":           string(testTherapistID),
+			"dayOfWeek":             "Sunday",
+			"startTime":             "09:00",
+			"durationMinutes":       1500, // Invalid: over 24 hours (1440 minutes)
+			"timezoneOffset":        testTimezoneOffset,
+			"advanceNotice":         0,
+			"afterSessionBreakTime": 30,
 		}
 		overDayDurationBody, _ := json.Marshal(overDayDurationData)
 
@@ -387,13 +387,13 @@ func TestTimeslotE2E(t *testing.T) {
 		nonExistentTherapistID := "therapist_00000000-0000-0000-0000-000000000000"
 
 		timeslotData := map[string]interface{}{
-			"therapistId":       nonExistentTherapistID,
-			"dayOfWeek":         "Monday",
-			"startTime":         "09:00",
-			"durationMinutes":   480,
-			"timezoneOffset":    testTimezoneOffset,
-			"preSessionBuffer":  0,
-			"postSessionBuffer": 30,
+			"therapistId":           nonExistentTherapistID,
+			"dayOfWeek":             "Monday",
+			"startTime":             "09:00",
+			"durationMinutes":       480,
+			"timezoneOffset":        testTimezoneOffset,
+			"advanceNotice":         0,
+			"afterSessionBreakTime": 30,
 		}
 		timeslotBody, _ := json.Marshal(timeslotData)
 
@@ -435,13 +435,13 @@ func TestTimeslotE2E(t *testing.T) {
 
 		// Test invalid day of week
 		invalidDayData := map[string]interface{}{
-			"therapistId":       string(testTherapistID),
-			"dayOfWeek":         "InvalidDay",
-			"startTime":         "09:00",
-			"durationMinutes":   480,
-			"timezoneOffset":    testTimezoneOffset,
-			"preSessionBuffer":  0,
-			"postSessionBuffer": 30,
+			"therapistId":           string(testTherapistID),
+			"dayOfWeek":             "InvalidDay",
+			"startTime":             "09:00",
+			"durationMinutes":       480,
+			"timezoneOffset":        testTimezoneOffset,
+			"advanceNotice":         0,
+			"afterSessionBreakTime": 30,
 		}
 		invalidDayBody, _ := json.Marshal(invalidDayData)
 
@@ -468,13 +468,13 @@ func TestTimeslotE2E(t *testing.T) {
 	t.Run("IsActive field toggle", func(t *testing.T) {
 		// Create a timeslot (should be active by default)
 		timeslotData := map[string]interface{}{
-			"therapistId":       string(testTherapistID),
-			"dayOfWeek":         "Friday",
-			"startTime":         "14:00",
-			"durationMinutes":   60,
-			"timezoneOffset":    testTimezoneOffset,
-			"preSessionBuffer":  0,
-			"postSessionBuffer": 30,
+			"therapistId":           string(testTherapistID),
+			"dayOfWeek":             "Friday",
+			"startTime":             "14:00",
+			"durationMinutes":       60,
+			"timezoneOffset":        testTimezoneOffset,
+			"advanceNotice":         0,
+			"afterSessionBreakTime": 30,
 		}
 		timeslotBody, _ := json.Marshal(timeslotData)
 
@@ -495,13 +495,13 @@ func TestTimeslotE2E(t *testing.T) {
 
 		// Update to inactive
 		updateToInactive := map[string]interface{}{
-			"dayOfWeek":         "Friday",
-			"startTime":         "14:00",
-			"durationMinutes":   60,
-			"timezoneOffset":    testTimezoneOffset,
-			"preSessionBuffer":  0,
-			"postSessionBuffer": 30,
-			"isActive":          false,
+			"dayOfWeek":             "Friday",
+			"startTime":             "14:00",
+			"durationMinutes":       60,
+			"timezoneOffset":        testTimezoneOffset,
+			"advanceNotice":         0,
+			"afterSessionBreakTime": 30,
+			"isActive":              false,
 		}
 		updateBody, _ := json.Marshal(updateToInactive)
 
@@ -522,13 +522,13 @@ func TestTimeslotE2E(t *testing.T) {
 
 		// Update back to active
 		updateToActive := map[string]interface{}{
-			"dayOfWeek":         "Friday",
-			"startTime":         "14:00",
-			"durationMinutes":   60,
-			"timezoneOffset":    testTimezoneOffset,
-			"preSessionBuffer":  0,
-			"postSessionBuffer": 30,
-			"isActive":          true,
+			"dayOfWeek":             "Friday",
+			"startTime":             "14:00",
+			"durationMinutes":       60,
+			"timezoneOffset":        testTimezoneOffset,
+			"advanceNotice":         0,
+			"afterSessionBreakTime": 30,
+			"isActive":              true,
 		}
 		updateActiveBody, _ := json.Marshal(updateToActive)
 

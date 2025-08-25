@@ -7,7 +7,6 @@ import (
 
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/usecases/common"
-	"github.com/mishkahtherapy/brain/core/usecases/session/create_session"
 	"github.com/mishkahtherapy/brain/core/usecases/session/get_session"
 	"github.com/mishkahtherapy/brain/core/usecases/session/list_sessions_admin"
 	"github.com/mishkahtherapy/brain/core/usecases/session/list_sessions_by_client"
@@ -20,7 +19,7 @@ import (
 const defaultSessionDuration = 60
 
 type SessionHandler struct {
-	createSessionUsecase           create_session.Usecase
+	// createSessionUsecase           create_session.Usecase
 	getSessionUsecase              get_session.Usecase
 	updateSessionStateUsecase      update_session_state.Usecase
 	updateSessionNotesUsecase      update_session_notes.Usecase
@@ -32,7 +31,7 @@ type SessionHandler struct {
 
 // NewSessionHandler creates a new instance of the SessionHandler
 func NewSessionHandler(
-	createUsecase create_session.Usecase,
+	// createUsecase create_session.Usecase,
 	getUsecase get_session.Usecase,
 	updateStateUsecase update_session_state.Usecase,
 	updateNotesUsecase update_session_notes.Usecase,
@@ -42,7 +41,7 @@ func NewSessionHandler(
 	listAdminUsecase list_sessions_admin.Usecase,
 ) *SessionHandler {
 	return &SessionHandler{
-		createSessionUsecase:           createUsecase,
+		// createSessionUsecase:           createUsecase,
 		getSessionUsecase:              getUsecase,
 		updateSessionStateUsecase:      updateStateUsecase,
 		updateSessionNotesUsecase:      updateNotesUsecase,
@@ -55,7 +54,7 @@ func NewSessionHandler(
 
 // SetUsecases sets the usecases for the handler (used for testing)
 func (h *SessionHandler) SetUsecases(
-	createUsecase create_session.Usecase,
+	// createUsecase create_session.Usecase,
 	getUsecase get_session.Usecase,
 	updateStateUsecase update_session_state.Usecase,
 	updateNotesUsecase update_session_notes.Usecase,
@@ -64,7 +63,7 @@ func (h *SessionHandler) SetUsecases(
 	listByClientUsecase list_sessions_by_client.Usecase,
 	listAdminUsecase list_sessions_admin.Usecase,
 ) {
-	h.createSessionUsecase = createUsecase
+	// h.createSessionUsecase = createUsecase
 	h.getSessionUsecase = getUsecase
 	h.updateSessionStateUsecase = updateStateUsecase
 	h.updateSessionNotesUsecase = updateNotesUsecase
@@ -76,7 +75,6 @@ func (h *SessionHandler) SetUsecases(
 
 // RegisterRoutes registers all the routes handled by the SessionHandler
 func (h *SessionHandler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("POST /api/v1/sessions", h.handleCreateSession)
 	mux.HandleFunc("GET /api/v1/sessions/{id}", h.handleGetSession)
 	mux.HandleFunc("PUT /api/v1/sessions/{id}/state", h.handleUpdateSessionState)
 	mux.HandleFunc("PUT /api/v1/sessions/{id}/notes", h.handleUpdateSessionNotes)
@@ -84,46 +82,6 @@ func (h *SessionHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/v1/therapists/{id}/sessions", h.handleListSessionsByTherapist)
 	mux.HandleFunc("GET /api/v1/clients/{id}/sessions", h.handleListSessionsByClient)
 	mux.HandleFunc("GET /api/v1/admin/sessions", h.handleListSessionsAdmin)
-}
-
-// handleCreateSession handles POST /api/v1/sessions
-func (h *SessionHandler) handleCreateSession(w http.ResponseWriter, r *http.Request) {
-	rw := NewResponseWriter(w)
-
-	var input create_session.Input
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		rw.WriteBadRequest(err.Error())
-		return
-	}
-
-	input.Duration = defaultSessionDuration
-
-	session, err := h.createSessionUsecase.Execute(input)
-	if err != nil {
-		// Handle specific business logic errors
-		switch err {
-		case common.ErrBookingIDIsRequired,
-			common.ErrTherapistIDIsRequired,
-			common.ErrClientIDIsRequired,
-			common.ErrTimeSlotIDIsRequired,
-			common.ErrStartTimeIsRequired,
-			common.ErrPaidAmountIsRequired,
-			common.ErrLanguageIsRequired:
-			rw.WriteBadRequest(err.Error())
-		case common.ErrBookingNotFound,
-			common.ErrTherapistNotFound,
-			common.ErrClientNotFound,
-			common.ErrTimeSlotNotFound:
-			rw.WriteNotFound(err.Error())
-		default:
-			rw.WriteError(err, http.StatusInternalServerError)
-		}
-		return
-	}
-
-	if err := rw.WriteJSON(session, http.StatusCreated); err != nil {
-		rw.WriteError(err, http.StatusInternalServerError)
-	}
 }
 
 // handleGetSession handles GET /api/v1/sessions/{id}

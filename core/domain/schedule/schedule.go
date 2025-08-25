@@ -15,8 +15,8 @@ type TherapistInfo struct {
 
 // I'm returning available "Time Ranges" not a ready made schedule to cater for timezone conversions on the frotnend.
 type AvailableTimeRange struct {
-	From            domain.UTCTimestamp `json:"from"`            // Start of available range
-	To              domain.UTCTimestamp `json:"to"`              // End of available range
-	DurationMinutes int                 `json:"durationMinutes"` // Duration in minutes
-	Therapists      []TherapistInfo     `json:"therapists"`      // List of therapists available in this time range
+	From       domain.UTCTimestamp    `json:"from"`       // Start of available range
+	To         domain.UTCTimestamp    `json:"to"`         // End of available range
+	Duration   domain.DurationMinutes `json:"duration"`   // Duration in minutes
+	Therapists []TherapistInfo        `json:"therapists"` // List of therapists available in this time range
 }

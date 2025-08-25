@@ -22,8 +22,10 @@ import (
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/get_all_therapists"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/get_therapist"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/new_therapist"
+	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_device"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_info"
 	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_therapist_specializations"
+	"github.com/mishkahtherapy/brain/core/usecases/therapist/update_timezone_offset"
 
 	_ "github.com/glebarez/go-sqlite"
 )
@@ -36,7 +38,6 @@ func TestTherapistE2E(t *testing.T) {
 	// Setup repositories
 	specializationRepo := specialization_db.NewSpecializationRepository(db)
 	therapistRepo := therapist_db.NewTherapistRepository(db)
-
 	// Setup specialization usecases (needed for therapist specialization management)
 	newSpecializationUsecase := new_specialization.NewUsecase(specializationRepo)
 	getAllSpecializationsUsecase := get_all_specializations.NewUsecase(specializationRepo)
@@ -48,10 +49,12 @@ func TestTherapistE2E(t *testing.T) {
 	getTherapistUsecase := get_therapist.NewUsecase(therapistRepo)
 	updateTherapistInfoUsecase := update_therapist_info.NewUsecase(therapistRepo)
 	updateTherapistSpecializationsUsecase := update_therapist_specializations.NewUsecase(therapistRepo, specializationRepo)
-
+	// TODO: add mock firebase_notifier
+	updateTherapistDeviceUsecase := update_therapist_device.NewUsecase(therapistRepo, notificationRepo)
+	updateTherapistTimezoneOffsetUsecase := update_timezone_offset.NewUsecase(therapistRepo)
 	// Setup handlers
 	specializationHandler := specialization_handler.NewSpecializationHandler(*newSpecializationUsecase, *getAllSpecializationsUsecase, *getSpecializationUsecase)
-	therapistHandler := NewTherapistHandler(*newTherapistUsecase, *getAllTherapistsUsecase, *getTherapistUsecase, *updateTherapistInfoUsecase, *updateTherapistSpecializationsUsecase)
+	therapistHandler := NewTherapistHandler(*newTherapistUsecase, *getAllTherapistsUsecase, *getTherapistUsecase, *updateTherapistInfoUsecase, *updateTherapistSpecializationsUsecase, *updateTherapistDeviceUsecase, *updateTherapistTimezoneOffsetUsecase)
 
 	// Setup router
 	mux := http.NewServeMux()

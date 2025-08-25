@@ -40,7 +40,7 @@ func NewSessionRepository(db ports.SQLDatabase) ports.SessionRepository {
 }
 
 // CreateSession creates a new session in the database
-func (r *SessionRepository) CreateSession(session *domain.Session) error {
+func (r *SessionRepository) CreateSession(tx ports.SQLTx, session *domain.Session) error {
 	// Validate required fields
 	if session.ID == "" {
 		return ErrSessionIDIsRequired
@@ -83,11 +83,11 @@ func (r *SessionRepository) CreateSession(session *domain.Session) error {
 		INSERT INTO sessions (
 			id, booking_id, therapist_id, client_id, timeslot_id, 
 			start_time, paid_amount, duration_minutes, language, state, notes, 
-			meeting_url, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			meeting_url, client_timezone_offset, created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 
-	_, err := r.db.Exec(
+	_, err := tx.Exec(
 		query,
 		session.ID,
 		session.BookingID,
@@ -101,6 +101,7 @@ func (r *SessionRepository) CreateSession(session *domain.Session) error {
 		session.State,
 		session.Notes,
 		session.MeetingURL,
+		session.ClientTimezoneOffset,
 		session.CreatedAt,
 		session.UpdatedAt,
 	)
@@ -122,7 +123,7 @@ func (r *SessionRepository) GetSessionByID(id domain.SessionID) (*domain.Session
 	query := `
 		SELECT id, booking_id, therapist_id, client_id, timeslot_id, 
 		       start_time, paid_amount, duration_minutes, language, state, notes, 
-		       meeting_url, created_at, updated_at
+		       meeting_url, client_timezone_offset, created_at, updated_at
 		FROM sessions
 		WHERE id = ?
 	`
@@ -142,6 +143,7 @@ func (r *SessionRepository) GetSessionByID(id domain.SessionID) (*domain.Session
 		&session.State,
 		&session.Notes,
 		&session.MeetingURL,
+		&session.ClientTimezoneOffset,
 		&session.CreatedAt,
 		&session.UpdatedAt,
 	)
@@ -301,7 +303,7 @@ func (r *SessionRepository) ListSessionsByTherapist(therapistID domain.Therapist
 	query := `
 		SELECT id, booking_id, therapist_id, client_id, timeslot_id, 
 		       start_time, paid_amount, duration_minutes, language, state, notes, 
-		       meeting_url, created_at, updated_at
+		       meeting_url, client_timezone_offset, created_at, updated_at
 		FROM sessions
 		WHERE therapist_id = ?
 		ORDER BY start_time ASC
@@ -326,7 +328,7 @@ func (r *SessionRepository) ListSessionsByClient(clientID domain.ClientID) ([]*d
 	query := `
 		SELECT id, booking_id, therapist_id, client_id, timeslot_id, 
 		       start_time, paid_amount, duration_minutes, language, state, notes, 
-		       meeting_url, created_at, updated_at
+		       meeting_url, client_timezone_offset, created_at, updated_at
 		FROM sessions
 		WHERE client_id = ?
 		ORDER BY start_time ASC
@@ -352,7 +354,7 @@ func (r *SessionRepository) ListSessionsAdmin(startDate, endDate time.Time) ([]*
 	query := `
 		SELECT id, booking_id, therapist_id, client_id, timeslot_id, 
 		       start_time, paid_amount, duration_minutes, language, state, notes, 
-		       meeting_url, created_at, updated_at
+		       meeting_url, client_timezone_offset, created_at, updated_at
 		FROM sessions
 		WHERE start_time >= ? AND start_time <= ?
 		ORDER BY start_time ASC
@@ -386,6 +388,7 @@ func (r *SessionRepository) scanSessions(rows *sql.Rows) ([]*domain.Session, err
 			&session.State,
 			&session.Notes,
 			&session.MeetingURL,
+			&session.ClientTimezoneOffset,
 			&session.CreatedAt,
 			&session.UpdatedAt,
 		)

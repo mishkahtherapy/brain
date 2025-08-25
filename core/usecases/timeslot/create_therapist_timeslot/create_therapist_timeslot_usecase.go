@@ -10,13 +10,13 @@ import (
 )
 
 type Input struct {
-	TherapistID       domain.TherapistID     `json:"therapistId"`
-	LocalDayOfWeek    string                 `json:"dayOfWeek"`         // Local day "Monday"
-	LocalStartTime    domain.Time24h         `json:"startTime"`         // Local time "01:30"
-	IsActive          bool                   `json:"isActive"`          // Is active
-	DurationMinutes   domain.DurationMinutes `json:"durationMinutes"`   // Duration in minutes
-	PostSessionBuffer domain.DurationMinutes `json:"postSessionBuffer"` // minutes
-	PreSessionBuffer  domain.DurationMinutes `json:"preSessionBuffer"`  // minutes
+	TherapistID           domain.TherapistID                  `json:"therapistId"`
+	LocalDayOfWeek        string                              `json:"dayOfWeek"`             // Local day "Monday"
+	LocalStartTime        domain.Time24h                      `json:"startTime"`             // Local time "01:30"
+	IsActive              bool                                `json:"isActive"`              // Is active
+	DurationMinutes       domain.DurationMinutes              `json:"durationMinutes"`       // Duration in minutes
+	AfterSessionBreakTime domain.AfterSessionBreakTimeMinutes `json:"afterSessionBreakTime"` // minutes
+	AdvanceNotice         domain.AdvanceNoticeMinutes         `json:"advanceNotice"`         // minutes
 }
 
 type Usecase struct {
@@ -44,13 +44,13 @@ func (u *Usecase) Execute(input Input) (*timeslot.TimeSlot, error) {
 
 	// Create timeslot for storage (no UTC conversion)
 	newTimeslot := &timeslot.TimeSlot{
-		TherapistID:       input.TherapistID,
-		DayOfWeek:         timeslot.DayOfWeek(input.LocalDayOfWeek),
-		Start:             input.LocalStartTime,
-		Duration:          input.DurationMinutes,
-		PreSessionBuffer:  domain.DurationMinutes(input.PreSessionBuffer),
-		PostSessionBuffer: domain.DurationMinutes(input.PostSessionBuffer),
-		IsActive:          input.IsActive,
+		TherapistID:           input.TherapistID,
+		DayOfWeek:             timeslot.DayOfWeek(input.LocalDayOfWeek),
+		Start:                 input.LocalStartTime,
+		Duration:              input.DurationMinutes,
+		AdvanceNotice:         input.AdvanceNotice,
+		AfterSessionBreakTime: input.AfterSessionBreakTime,
+		IsActive:              input.IsActive,
 	}
 
 	// Check for overlapping timeslots
@@ -110,7 +110,10 @@ func (u *Usecase) validateInput(input Input) error {
 	}
 
 	// Validate buffer times
-	if err := timeslot_usecase.ValidateBufferTimes(input.PreSessionBuffer, input.PostSessionBuffer); err != nil {
+	if err := timeslot_usecase.ValidateBufferTimes(
+		input.AdvanceNotice,
+		input.AfterSessionBreakTime,
+	); err != nil {
 		return err
 	}
 

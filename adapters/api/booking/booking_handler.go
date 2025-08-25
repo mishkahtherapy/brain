@@ -252,7 +252,8 @@ func (h *BookingHandler) handleConfirmBooking(w http.ResponseWriter, r *http.Req
 		switch err {
 		case common.ErrBookingIDIsRequired,
 			common.ErrPaidAmountIsRequired,
-			common.ErrLanguageIsRequired:
+			common.ErrLanguageIsRequired,
+			common.ErrTimeSlotAlreadyBooked:
 			rw.WriteBadRequest(err.Error())
 		case common.ErrBookingNotFound:
 			rw.WriteNotFound(err.Error())

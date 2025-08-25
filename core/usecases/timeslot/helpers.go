@@ -72,12 +72,15 @@ func ValidateTimeRange(startTime, endTime domain.Time24h) error {
 }
 
 // Helper function to validate buffer times
-func ValidateBufferTimes(preSessionBuffer, postSessionBuffer domain.DurationMinutes) error {
-	if preSessionBuffer < 0 {
+func ValidateBufferTimes(
+	advanceNotice domain.AdvanceNoticeMinutes,
+	afterSessionBreakTime domain.AfterSessionBreakTimeMinutes,
+) error {
+	if advanceNotice < 0 {
 		return timeslot.ErrPreSessionBufferNegative
 	}
 
-	if postSessionBuffer < MIN_POST_SESSION_BUFFER_MINUTES {
+	if afterSessionBreakTime < MIN_POST_SESSION_BUFFER_MINUTES {
 		return timeslot.ErrPostSessionBufferTooLow
 	}
 

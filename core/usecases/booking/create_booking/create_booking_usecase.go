@@ -7,9 +7,9 @@ import (
 
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/domain/booking"
-	"github.com/mishkahtherapy/brain/core/domain/timeslot"
 	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/common"
+	"github.com/mishkahtherapy/brain/core/usecases/schedule/get_schedule"
 )
 
 var (
@@ -18,19 +18,20 @@ var (
 )
 
 type Input struct {
-	TherapistID domain.TherapistID     `json:"therapistId"`
-	ClientID    domain.ClientID        `json:"clientId"`
-	TimeSlotID  domain.TimeSlotID      `json:"timeSlotId"`
-	StartTime   domain.UTCTimestamp    `json:"startTime"`
-	Duration    domain.DurationMinutes `json:"duration"`
-	// TimezoneOffset domain.TimezoneOffset `json:"timezoneOffset"`
+	TherapistID          domain.TherapistID     `json:"therapistId"`
+	ClientID             domain.ClientID        `json:"clientId"`
+	TimeSlotID           domain.TimeSlotID      `json:"timeSlotId"`
+	StartTime            domain.UTCTimestamp    `json:"startTime"`
+	Duration             domain.DurationMinutes `json:"duration"`
+	ClientTimezoneOffset domain.TimezoneOffset  `json:"clientTimezoneOffset"`
 }
 
 type Usecase struct {
-	bookingRepo   ports.BookingRepository
-	therapistRepo ports.TherapistRepository
-	clientRepo    ports.ClientRepository
-	timeSlotRepo  ports.TimeSlotRepository
+	bookingRepo        ports.BookingRepository
+	therapistRepo      ports.TherapistRepository
+	clientRepo         ports.ClientRepository
+	timeSlotRepo       ports.TimeSlotRepository
+	getScheduleUsecase get_schedule.Usecase
 }
 
 func NewUsecase(
@@ -38,12 +39,14 @@ func NewUsecase(
 	therapistRepo ports.TherapistRepository,
 	clientRepo ports.ClientRepository,
 	timeSlotRepo ports.TimeSlotRepository,
+	getScheduleUsecase get_schedule.Usecase,
 ) *Usecase {
 	return &Usecase{
-		bookingRepo:   bookingRepo,
-		therapistRepo: therapistRepo,
-		clientRepo:    clientRepo,
-		timeSlotRepo:  timeSlotRepo,
+		bookingRepo:        bookingRepo,
+		therapistRepo:      therapistRepo,
+		clientRepo:         clientRepo,
+		timeSlotRepo:       timeSlotRepo,
+		getScheduleUsecase: getScheduleUsecase,
 	}
 }
 
@@ -53,88 +56,68 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 		return nil, err
 	}
 
-	// Check if therapist exists
-	therapist, err := u.therapistRepo.GetByID(input.TherapistID)
-	if err != nil || therapist == nil {
-		return nil, common.ErrTherapistNotFound
-	}
-
 	// Check if client exists
 	client, err := u.clientRepo.FindByIDs([]domain.ClientID{input.ClientID})
 	if err != nil || client == nil {
 		return nil, common.ErrClientNotFound
 	}
 
-	// Check if timeslot exists
-	timeSlot, err := u.timeSlotRepo.GetByID(input.TimeSlotID)
-	if err != nil || timeSlot == nil {
-		return nil, common.ErrTimeSlotNotFound
-	}
+	startTime := time.Time(input.StartTime)
+	endTime := startTime.Add(time.Duration(input.Duration) * time.Minute)
+	availabilities, err := u.getScheduleUsecase.Execute(get_schedule.Input{
+		TherapistIDs: []domain.TherapistID{input.TherapistID},
+		StartDate:    startTime,
+		EndDate:      endTime,
+	})
 
-	// Fetch all timeslots for the therapist once to avoid repeated DB hits in the overlap check loop.
-	therapistTimeSlots, err := u.timeSlotRepo.ListByTherapist(input.TherapistID)
 	if err != nil {
-		return nil, common.ErrFailedToCreateBooking
+		return nil, err
 	}
 
-	// Build a quick lookup map: timeSlotID ➜ TimeSlot
-	therapistTimeSlotMap := make(map[domain.TimeSlotID]*timeslot.TimeSlot, len(therapistTimeSlots))
-	for _, ts := range therapistTimeSlots {
-		therapistTimeSlotMap[ts.ID] = ts
+	if len(availabilities) == 0 {
+		return nil, common.ErrTimeSlotAlreadyBooked
 	}
 
-	// Gather existing bookings for therapist
-	therapistBookings, err := u.bookingRepo.ListByTherapist(input.TherapistID)
-	if err != nil {
-		return nil, common.ErrFailedToCreateBooking
+	if len(availabilities) > 1 {
+		slog.Error(
+			"multiple availabilities found for the same time slot",
+			"timeSlotId", input.TimeSlotID,
+			"availabilities", availabilities,
+			"startTime", input.StartTime,
+			"endTime", endTime,
+		)
+		return nil, common.ErrTimeSlotAlreadyBooked
 	}
 
-	// Compute the occupied interval for the *new* booking. Note that the new booking's
-	// own post-session buffer does NOT affect conflict detection – only the existing
-	// booking's buffer matters as per business rules.
-	newBookingStart := time.Time(input.StartTime)
-	newBookingEnd := newBookingStart.Add(time.Duration(timeSlot.Duration) * time.Minute)
-
-	for _, existingBooking := range therapistBookings {
-		if existingBooking.State != booking.BookingStateConfirmed {
-			continue
-		}
-
-		existingTimeSlot, ok := therapistTimeSlotMap[existingBooking.TimeSlotID]
-		if !ok {
-			slog.Error("timeslot not found", "existing_booking_id", existingBooking.ID, "existing_booking_time_slot_id", existingBooking.TimeSlotID)
-			// Timeslot not found; conservative conflict
-			return nil, common.ErrTimeSlotAlreadyBooked
-		}
-
-		// Occupied interval of the *existing* booking, extended forward by its
-		// post-session buffer.
-		existingStartTime := time.Time(existingBooking.StartTime)
-		existingEndTime := existingStartTime.Add(time.Duration(existingTimeSlot.Duration) * time.Minute)
-		existingEndWithBuffer := existingEndTime.Add(time.Duration(existingTimeSlot.PostSessionBuffer) * time.Minute)
-
-		// Ranges overlap if:
-		//   newStart < existingEndWithBuffer  &&  newEnd > existingStart
-		// This captures full and partial overlaps, including intrusion into the
-		// existing booking's post-session buffer.
-		if newBookingStart.Before(existingEndWithBuffer) && newBookingEnd.After(existingStartTime) {
-			return nil, common.ErrTimeSlotAlreadyBooked
-		}
+	availability := availabilities[0]
+	// Make sure the booked timeslot is within the availability
+	availabilityStartTime := time.Time(availability.From)
+	availabilityEndTime := availabilityStartTime.Add(time.Duration(availability.Duration) * time.Minute)
+	if input.StartTime.Time().Before(availabilityStartTime) || input.StartTime.Time().Add(time.Duration(input.Duration)*time.Minute).After(availabilityEndTime) {
+		slog.Error(
+			"booked timeslot is not within the availability",
+			"timeSlotId", input.TimeSlotID,
+			"availabilityStartTime", availabilityStartTime,
+			"availabilityEndTime", availabilityEndTime,
+			"startTime", input.StartTime,
+			"endTime", endTime,
+		)
+		return nil, common.ErrTimeSlotAlreadyBooked
 	}
 
 	// Create booking with Pending state and timezone (no conversion, just store as hint)
 	now := domain.NewUTCTimestamp()
 	createdBooking := &booking.Booking{
-		ID:          domain.NewBookingID(),
-		TherapistID: input.TherapistID,
-		ClientID:    input.ClientID,
-		TimeSlotID:  input.TimeSlotID,
-		StartTime:   input.StartTime, // Always in UTC
-		Duration:    input.Duration,
-		// TimezoneOffset: input.TimezoneOffset, // Store as frontend hint, no conversion
-		State:     booking.BookingStatePending,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:                   domain.NewBookingID(),
+		TherapistID:          input.TherapistID,
+		ClientID:             input.ClientID,
+		TimeSlotID:           input.TimeSlotID,
+		StartTime:            input.StartTime, // Always in UTC
+		Duration:             input.Duration,
+		ClientTimezoneOffset: input.ClientTimezoneOffset,
+		State:                booking.BookingStatePending,
+		CreatedAt:            now,
+		UpdatedAt:            now,
 	}
 
 	err = u.bookingRepo.Create(createdBooking)

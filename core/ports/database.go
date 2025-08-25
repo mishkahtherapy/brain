@@ -2,6 +2,12 @@ package ports
 
 import "database/sql"
 
+type SQLExec interface {
+	Query(query string, args ...any) (*sql.Rows, error)
+	QueryRow(query string, args ...any) *sql.Row
+	Exec(query string, args ...any) (sql.Result, error)
+}
+
 type SQLTx interface {
 	Query(query string, args ...any) (*sql.Rows, error)
 	QueryRow(query string, args ...any) *sql.Row
@@ -22,6 +28,6 @@ type SQLDatabase interface {
 // TODO: Apply transactions to repos
 type TransactionPort interface {
 	Begin() (SQLTx, error)
-	Commit() error
-	Rollback() error
+	Commit(tx SQLTx) error
+	Rollback(tx SQLTx) error
 }

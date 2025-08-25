@@ -33,28 +33,17 @@ func MapToDayOfWeek(dayOfWeek time.Weekday) DayOfWeek {
 }
 
 type TimeSlot struct {
-	ID          domain.TimeSlotID      `json:"id"`
-	TherapistID domain.TherapistID     `json:"therapistId"`
-	IsActive    bool                   `json:"isActive"`
-	DayOfWeek   DayOfWeek              `json:"dayOfWeek"` // UTC day
-	Start       domain.Time24h         `json:"start"`     // UTC time e.g. "22:30"
-	Duration    domain.DurationMinutes `json:"duration"`  // Duration in minutes e.g. 60
-	// TODO: rename to AdvanceNotice
-	PreSessionBuffer domain.DurationMinutes `json:"preSessionBuffer"` // minutes (advance notice), used only when preparing schedule.
-	// TODO: rename to AfterSessionBreakTime
-	PostSessionBuffer domain.DurationMinutes `json:"postSessionBuffer"` // minutes (break after session).
-	BookingIDs        []domain.BookingID     `json:"bookingIds"`
-	CreatedAt         domain.UTCTimestamp    `json:"createdAt"`
-	UpdatedAt         domain.UTCTimestamp    `json:"updatedAt"`
-}
-
-// Helper method to convert buffer to minutes for calculations
-func (ts *TimeSlot) PreSessionBufferInMinutes() domain.DurationMinutes {
-	return ts.PreSessionBuffer
-}
-
-func (ts *TimeSlot) PostSessionBufferInMinutes() domain.DurationMinutes {
-	return ts.PostSessionBuffer
+	ID                    domain.TimeSlotID                   `json:"id"`
+	TherapistID           domain.TherapistID                  `json:"therapistId"`
+	IsActive              bool                                `json:"isActive"`
+	DayOfWeek             DayOfWeek                           `json:"dayOfWeek"`             // UTC day
+	Start                 domain.Time24h                      `json:"start"`                 // UTC time e.g. "22:30"
+	Duration              domain.DurationMinutes              `json:"duration"`              // Duration in minutes e.g. 60
+	AdvanceNotice         domain.AdvanceNoticeMinutes         `json:"advanceNotice"`         // minutes (advance notice), used only when preparing schedule.
+	AfterSessionBreakTime domain.AfterSessionBreakTimeMinutes `json:"afterSessionBreakTime"` // minutes (break after session).
+	BookingIDs            []domain.BookingID                  `json:"bookingIds"`
+	CreatedAt             domain.UTCTimestamp                 `json:"createdAt"`
+	UpdatedAt             domain.UTCTimestamp                 `json:"updatedAt"`
 }
 
 func (ts *TimeSlot) ApplyToDate(date time.Time) (domain.UTCTimestamp, domain.UTCTimestamp) {

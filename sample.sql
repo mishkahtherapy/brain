@@ -70,8 +70,8 @@ INSERT INTO
         day_of_week,
         start_time,
         duration_minutes,
-        pre_session_buffer,
-        post_session_buffer
+        advance_notice,
+        after_session_break_time
     )
 VALUES (
         'slot_001',

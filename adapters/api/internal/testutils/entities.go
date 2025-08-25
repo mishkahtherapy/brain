@@ -84,7 +84,7 @@ func CreateTestTimeSlot(t *testing.T, database ports.SQLDatabase, therapistID do
 	timeSlotID := domain.NewTimeSlotID()
 
 	_, err := database.Exec(`
-		INSERT INTO time_slots (id, therapist_id, day_of_week, start_time, duration_minutes, pre_session_buffer, post_session_buffer, is_active, created_at, updated_at)
+		INSERT INTO time_slots (id, therapist_id, day_of_week, start_time, duration_minutes, advance_notice, after_session_break_time, is_active, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, timeSlotID, therapistID, "Monday", "10:00", 60, 0, 0, true, now, now)
 
@@ -101,7 +101,7 @@ func CreateTestTimeSlotCustom(t *testing.T, database ports.SQLDatabase, therapis
 	timeSlotID := domain.NewTimeSlotID()
 
 	_, err := database.Exec(`
-		INSERT INTO time_slots (id, therapist_id, day_of_week, start_time, duration_minutes, pre_session_buffer, post_session_buffer, is_active, created_at, updated_at)
+		INSERT INTO time_slots (id, therapist_id, day_of_week, start_time, duration_minutes, advance_notice, after_session_break_time, is_active, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, timeSlotID, therapistID, dayOfWeek, startTime, durationMinutes, 0, 0, isActive, now, now)
 

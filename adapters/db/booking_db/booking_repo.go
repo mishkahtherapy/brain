@@ -22,7 +22,7 @@ func NewBookingRepository(db ports.SQLDatabase) ports.BookingRepository {
 
 func (r *BookingRepository) GetByID(id domain.BookingID) (*booking.Booking, error) {
 	query := `
-		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at
+		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, client_timezone_offset, state, created_at, updated_at
 		FROM bookings
 		WHERE id = ?
 	`
@@ -35,6 +35,7 @@ func (r *BookingRepository) GetByID(id domain.BookingID) (*booking.Booking, erro
 		&booking.ClientID,
 		&booking.StartTime,
 		&booking.Duration,
+		&booking.ClientTimezoneOffset,
 		&booking.State,
 		&booking.CreatedAt,
 		&booking.UpdatedAt,
@@ -88,8 +89,8 @@ func (r *BookingRepository) Create(booking *booking.Booking) error {
 
 	query := `
 		INSERT INTO bookings (
-			id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+			id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, client_timezone_offset, state, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	_, err := r.db.Exec(
 		query,
@@ -99,6 +100,7 @@ func (r *BookingRepository) Create(booking *booking.Booking) error {
 		booking.ClientID,
 		booking.StartTime,
 		booking.Duration,
+		booking.ClientTimezoneOffset,
 		booking.State,
 		booking.CreatedAt,
 		booking.UpdatedAt,
@@ -110,7 +112,7 @@ func (r *BookingRepository) Create(booking *booking.Booking) error {
 	return nil
 }
 
-func (r *BookingRepository) Update(booking *booking.Booking) error {
+func (r *BookingRepository) UpdateTx(sqlExec ports.SQLExec, booking *booking.Booking) error {
 	if booking.ID == "" {
 		return ports.ErrBookingIDIsRequired
 	}
@@ -141,16 +143,17 @@ func (r *BookingRepository) Update(booking *booking.Booking) error {
 
 	query := `
 		UPDATE bookings 
-		SET timeslot_id = ?, therapist_id = ?, client_id = ?, start_time = ?, duration_minutes = ?, state = ?, updated_at = ?
+			SET timeslot_id = ?, therapist_id = ?, client_id = ?, start_time = ?, duration_minutes = ?, client_timezone_offset = ?, state = ?, updated_at = ?
 		WHERE id = ?
 	`
-	result, err := r.db.Exec(
+	result, err := sqlExec.Exec(
 		query,
 		booking.TimeSlotID,
 		booking.TherapistID,
 		booking.ClientID,
 		booking.StartTime,
 		booking.Duration,
+		booking.ClientTimezoneOffset,
 		booking.State,
 		booking.UpdatedAt,
 		booking.ID,
@@ -171,6 +174,10 @@ func (r *BookingRepository) Update(booking *booking.Booking) error {
 	}
 
 	return nil
+}
+
+func (r *BookingRepository) Update(booking *booking.Booking) error {
+	return r.UpdateTx(r.db, booking)
 }
 
 func (r *BookingRepository) Delete(id domain.BookingID) error {
@@ -204,7 +211,7 @@ func (r *BookingRepository) ListByTherapist(therapistID domain.TherapistID) ([]*
 	}
 
 	query := `
-		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at
+		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, client_timezone_offset, state, created_at, updated_at
 		FROM bookings
 		WHERE therapist_id = ?
 		ORDER BY start_time ASC
@@ -225,7 +232,7 @@ func (r *BookingRepository) ListByClient(clientID domain.ClientID) ([]*booking.B
 	}
 
 	query := `
-		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at
+		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, client_timezone_offset, state, created_at, updated_at
 		FROM bookings
 		WHERE client_id = ?
 		ORDER BY start_time ASC
@@ -246,7 +253,7 @@ func (r *BookingRepository) ListByState(state booking.BookingState) ([]*booking.
 	}
 
 	query := `
-		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at
+		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, client_timezone_offset, state, created_at, updated_at
 		FROM bookings
 		WHERE state = ?
 		ORDER BY start_time ASC
@@ -271,7 +278,7 @@ func (r *BookingRepository) ListByTherapistAndState(therapistID domain.Therapist
 	}
 
 	query := `
-		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at
+		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, client_timezone_offset, state, created_at, updated_at
 		FROM bookings
 		WHERE therapist_id = ? AND state = ?
 		ORDER BY start_time ASC
@@ -296,7 +303,7 @@ func (r *BookingRepository) ListByClientAndState(clientID domain.ClientID, state
 	}
 
 	query := `
-		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at
+		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, client_timezone_offset, state, created_at, updated_at
 		FROM bookings
 		WHERE client_id = ? AND state = ?
 		ORDER BY start_time ASC
@@ -323,6 +330,7 @@ func (r *BookingRepository) scanBookings(rows *sql.Rows) ([]*booking.Booking, er
 			&booking.ClientID,
 			&booking.StartTime,
 			&booking.Duration,
+			&booking.ClientTimezoneOffset,
 			&booking.State,
 			&booking.CreatedAt,
 			&booking.UpdatedAt,
@@ -338,7 +346,7 @@ func (r *BookingRepository) scanBookings(rows *sql.Rows) ([]*booking.Booking, er
 
 func (r *BookingRepository) BulkListByTherapistForDateRange(
 	therapistIDs []domain.TherapistID,
-	state booking.BookingState,
+	states []booking.BookingState,
 	startDate time.Time,
 	endDate time.Time,
 ) (map[domain.TherapistID][]*booking.Booking, error) {
@@ -346,23 +354,14 @@ func (r *BookingRepository) BulkListByTherapistForDateRange(
 		return nil, ports.ErrBookingTherapistIDIsRequired
 	}
 
-	// Start and end dates are days, not times.
-	if startDate.Hour() != 0 || startDate.Minute() != 0 || startDate.Second() != 0 {
-		return nil, ports.ErrInvalidDateRange
-	}
-
-	if endDate.Hour() != 0 || endDate.Minute() != 0 || endDate.Second() != 0 {
-		return nil, ports.ErrInvalidDateRange
-	}
-
 	// Calculate endTimeForBookingStartedBeforeRange (startDate - 1 hour)
 	// FIXME: I don't capture bookings that start before the range but extend into it
 	// Example: a booking at 11.30PM that ends at 12.30AM next day is not captured.
 
 	query := `
-	       SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at
+	       SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, client_timezone_offset, state, created_at, updated_at
 	       FROM bookings
-	       WHERE state = ?
+	       WHERE state IN (%s)
 	       AND (
 		       -- Bookings that start within the range
 		       (start_time >= ? AND start_time <= ?)
@@ -378,23 +377,33 @@ func (r *BookingRepository) BulkListByTherapistForDateRange(
 	       ORDER BY start_time ASC
 	   `
 
-	placeholders := make([]string, len(therapistIDs))
+	statePlaceholders := make([]string, 0)
+	stateValues := make([]interface{}, 0)
+	for _, state := range states {
+		statePlaceholders = append(statePlaceholders, "?")
+		stateValues = append(stateValues, state)
+	}
+	statePlaceholdersStr := strings.Join(statePlaceholders, ",")
 
-	therapistIds := make([]interface{}, len(therapistIDs))
-	for i, id := range therapistIDs {
-		placeholders[i] = "?"
-		therapistIds[i] = id
+	therapistIDPlaceholders := make([]string, 0)
+	therapistIds := make([]interface{}, 0)
+	for _, id := range therapistIDs {
+		therapistIDPlaceholders = append(therapistIDPlaceholders, "?")
+		therapistIds = append(therapistIds, id)
 	}
-	placeholdersStr := strings.Join(placeholders, ",")
-	query = fmt.Sprintf(query, placeholdersStr)
-	values := []interface{}{
-		state,
-		startDate,
-		endDate,
-		startDate,
-		endDate,
-	}
+	therapistIDPlaceholdersStr := strings.Join(therapistIDPlaceholders, ",")
+
+	query = fmt.Sprintf(query, statePlaceholdersStr, therapistIDPlaceholdersStr)
+
+	values := []interface{}{}
+
+	values = append(values, stateValues...)
+	values = append(values, startDate)
+	values = append(values, endDate)
+	values = append(values, startDate)
+	values = append(values, endDate)
 	values = append(values, therapistIds...)
+
 	rows, err := r.db.Query(query, values...)
 
 	if err != nil {
@@ -418,6 +427,7 @@ func (r *BookingRepository) BulkListByTherapistForDateRange(
 			&booking.ClientID,
 			&booking.StartTime,
 			&booking.Duration,
+			&booking.ClientTimezoneOffset,
 			&booking.State,
 			&booking.CreatedAt,
 			&booking.UpdatedAt,
@@ -437,7 +447,7 @@ func (r *BookingRepository) BulkListByTherapistForDateRange(
 // further filtered by the given booking state.
 func (r *BookingRepository) Search(startDate, endDate time.Time, states []booking.BookingState) ([]*booking.Booking, error) {
 	query := `
-		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, state, created_at, updated_at
+		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, client_timezone_offset, state, created_at, updated_at
 		FROM bookings
 		WHERE 1=1
 	`
@@ -478,4 +488,29 @@ func (r *BookingRepository) Search(startDate, endDate time.Time, states []bookin
 	defer rows.Close()
 
 	return r.scanBookings(rows)
+}
+
+func (r *BookingRepository) BulkCancel(tx ports.SQLTx, bookingIDs []domain.BookingID) error {
+	query := `
+		UPDATE bookings
+		SET state = ?
+		WHERE id IN (%s)
+	`
+	values := make([]any, 0)
+	values = append(values, booking.BookingStateCancelled)
+
+	placeholders := make([]string, len(bookingIDs))
+	for i := range bookingIDs {
+		placeholders[i] = "?"
+		values = append(values, bookingIDs[i])
+	}
+	placeholdersStr := strings.Join(placeholders, ",")
+	query = fmt.Sprintf(query, placeholdersStr)
+
+	_, err := tx.Exec(query, values...)
+	if err != nil {
+		slog.Error("error bulk cancelling bookings", "error", err)
+		return ports.ErrFailedToUpdateBooking
+	}
+	return nil
 }

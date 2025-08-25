@@ -38,7 +38,7 @@ func NewTimeSlotRepository(db ports.SQLDatabase) ports.TimeSlotRepository {
 func (r *TimeSlotRepository) GetByID(id domain.TimeSlotID) (*timeslot.TimeSlot, error) {
 	query := `
 		SELECT id, therapist_id, is_active, day_of_week, start_time, duration_minutes,
-		       pre_session_buffer, post_session_buffer, created_at, updated_at
+		       advance_notice, after_session_break_time, created_at, updated_at
 		FROM time_slots
 		WHERE id = ?
 	`
@@ -51,8 +51,8 @@ func (r *TimeSlotRepository) GetByID(id domain.TimeSlotID) (*timeslot.TimeSlot, 
 		&timeslot.DayOfWeek,
 		&timeslot.Start,
 		&timeslot.Duration,
-		&timeslot.PreSessionBuffer,
-		&timeslot.PostSessionBuffer,
+		&timeslot.AdvanceNotice,
+		&timeslot.AfterSessionBreakTime,
 		&timeslot.CreatedAt,
 		&timeslot.UpdatedAt,
 	)
@@ -121,7 +121,7 @@ func (r *TimeSlotRepository) Create(timeslot *timeslot.TimeSlot) error {
 	query := `
 		INSERT INTO time_slots (
 			id, therapist_id, is_active, day_of_week, start_time, duration_minutes,
-			pre_session_buffer, post_session_buffer, created_at, updated_at
+			advance_notice, after_session_break_time, created_at, updated_at
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`
 	_, err := r.db.Exec(
@@ -132,8 +132,8 @@ func (r *TimeSlotRepository) Create(timeslot *timeslot.TimeSlot) error {
 		timeslot.DayOfWeek,
 		timeslot.Start,
 		timeslot.Duration,
-		timeslot.PreSessionBuffer,
-		timeslot.PostSessionBuffer,
+		timeslot.AdvanceNotice,
+		timeslot.AfterSessionBreakTime,
 		timeslot.CreatedAt,
 		timeslot.UpdatedAt,
 	)
@@ -173,7 +173,7 @@ func (r *TimeSlotRepository) Update(timeslot *timeslot.TimeSlot) error {
 	query := `
 		UPDATE time_slots
 		SET therapist_id = ?, is_active = ?, day_of_week = ?, start_time = ?, duration_minutes = ?,
-		    pre_session_buffer = ?, post_session_buffer = ?, updated_at = ?
+		    advance_notice = ?, after_session_break_time = ?, updated_at = ?
 		WHERE id = ?
 	`
 	result, err := r.db.Exec(
@@ -183,8 +183,8 @@ func (r *TimeSlotRepository) Update(timeslot *timeslot.TimeSlot) error {
 		timeslot.DayOfWeek,
 		timeslot.Start,
 		timeslot.Duration,
-		timeslot.PreSessionBuffer,
-		timeslot.PostSessionBuffer,
+		timeslot.AdvanceNotice,
+		timeslot.AfterSessionBreakTime,
 		timeslot.UpdatedAt,
 		timeslot.ID,
 	)
@@ -251,7 +251,7 @@ func (r *TimeSlotRepository) BulkListByTherapist(therapistIDs []domain.Therapist
 
 	query := `
 		SELECT id, therapist_id, is_active, day_of_week, start_time, duration_minutes,
-		       pre_session_buffer, post_session_buffer, created_at, updated_at
+		       advance_notice, after_session_break_time, created_at, updated_at
 		FROM time_slots
 		WHERE therapist_id IN (%s)
 		ORDER BY day_of_week, start_time
@@ -298,8 +298,8 @@ func (r *TimeSlotRepository) scanTimeslot(rows *sql.Rows) (*timeslot.TimeSlot, e
 		&timeslot.DayOfWeek,
 		&timeslot.Start,
 		&timeslot.Duration,
-		&timeslot.PreSessionBuffer,
-		&timeslot.PostSessionBuffer,
+		&timeslot.AdvanceNotice,
+		&timeslot.AfterSessionBreakTime,
 		&timeslot.CreatedAt,
 		&timeslot.UpdatedAt,
 	)

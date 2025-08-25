@@ -118,7 +118,7 @@ func (d *DatabaseTestUtils) CreateTestTimeSlot(t *testing.T, therapistID domain.
 	now := time.Now().UTC()
 
 	_, err := d.db.Exec(`
-		INSERT INTO time_slots (id, therapist_id, day_of_week, start_time, duration_minutes, pre_session_buffer, post_session_buffer, created_at, updated_at)
+		INSERT INTO time_slots (id, therapist_id, day_of_week, start_time, duration_minutes, advance_notice, after_session_break_time, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`, timeSlotID, therapistID, dayOfWeek, startTime, durationMinutes, 0, 0, now, now)
 

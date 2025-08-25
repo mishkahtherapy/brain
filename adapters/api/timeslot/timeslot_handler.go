@@ -19,17 +19,17 @@ import (
 
 // Response structure for API clients (in local timezone)
 type TimeslotResponse struct {
-	ID                string `json:"id"`
-	TherapistID       string `json:"therapistId"`
-	IsActive          bool   `json:"isActive"`
-	DayOfWeek         string `json:"dayOfWeek"`         // Local day
-	StartTime         string `json:"startTime"`         // Local time
-	EndTime           string `json:"endTime"`           // Calculated local end time
-	DurationMinutes   int    `json:"durationMinutes"`   // Duration in minutes
-	PreSessionBuffer  int    `json:"preSessionBuffer"`  // minutes
-	PostSessionBuffer int    `json:"postSessionBuffer"` // minutes
-	CreatedAt         string `json:"createdAt"`
-	UpdatedAt         string `json:"updatedAt"`
+	ID                    string `json:"id"`
+	TherapistID           string `json:"therapistId"`
+	IsActive              bool   `json:"isActive"`
+	DayOfWeek             string `json:"dayOfWeek"`             // Local day
+	StartTime             string `json:"startTime"`             // Local time
+	EndTime               string `json:"endTime"`               // Calculated local end time
+	DurationMinutes       int    `json:"durationMinutes"`       // Duration in minutes
+	AdvanceNotice         int    `json:"advanceNotice"`         // minutes
+	AfterSessionBreakTime int    `json:"afterSessionBreakTime"` // minutes
+	CreatedAt             string `json:"createdAt"`
+	UpdatedAt             string `json:"updatedAt"`
 }
 type TimeslotHandler struct {
 	bulkToggleUsecase     bulk_toggle_therapist_timeslots.Usecase
@@ -134,8 +134,8 @@ func (h *TimeslotHandler) handleCreateTimeslot(w http.ResponseWriter, r *http.Re
 		Duration  domain.DurationMinutes `json:"duration"`  // Duration in minutes
 		IsActive  bool                   `json:"isActive"`  // Is active
 		// TimezoneOffset    domain.TimezoneOffset  `json:"timezoneOffset"`    // Minutes from UTC
-		PreSessionBuffer  domain.DurationMinutes `json:"preSessionBuffer"`  // minutes
-		PostSessionBuffer domain.DurationMinutes `json:"postSessionBuffer"` // minutes
+		AdvanceNotice         domain.AdvanceNoticeMinutes         `json:"advanceNotice"`         // minutes
+		AfterSessionBreakTime domain.AfterSessionBreakTimeMinutes `json:"afterSessionBreakTime"` // minutes
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
@@ -145,13 +145,13 @@ func (h *TimeslotHandler) handleCreateTimeslot(w http.ResponseWriter, r *http.Re
 
 	// Create input for usecase
 	input := create_therapist_timeslot.Input{
-		TherapistID:       therapistID,
-		LocalDayOfWeek:    requestBody.DayOfWeek,
-		LocalStartTime:    requestBody.Start,
-		DurationMinutes:   requestBody.Duration,
-		PreSessionBuffer:  requestBody.PreSessionBuffer,
-		PostSessionBuffer: requestBody.PostSessionBuffer,
-		IsActive:          requestBody.IsActive,
+		TherapistID:           therapistID,
+		LocalDayOfWeek:        requestBody.DayOfWeek,
+		LocalStartTime:        requestBody.Start,
+		DurationMinutes:       requestBody.Duration,
+		AdvanceNotice:         requestBody.AdvanceNotice,
+		AfterSessionBreakTime: requestBody.AfterSessionBreakTime,
+		IsActive:              requestBody.IsActive,
 	}
 
 	newTimeslot, err := h.createTimeslotUsecase.Execute(input)
@@ -303,12 +303,12 @@ func (h *TimeslotHandler) handleUpdateTimeslot(w http.ResponseWriter, r *http.Re
 
 	// Parse request body (contains local timezone data)
 	var requestBody struct {
-		DayOfWeek         timeslot.DayOfWeek     `json:"dayOfWeek"`
-		Start             domain.Time24h         `json:"start"` // Local time
-		Duration          domain.DurationMinutes `json:"duration"`
-		PreSessionBuffer  domain.DurationMinutes `json:"preSessionBuffer"`
-		PostSessionBuffer domain.DurationMinutes `json:"postSessionBuffer"`
-		IsActive          bool                   `json:"isActive"`
+		DayOfWeek             timeslot.DayOfWeek                  `json:"dayOfWeek"`
+		Start                 domain.Time24h                      `json:"start"` // Local time
+		Duration              domain.DurationMinutes              `json:"duration"`
+		AdvanceNotice         domain.AdvanceNoticeMinutes         `json:"advanceNotice"`
+		AfterSessionBreakTime domain.AfterSessionBreakTimeMinutes `json:"afterSessionBreakTime"`
+		IsActive              bool                                `json:"isActive"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
@@ -318,14 +318,14 @@ func (h *TimeslotHandler) handleUpdateTimeslot(w http.ResponseWriter, r *http.Re
 
 	// Create input for usecase (with UTC data)
 	input := update_therapist_timeslot.Input{
-		TherapistID:       therapistID,
-		TimeslotID:        timeslotID,
-		DayOfWeek:         requestBody.DayOfWeek,
-		Start:             requestBody.Start,
-		Duration:          requestBody.Duration,
-		PreSessionBuffer:  requestBody.PreSessionBuffer,
-		PostSessionBuffer: requestBody.PostSessionBuffer,
-		IsActive:          requestBody.IsActive,
+		TherapistID:           therapistID,
+		TimeslotID:            timeslotID,
+		DayOfWeek:             requestBody.DayOfWeek,
+		Start:                 requestBody.Start,
+		Duration:              requestBody.Duration,
+		AdvanceNotice:         requestBody.AdvanceNotice,
+		AfterSessionBreakTime: requestBody.AfterSessionBreakTime,
+		IsActive:              requestBody.IsActive,
 	}
 
 	updatedTimeslot, err := h.updateTimeslotUsecase.Execute(input)

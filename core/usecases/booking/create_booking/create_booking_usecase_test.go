@@ -162,17 +162,17 @@ func TestCreateBooking_ConflictDetection(t *testing.T) {
 	clientID := domain.ClientID("client_1")
 
 	tsMorning := &timeslot.TimeSlot{
-		ID:                "slot_morning",
-		TherapistID:       therapistID,
-		Duration:          60,
-		PostSessionBuffer: 15,
+		ID:                    "slot_morning",
+		TherapistID:           therapistID,
+		Duration:              60,
+		AfterSessionBreakTime: 15,
 	}
 
 	tsLateMorning := &timeslot.TimeSlot{
-		ID:                "slot_late",
-		TherapistID:       therapistID,
-		Duration:          60,
-		PostSessionBuffer: 15,
+		ID:                    "slot_late",
+		TherapistID:           therapistID,
+		Duration:              60,
+		AfterSessionBreakTime: 15,
 	}
 
 	slotRepo := &inMemoryTimeSlotRepo{slots: map[domain.TimeSlotID]*timeslot.TimeSlot{

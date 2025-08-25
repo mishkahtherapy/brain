@@ -246,7 +246,7 @@ func (u *Usecase) calculateAvailableTimeRanges(
                 
                 // Calculate available ranges between bookings
                 availableRanges := calculateAvailableRangesBetweenBookings(
-                    slotStart, slotEnd, dayBookings, slot.PreSessionBuffer, slot.PostSessionBuffer)
+                    slotStart, slotEnd, dayBookings, slot.preSessionBuffer, slot.afterSessionBreakTime)
                 
                 // Add each available range
                 for _, r := range availableRanges {

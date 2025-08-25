@@ -100,11 +100,11 @@ func NewTestTimeSlotRepository(db ports.SQLDatabase) ports.TimeSlotRepository {
 }
 
 func (r *TestTimeSlotRepository) GetByID(id domain.TimeSlotID) (*timeslot.TimeSlot, error) {
-	query := `SELECT id, therapist_id, day_of_week, start_time, duration_minutes, pre_session_buffer, post_session_buffer, is_active, created_at, updated_at FROM time_slots WHERE id = ?`
+	query := `SELECT id, therapist_id, day_of_week, start_time, duration_minutes, advance_notice, after_session_break_time, is_active, created_at, updated_at FROM time_slots WHERE id = ?`
 	row := r.db.QueryRow(query, id)
 
 	var timeSlot timeslot.TimeSlot
-	err := row.Scan(&timeSlot.ID, &timeSlot.TherapistID, &timeSlot.DayOfWeek, &timeSlot.Start, &timeSlot.Duration, &timeSlot.PreSessionBuffer, &timeSlot.PostSessionBuffer, &timeSlot.IsActive, &timeSlot.CreatedAt, &timeSlot.UpdatedAt)
+	err := row.Scan(&timeSlot.ID, &timeSlot.TherapistID, &timeSlot.DayOfWeek, &timeSlot.Start, &timeSlot.Duration, &timeSlot.AdvanceNotice, &timeSlot.AfterSessionBreakTime, &timeSlot.IsActive, &timeSlot.CreatedAt, &timeSlot.UpdatedAt)
 	if err != nil {
 		return nil, err
 	}

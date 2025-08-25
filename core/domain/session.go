@@ -27,20 +27,21 @@ func (s SessionState) IsFinalState() bool {
 
 // Session represents a confirmed therapy session derived from a booking
 type Session struct {
-	ID          SessionID       `json:"id"`
-	BookingID   BookingID       `json:"bookingId"`
-	TherapistID TherapistID     `json:"therapistId"`
-	ClientID    ClientID        `json:"clientId"`
-	TimeSlotID  TimeSlotID      `json:"timeSlotId"`
-	StartTime   UTCTimestamp    `json:"startTime"`
-	Duration    DurationMinutes `json:"duration"`
-	PaidAmount  int             `json:"paidAmount"` // USD cents
-	Language    SessionLanguage `json:"language"`
-	State       SessionState    `json:"state"`
-	Notes       string          `json:"notes"` // delays, special notes, ...etc.
-	MeetingURL  string          `json:"meetingUrl,omitempty"`
-	CreatedAt   UTCTimestamp    `json:"createdAt"`
-	UpdatedAt   UTCTimestamp    `json:"updatedAt"`
+	ID                   SessionID       `json:"id"`
+	BookingID            BookingID       `json:"bookingId"`
+	TherapistID          TherapistID     `json:"therapistId"`
+	ClientID             ClientID        `json:"clientId"`
+	TimeSlotID           TimeSlotID      `json:"timeSlotId"`
+	StartTime            UTCTimestamp    `json:"startTime"`
+	Duration             DurationMinutes `json:"duration"`
+	ClientTimezoneOffset TimezoneOffset  `json:"clientTimezoneOffset"`
+	PaidAmount           int             `json:"paidAmount"` // USD cents
+	Language             SessionLanguage `json:"language"`
+	State                SessionState    `json:"state"`
+	Notes                string          `json:"notes"` // delays, special notes, ...etc.
+	MeetingURL           string          `json:"meetingUrl,omitempty"`
+	CreatedAt            UTCTimestamp    `json:"createdAt"`
+	UpdatedAt            UTCTimestamp    `json:"updatedAt"`
 }
 
 // IsValidStateTransition checks if a state transition is valid based on the rules:

@@ -29,6 +29,7 @@ type BookingRepository interface {
 	GetByID(id domain.BookingID) (*booking.Booking, error)
 	Create(booking *booking.Booking) error
 	Update(booking *booking.Booking) error
+	UpdateTx(sqlExec SQLExec, booking *booking.Booking) error
 	Delete(id domain.BookingID) error
 	ListByTherapist(therapistID domain.TherapistID) ([]*booking.Booking, error)
 	ListByClient(clientID domain.ClientID) ([]*booking.Booking, error)
@@ -37,8 +38,9 @@ type BookingRepository interface {
 	ListByClientAndState(clientID domain.ClientID, state booking.BookingState) ([]*booking.Booking, error)
 	BulkListByTherapistForDateRange(
 		therapistIDs []domain.TherapistID,
-		state booking.BookingState,
+		states []booking.BookingState,
 		startDate, endDate time.Time,
 	) (map[domain.TherapistID][]*booking.Booking, error)
+	BulkCancel(tx SQLTx, bookingIDs []domain.BookingID) error
 	Search(startDate, endDate time.Time, states []booking.BookingState) ([]*booking.Booking, error)
 }

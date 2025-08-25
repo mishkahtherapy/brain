@@ -116,8 +116,8 @@ curl -X POST "http://localhost:8080/api/v1/therapists/therapist_001/timeslots?ti
     "durationMinutes": 60,
     "timezoneOffset": 180,
     "timezone": "Africa/Cairo",
-    "preSessionBuffer": 30,
-    "postSessionBuffer": 15
+    "advanceNotice": 30,
+    "afterSessionBreakTime": 15
   }'
 ```
 
@@ -134,8 +134,8 @@ curl -X PUT "http://localhost:8080/api/v1/therapists/therapist_001/timeslots/slo
     "dayOfWeek": "Monday",
     "startTime": "15:00",
     "durationMinutes": 90,
-    "preSessionBuffer": 60,
-    "postSessionBuffer": 30,
+    "advanceNotice": 60,
+    "afterSessionBreakTime": 30,
     "isActive": true
   }'
 ```
