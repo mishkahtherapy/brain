@@ -274,8 +274,9 @@ func applyLineSweepAlgorithm(
 	}
 
 	type TherapistPointInfo struct {
-		Therapist  *therapist.Therapist
-		TimeSlotID domain.TimeSlotID
+		Therapist    *therapist.Therapist
+		TimeSlotID   domain.TimeSlotID
+		Availability therapistAvailability
 	}
 
 	// Step 1: Collect all time points (start and end times)
@@ -292,8 +293,9 @@ func applyLineSweepAlgorithm(
 			Time:    avail.StartTime,
 			IsStart: true,
 			TherapistInfo: TherapistPointInfo{
-				Therapist:  avail.Therapist,
-				TimeSlotID: avail.TimeSlotID,
+				Therapist:    avail.Therapist,
+				TimeSlotID:   avail.TimeSlotID,
+				Availability: avail,
 			},
 		})
 
@@ -301,8 +303,9 @@ func applyLineSweepAlgorithm(
 			Time:    avail.EndTime,
 			IsStart: false,
 			TherapistInfo: TherapistPointInfo{
-				Therapist:  avail.Therapist,
-				TimeSlotID: avail.TimeSlotID,
+				Therapist:    avail.Therapist,
+				TimeSlotID:   avail.TimeSlotID,
+				Availability: avail,
 			},
 		})
 	}
@@ -338,6 +341,10 @@ func applyLineSweepAlgorithm(
 					Specializations: t.Therapist.Specializations,
 					SpeaksEnglish:   t.Therapist.SpeaksEnglish,
 					TimeSlotID:      t.TimeSlotID,
+					AvailabilityRange: schedule.TimeRange{
+						From: t.Availability.StartTime,
+						To:   t.Availability.EndTime,
+					},
 				})
 			}
 

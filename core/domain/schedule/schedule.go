@@ -5,12 +5,18 @@ import (
 	"github.com/mishkahtherapy/brain/core/domain/specialization"
 )
 
+type TimeRange struct {
+	From domain.UTCTimestamp `json:"from"`
+	To   domain.UTCTimestamp `json:"to"`
+}
+
 type TherapistInfo struct {
-	TherapistID     domain.TherapistID              `json:"therapistId"`
-	Name            string                          `json:"name"`
-	Specializations []specialization.Specialization `json:"specializations"`
-	SpeaksEnglish   bool                            `json:"speaksEnglish"`
-	TimeSlotID      domain.TimeSlotID               `json:"timeSlotId"`
+	TherapistID       domain.TherapistID              `json:"therapistId"`
+	Name              string                          `json:"name"`
+	Specializations   []specialization.Specialization `json:"specializations"`
+	SpeaksEnglish     bool                            `json:"speaksEnglish"`
+	TimeSlotID        domain.TimeSlotID               `json:"timeSlotId"`
+	AvailabilityRange TimeRange                       `json:"availabilityRange"`
 }
 
 // I'm returning available "Time Ranges" not a ready made schedule to cater for timezone conversions on the frotnend.
