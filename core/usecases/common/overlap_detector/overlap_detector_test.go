@@ -96,6 +96,14 @@ func TestTimeslotOverlappsBooking(t *testing.T) {
 			otherEnd:       mustParse(t, "11:00:00"),
 			expectConflict: true,
 		},
+		{
+			name:           "conflict - full overlap",
+			firstStart:     mustParse(t, "09:00:00"),
+			firstEnd:       mustParse(t, "12:00:00"),
+			otherStart:     mustParse(t, "09:00:00"),
+			otherEnd:       mustParse(t, "12:00:00"),
+			expectConflict: true,
+		},
 	}
 
 	for _, tc := range cases {

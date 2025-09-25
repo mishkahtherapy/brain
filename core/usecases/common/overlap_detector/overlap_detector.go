@@ -33,6 +33,10 @@ func (c *OverlapDetector) HasOverlap(
 		return true
 	}
 
+	if c.baseStart.Equal(otherStart) && c.baseEnd.Equal(otherEnd) {
+		return true
+	}
+
 	return false
 }
 
