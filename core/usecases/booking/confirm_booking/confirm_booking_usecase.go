@@ -216,7 +216,6 @@ func (u *Usecase) confirmBooking(tx ports.SQLTx, existingBooking *booking.Bookin
 		BookingID:            existingBooking.ID,
 		TherapistID:          existingBooking.TherapistID,
 		ClientID:             existingBooking.ClientID,
-		TimeSlotID:           existingBooking.TimeSlotID,
 		StartTime:            existingBooking.StartTime,
 		Duration:             existingBooking.Duration,
 		PaidAmount:           paidAmountUSD,

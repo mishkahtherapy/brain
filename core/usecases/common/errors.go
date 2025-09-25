@@ -59,11 +59,13 @@ var (
 
 // Required Field Errors - Other common validations
 var (
-	ErrStartTimeIsRequired  = errors.New("start time is required")
-	ErrPaidAmountIsRequired = errors.New("paid amount is required")
-	ErrLanguageIsRequired   = errors.New("language is required")
-	ErrStateIsRequired      = errors.New("state is required")
-	ErrNotesIsRequired      = errors.New("notes is required")
-	ErrMeetingURLIsRequired = errors.New("meeting URL is required")
-	ErrNameIsRequired       = errors.New("name is required")
+	ErrStartTimeIsRequired            = errors.New("start time is required")
+	ErrDurationIsRequired             = errors.New("duration is required")
+	ErrClientTimezoneOffsetIsRequired = errors.New("client timezone offset is required")
+	ErrPaidAmountIsRequired           = errors.New("paid amount is required")
+	ErrLanguageIsRequired             = errors.New("language is required")
+	ErrStateIsRequired                = errors.New("state is required")
+	ErrNotesIsRequired                = errors.New("notes is required")
+	ErrMeetingURLIsRequired           = errors.New("meeting URL is required")
+	ErrNameIsRequired                 = errors.New("name is required")
 )

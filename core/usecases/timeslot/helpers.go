@@ -120,7 +120,7 @@ func ApplyTimesToReferenceDate(slot timeslot.TimeSlot) (start, end time.Time) {
 	return sessionStart, sessionEnd
 }
 
-// Check if two time slots have sufficient gap between them (at least 30 minutes)
+// Check if two time slots have sufficient gap between them (at least MIN_POST_SESSION_BUFFER_MINUTES minutes)
 func HasSufficientGapBetweenSlots(slot1, slot2 timeslot.TimeSlot) bool {
 	// Skip validation if slots are on different days
 	if slot1.DayOfWeek != slot2.DayOfWeek {
@@ -130,8 +130,8 @@ func HasSufficientGapBetweenSlots(slot1, slot2 timeslot.TimeSlot) bool {
 	start1, end1 := ApplyTimesToReferenceDate(slot1)
 	start2, end2 := ApplyTimesToReferenceDate(slot2)
 
-	// Check if there's at least 30 minutes between the slots
-	minGap := 30 * time.Minute
+	// Check if there's at least MIN_POST_SESSION_BUFFER_MINUTES minutes between the slots
+	minGap := MIN_POST_SESSION_BUFFER_MINUTES * time.Minute
 
 	// If slot1 ends before slot2 starts, check the gap
 	if end1.Before(start2) || end1.Equal(start2) {

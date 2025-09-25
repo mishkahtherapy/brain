@@ -16,6 +16,7 @@ import (
 	therapistHandler "github.com/mishkahtherapy/brain/adapters/api/therapist"
 	timeslotHandler "github.com/mishkahtherapy/brain/adapters/api/timeslot"
 	"github.com/mishkahtherapy/brain/adapters/db"
+	"github.com/mishkahtherapy/brain/adapters/db/adhoc_booking_db"
 	"github.com/mishkahtherapy/brain/adapters/db/booking_db"
 	"github.com/mishkahtherapy/brain/adapters/db/client_db"
 	"github.com/mishkahtherapy/brain/adapters/db/notification_db"
@@ -27,6 +28,7 @@ import (
 	"github.com/mishkahtherapy/brain/config"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/cancel_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/confirm_booking"
+	"github.com/mishkahtherapy/brain/core/usecases/booking/create_adhoc_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/create_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/get_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/list_bookings_by_client"
@@ -90,6 +92,7 @@ func main() {
 	therapistRepo := therapist_db.NewTherapistRepository(database)
 	clientRepo := client_db.NewClientRepository(database)
 	bookingRepo := booking_db.NewBookingRepository(database)
+	adhocBookingRepo := adhoc_booking_db.NewAdhocBookingRepository(database)
 	sessionRepo := session_db.NewSessionRepository(database)
 	timeSlotRepo := timeslot_db.NewTimeSlotRepository(database)
 	notificationPort := firebase_notifier.NewFirebaseNotifier(notificationConfig.FirebaseServiceAccountPath)
@@ -123,10 +126,29 @@ func main() {
 	getClientUsecase := get_client.NewUsecase(clientRepo)
 
 	// Initialize schedule usecases
-	getScheduleUsecase := get_schedule.NewUsecase(therapistRepo, timeSlotRepo, bookingRepo, bookingConfig.MinimumBookingTime())
+	getScheduleUsecase := get_schedule.NewUsecase(
+		therapistRepo,
+		timeSlotRepo,
+		bookingRepo,
+		adhocBookingRepo,
+		bookingConfig.MinimumBookingTime(),
+	)
 
 	// Initialize booking usecases
-	createBookingUsecase := create_booking.NewUsecase(bookingRepo, therapistRepo, clientRepo, timeSlotRepo, *getScheduleUsecase)
+	createBookingUsecase := create_booking.NewUsecase(
+		bookingRepo,
+		therapistRepo,
+		clientRepo,
+		timeSlotRepo,
+		*getScheduleUsecase,
+	)
+	createAdhocBookingUsecase := create_adhoc_booking.NewUsecase(
+		bookingRepo,
+		adhocBookingRepo,
+		timeSlotRepo,
+		therapistRepo,
+		clientRepo,
+	)
 	getBookingUsecase := get_booking.NewUsecase(bookingRepo)
 	confirmBookingUsecase := confirm_booking.NewUsecase(
 		bookingRepo,
@@ -177,6 +199,7 @@ func main() {
 
 	bookingHandler := bookingHandler.NewBookingHandler(
 		*createBookingUsecase,
+		*createAdhocBookingUsecase,
 		*getBookingUsecase,
 		*confirmBookingUsecase,
 		*cancelBookingUsecase,

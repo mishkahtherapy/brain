@@ -1,7 +1,6 @@
 package create_booking
 
 import (
-	"errors"
 	"log/slog"
 	"time"
 
@@ -10,11 +9,6 @@ import (
 	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/common"
 	"github.com/mishkahtherapy/brain/core/usecases/schedule/get_schedule"
-)
-
-var (
-	ErrTimezoneIsRequired = errors.New("timezone is required")
-	ErrInvalidTimezone    = errors.New("invalid timezone format")
 )
 
 type Input struct {

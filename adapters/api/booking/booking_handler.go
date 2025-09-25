@@ -11,6 +11,7 @@ import (
 	"github.com/mishkahtherapy/brain/core/domain/booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/cancel_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/confirm_booking"
+	"github.com/mishkahtherapy/brain/core/usecases/booking/create_adhoc_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/create_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/get_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/list_bookings_by_client"
@@ -21,6 +22,7 @@ import (
 
 type BookingHandler struct {
 	createBookingUsecase           create_booking.Usecase
+	createAdhocBookingUsecase      create_adhoc_booking.Usecase
 	getBookingUsecase              get_booking.Usecase
 	confirmBookingUsecase          confirm_booking.Usecase
 	cancelBookingUsecase           cancel_booking.Usecase
@@ -31,6 +33,7 @@ type BookingHandler struct {
 
 func NewBookingHandler(
 	createUsecase create_booking.Usecase,
+	createAdhocBookingUsecase create_adhoc_booking.Usecase,
 	getUsecase get_booking.Usecase,
 	confirmUsecase confirm_booking.Usecase,
 	cancelUsecase cancel_booking.Usecase,
@@ -40,6 +43,7 @@ func NewBookingHandler(
 ) *BookingHandler {
 	return &BookingHandler{
 		createBookingUsecase:           createUsecase,
+		createAdhocBookingUsecase:      createAdhocBookingUsecase,
 		getBookingUsecase:              getUsecase,
 		confirmBookingUsecase:          confirmUsecase,
 		cancelBookingUsecase:           cancelUsecase,
@@ -47,25 +51,6 @@ func NewBookingHandler(
 		listBookingsByClientUsecase:    listByClientUsecase,
 		searchBookingsUsecase:          searchUsecase,
 	}
-}
-
-// SetUsecases sets the usecases for the handler (used for testing)
-func (h *BookingHandler) SetUsecases(
-	createUsecase create_booking.Usecase,
-	getUsecase get_booking.Usecase,
-	confirmUsecase confirm_booking.Usecase,
-	cancelUsecase cancel_booking.Usecase,
-	listByTherapistUsecase list_bookings_by_therapist.Usecase,
-	listByClientUsecase list_bookings_by_client.Usecase,
-	searchUsecase search_bookings.Usecase,
-) {
-	h.createBookingUsecase = createUsecase
-	h.getBookingUsecase = getUsecase
-	h.confirmBookingUsecase = confirmUsecase
-	h.cancelBookingUsecase = cancelUsecase
-	h.listBookingsByTherapistUsecase = listByTherapistUsecase
-	h.listBookingsByClientUsecase = listByClientUsecase
-	h.searchBookingsUsecase = searchUsecase
 }
 
 func (h *BookingHandler) RegisterRoutes(mux *http.ServeMux) {
@@ -76,6 +61,8 @@ func (h *BookingHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/v1/bookings/{id}/cancel", h.handleCancelBooking)
 	mux.HandleFunc("GET /api/v1/therapists/{id}/bookings", h.handleListBookingsByTherapist)
 	mux.HandleFunc("GET /api/v1/clients/{id}/bookings", h.handleListBookingsByClient)
+
+	mux.HandleFunc("POST /api/v1/bookings/adhoc", h.handleCreateAdhocBooking)
 }
 
 func (h *BookingHandler) handleCreateBooking(w http.ResponseWriter, r *http.Request) {
@@ -95,8 +82,6 @@ func (h *BookingHandler) handleCreateBooking(w http.ResponseWriter, r *http.Requ
 			common.ErrClientIDIsRequired,
 			common.ErrTimeSlotIDIsRequired,
 			common.ErrStartTimeIsRequired,
-			create_booking.ErrTimezoneIsRequired,
-			create_booking.ErrInvalidTimezone,
 			domain.ErrTimezoneIsRequired,
 			common.ErrTherapistNotFound,
 			common.ErrClientNotFound,
@@ -112,6 +97,26 @@ func (h *BookingHandler) handleCreateBooking(w http.ResponseWriter, r *http.Requ
 	}
 
 	if err := rw.WriteJSON(booking, http.StatusCreated); err != nil {
+		rw.WriteError(err, http.StatusInternalServerError)
+	}
+}
+
+func (h *BookingHandler) handleCreateAdhocBooking(w http.ResponseWriter, r *http.Request) {
+	rw := api.NewResponseWriter(w)
+
+	var input create_adhoc_booking.Input
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		rw.WriteBadRequest(err.Error())
+		return
+	}
+
+	adhocBooking, err := h.createAdhocBookingUsecase.Execute(input)
+	if err != nil {
+		rw.WriteError(err, http.StatusInternalServerError)
+		return
+	}
+
+	if err := rw.WriteJSON(adhocBooking, http.StatusCreated); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
 }
@@ -177,6 +182,8 @@ func (h *BookingHandler) handleSearchBookings(w http.ResponseWriter, r *http.Req
 	}
 
 	bookings, err := h.searchBookingsUsecase.Execute(input)
+
+	// TODO: combine with adhoc bookings.
 	if err != nil {
 		switch err {
 		case common.ErrInvalidDateRange:

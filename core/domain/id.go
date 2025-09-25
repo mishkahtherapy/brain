@@ -14,6 +14,7 @@ type TimeSlotID string
 type BookingID string
 type SessionID string
 type SpecializationID string
+type AdhocBookingID string
 
 func NewClientID() ClientID {
 	return ClientID(generatePrefixedUUID("client"))
@@ -29,6 +30,10 @@ func NewSpecializationID() SpecializationID {
 
 func NewBookingID() BookingID {
 	return BookingID(generatePrefixedUUID("booking"))
+}
+
+func NewAdhocBookingID() AdhocBookingID {
+	return AdhocBookingID(generatePrefixedUUID("adhoc_booking"))
 }
 
 func NewSessionID() SessionID {

@@ -46,6 +46,7 @@ type TimeSlot struct {
 	UpdatedAt             domain.UTCTimestamp                 `json:"updatedAt"`
 }
 
+// ApplyToDate returns the start and end times of the time slot for a given date.
 func (ts *TimeSlot) ApplyToDate(date time.Time) (domain.UTCTimestamp, domain.UTCTimestamp) {
 	slotStartTime, err := ts.Start.ParseTime()
 	if err != nil {

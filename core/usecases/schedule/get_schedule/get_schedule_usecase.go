@@ -30,6 +30,7 @@ type Usecase struct {
 	therapistRepo                   ports.TherapistRepository
 	timeSlotRepo                    ports.TimeSlotRepository
 	bookingRepo                     ports.BookingRepository
+	adhocBookingRepo                ports.AdhocBookingRepository
 	timeRangeMinimumDurationMinutes domain.DurationMinutes
 }
 
@@ -41,12 +42,14 @@ func NewUsecase(
 	therapistRepo ports.TherapistRepository,
 	timeSlotRepo ports.TimeSlotRepository,
 	bookingRepo ports.BookingRepository,
+	adhocBookingRepo ports.AdhocBookingRepository,
 	timeRangeMinimumDurationMinutes domain.DurationMinutes,
 ) *Usecase {
 	return &Usecase{
 		therapistRepo:                   therapistRepo,
 		timeSlotRepo:                    timeSlotRepo,
 		bookingRepo:                     bookingRepo,
+		adhocBookingRepo:                adhocBookingRepo,
 		timeRangeMinimumDurationMinutes: timeRangeMinimumDurationMinutes,
 	}
 }
@@ -107,6 +110,20 @@ func (u *Usecase) Execute(input Input) ([]schedule.AvailableTimeRange, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// TODO: if a therapist modifies their timeslot ranges, they might have had conflicting
+	// adhoc bookings within the slot ranges that need to be checked for conflicts. On
+	// top of that, we need to subtract the times of adhoc bookings from exisitng timeslot
+	// availabilities.
+	// adhocBookingsMap, err := u.adhocBookingRepo.BulkListByTherapistForDateRange(
+	// 	therapistIDs,
+	// 	[]booking.BookingState{booking.BookingStateConfirmed},
+	// 	input.StartDate,
+	// 	input.EndDate,
+	// )
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	allTherapistAvailabilities := []therapistAvailability{}
 	nowUTC := domain.NewUTCTimestamp()
@@ -246,7 +263,7 @@ type therapistAvailability struct {
 func makeBookingMap(bookings []*booking.Booking) map[string]map[domain.TimeSlotID][]*booking.Booking {
 	bookingMap := make(map[string]map[domain.TimeSlotID][]*booking.Booking)
 	for _, bookingEntry := range bookings {
-		dateStr := time.Time(bookingEntry.StartTime).Format("2006-01-02")
+		dateStr := time.Time(bookingEntry.StartTime).Format(time.DateOnly)
 		if bookingMap[dateStr] == nil {
 			bookingMap[dateStr] = make(map[domain.TimeSlotID][]*booking.Booking)
 		}
@@ -256,7 +273,7 @@ func makeBookingMap(bookings []*booking.Booking) map[string]map[domain.TimeSlotI
 }
 
 func getBookingsForSlot(bookingMap map[string]map[domain.TimeSlotID][]*booking.Booking, slotID domain.TimeSlotID, date time.Time) []*booking.Booking {
-	dateStr := date.Format("2006-01-02")
+	dateStr := date.Format(time.DateOnly)
 	if dateMap, ok := bookingMap[dateStr]; ok {
 		return dateMap[slotID]
 	}

@@ -31,7 +31,6 @@ type Session struct {
 	BookingID            BookingID       `json:"bookingId"`
 	TherapistID          TherapistID     `json:"therapistId"`
 	ClientID             ClientID        `json:"clientId"`
-	TimeSlotID           TimeSlotID      `json:"timeSlotId"`
 	StartTime            UTCTimestamp    `json:"startTime"`
 	Duration             DurationMinutes `json:"duration"`
 	ClientTimezoneOffset TimezoneOffset  `json:"clientTimezoneOffset"`

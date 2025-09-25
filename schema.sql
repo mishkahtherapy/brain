@@ -6,7 +6,7 @@
 -- =============================================================================
 
 -- Therapists table
-CREATE TABLE therapists (
+CREATE TABLE IF NOT EXISTS therapists (
     id VARCHAR(128) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE therapists (
 );
 
 -- Therapist specializations table
-CREATE TABLE specializations (
+CREATE TABLE IF NOT EXISTS specializations (
     id VARCHAR(128) PRIMARY KEY,
     name VARCHAR(255) NOT NULL UNIQUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -29,14 +29,14 @@ CREATE TABLE specializations (
 );
 
 -- Therapist specializations table
-CREATE TABLE therapist_specializations (
+CREATE TABLE IF NOT EXISTS therapist_specializations (
     id VARCHAR(128) PRIMARY KEY,
     therapist_id VARCHAR(128) NOT NULL,
     specialization_id VARCHAR(128) NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_therapist_specializations_therapist FOREIGN KEY (therapist_id) REFERENCES therapists (id) ON DELETE CASCADE,
-    CONSTRAINT fk_therapist_specializations_specialization FOREIGN KEY (specialization_id) REFERENCES specializations (id) ON DELETE CASCADE,
+    CONSTRAINT fk_therapist_specializations_therapist FOREIGN KEY (therapist_id) REFERENCES therapists (id) ON DELETE NO ACTION,
+    CONSTRAINT fk_therapist_specializations_specialization FOREIGN KEY (specialization_id) REFERENCES specializations (id) ON DELETE NO ACTION,
     -- Prevent duplicate specializations for the same therapist
     CONSTRAINT unique_therapist_specialization UNIQUE (
         therapist_id,
@@ -45,7 +45,7 @@ CREATE TABLE therapist_specializations (
 );
 
 -- Clients table
-CREATE TABLE clients (
+CREATE TABLE IF NOT EXISTS clients (
     id VARCHAR(128) PRIMARY KEY,
     name VARCHAR(255), -- Optional field
     -- email VARCHAR(255) UNIQUE NOT NULL,
@@ -57,7 +57,7 @@ CREATE TABLE clients (
 
 -- Time slots table (therapist availability)
 -- Note: Times are stored in UTC timezone, duration-based approach
-CREATE TABLE time_slots (
+CREATE TABLE IF NOT EXISTS time_slots (
     id VARCHAR(128) PRIMARY KEY,
     therapist_id VARCHAR(128) NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -78,7 +78,7 @@ CREATE TABLE time_slots (
     after_session_break_time INTEGER NOT NULL DEFAULT 0, -- minutes (break time after session)
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_time_slots_therapist FOREIGN KEY (therapist_id) REFERENCES therapists (id) ON DELETE CASCADE,
+    CONSTRAINT fk_time_slots_therapist FOREIGN KEY (therapist_id) REFERENCES therapists (id) ON DELETE NO ACTION,
     CONSTRAINT check_positive_duration CHECK (
         duration_minutes > 0
         AND duration_minutes <= 1440
@@ -89,8 +89,8 @@ CREATE TABLE time_slots (
     )
 );
 
--- Bookings table (actual appointments - always 1 hour duration)
-CREATE TABLE bookings (
+-- Bookings table
+CREATE TABLE IF NOT EXISTS bookings (
     id VARCHAR(128) PRIMARY KEY,
     timeslot_id VARCHAR(128) NOT NULL,
     therapist_id VARCHAR(128) NOT NULL,
@@ -107,18 +107,37 @@ CREATE TABLE bookings (
     ),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_bookings_timeslot FOREIGN KEY (timeslot_id) REFERENCES time_slots (id) ON DELETE CASCADE,
-    CONSTRAINT fk_bookings_therapist FOREIGN KEY (therapist_id) REFERENCES therapists (id) ON DELETE CASCADE,
-    CONSTRAINT fk_bookings_client FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE CASCADE
+    CONSTRAINT fk_bookings_timeslot FOREIGN KEY (timeslot_id) REFERENCES time_slots (id) ON DELETE NO ACTION,
+    CONSTRAINT fk_bookings_therapist FOREIGN KEY (therapist_id) REFERENCES therapists (id) ON DELETE NO ACTION,
+    CONSTRAINT fk_bookings_client FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE NO ACTION
 );
 
--- Sessions table (therapy sessions derived from bookings)
-CREATE TABLE sessions (
+-- Adhoc bookings table
+CREATE TABLE IF NOT EXISTS adhoc_bookings (
+    id VARCHAR(128) PRIMARY KEY,
+    therapist_id VARCHAR(128) NOT NULL,
+    client_id VARCHAR(128) NOT NULL,
+    start_time DATETIME NOT NULL, -- Specific start datetime for this booking
+    duration_minutes INTEGER NOT NULL, -- Duration in minutes (e.g., 60, 120, 480)
+    client_timezone_offset INTEGER NOT NULL, -- Frontend hint for timezone adjustments (minutes ahead of UTC)
+    state VARCHAR(20) DEFAULT 'pending' CHECK (
+        state IN (
+            'pending',
+            'confirmed',
+            'cancelled'
+        )
+    ),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_bookings_therapist FOREIGN KEY (therapist_id) REFERENCES therapists (id) ON DELETE NO ACTION CONSTRAINT fk_bookings_client FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE NO ACTION
+);
+
+-- Sessions table, derived from bookings
+CREATE TABLE IF NOT EXISTS sessions (
     id VARCHAR(128) PRIMARY KEY,
     booking_id VARCHAR(128) NOT NULL UNIQUE,
     therapist_id VARCHAR(128) NOT NULL,
     client_id VARCHAR(128) NOT NULL,
-    timeslot_id VARCHAR(128) NOT NULL,
     start_time DATETIME NOT NULL,
     duration_minutes INTEGER NOT NULL, -- Duration in minutes
     client_timezone_offset INTEGER NOT NULL, -- Frontend hint for timezone adjustments (minutes ahead of UTC)
@@ -131,21 +150,20 @@ CREATE TABLE sessions (
             'planned',
             'done',
             'rescheduled',
-            'cancelled',
-            'refunded'
+            'cancelled', -- Won't be used for now
+            'refunded' -- Won't be used for now
         )
     ),
     notes TEXT,
     meeting_url VARCHAR(512), -- nullable, added manually
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_sessions_booking FOREIGN KEY (booking_id) REFERENCES bookings (id) ON DELETE CASCADE,
-    CONSTRAINT fk_sessions_therapist FOREIGN KEY (therapist_id) REFERENCES therapists (id) ON DELETE CASCADE,
-    CONSTRAINT fk_sessions_client FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE CASCADE,
-    CONSTRAINT fk_sessions_timeslot FOREIGN KEY (timeslot_id) REFERENCES time_slots (id) ON DELETE CASCADE
+    CONSTRAINT fk_sessions_booking FOREIGN KEY (booking_id) REFERENCES bookings (id) ON DELETE NO ACTION,
+    CONSTRAINT fk_sessions_therapist FOREIGN KEY (therapist_id) REFERENCES therapists (id) ON DELETE NO ACTION,
+    CONSTRAINT fk_sessions_client FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE NO ACTION
 );
 
-CREATE TABLE push_notifications (
+CREATE TABLE IF NOT EXISTS push_notifications (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     therapist_id VARCHAR(128) NOT NULL,
     title VARCHAR(255) NOT NULL,

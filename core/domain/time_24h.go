@@ -32,3 +32,11 @@ func (i Time24h) ParseTime() (time.Time, error) {
 	}
 	return parsedTime.UTC(), nil
 }
+
+func (i Time24h) MustParseTime() time.Time {
+	parsedTime, err := i.ParseTime()
+	if err != nil {
+		panic(err)
+	}
+	return parsedTime
+}

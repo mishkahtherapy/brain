@@ -324,7 +324,7 @@ func (h *SessionHandler) handleListSessionsAdmin(w http.ResponseWriter, r *http.
 	var input list_sessions_admin.Input
 
 	if startDateParam := r.URL.Query().Get("startDate"); startDateParam != "" {
-		if startDate, err := time.Parse("2006-01-02", startDateParam); err != nil {
+		if startDate, err := time.Parse(time.DateOnly, startDateParam); err != nil {
 			rw.WriteBadRequest("Invalid startDate format. Use YYYY-MM-DD")
 			return
 		} else {
@@ -333,7 +333,7 @@ func (h *SessionHandler) handleListSessionsAdmin(w http.ResponseWriter, r *http.
 	}
 
 	if endDateParam := r.URL.Query().Get("endDate"); endDateParam != "" {
-		if endDate, err := time.Parse("2006-01-02", endDateParam); err != nil {
+		if endDate, err := time.Parse(time.DateOnly, endDateParam); err != nil {
 			rw.WriteBadRequest("Invalid endDate format. Use YYYY-MM-DD")
 			return
 		} else {

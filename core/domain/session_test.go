@@ -38,7 +38,6 @@ func TestNewSession(t *testing.T) {
 		BookingID:   BookingID("booking_test"),
 		TherapistID: TherapistID("therapist_test"),
 		ClientID:    ClientID("client_test"),
-		TimeSlotID:  TimeSlotID("timeslot_test"),
 		StartTime:   now,
 		PaidAmount:  5000, // $50.00
 		Language:    SessionLanguageEnglish,
@@ -267,7 +266,6 @@ func TestSessionLanguage(t *testing.T) {
 			BookingID:   BookingID("booking_test"),
 			TherapistID: TherapistID("therapist_test"),
 			ClientID:    ClientID("client_test"),
-			TimeSlotID:  TimeSlotID("timeslot_test"),
 			StartTime:   now,
 			PaidAmount:  5000,
 			Language:    SessionLanguage("invalid"),
@@ -296,7 +294,6 @@ func TestFullSessionLifecycle(t *testing.T) {
 		BookingID:   BookingID("booking_test"),
 		TherapistID: TherapistID("therapist_test"),
 		ClientID:    ClientID("client_test"),
-		TimeSlotID:  TimeSlotID("timeslot_test"),
 		StartTime:   now,
 		PaidAmount:  5000,
 		Language:    SessionLanguageEnglish,
