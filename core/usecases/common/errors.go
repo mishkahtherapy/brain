@@ -38,6 +38,7 @@ var (
 	ErrInvalidStateTransition = errors.New("invalid state transition")
 	ErrInvalidBookingState    = errors.New("booking must be in pending state to be confirmed")
 	ErrTimeSlotAlreadyBooked  = errors.New("timeslot is already booked")
+	ErrInvalidBookingTime     = errors.New("booking time is not within the available time slot. Create an Adhoc Booking instead")
 	ErrMeetingURLNotSet       = errors.New("meeting URL is not set for this session")
 	ErrInvalidMeetingURL      = errors.New("invalid meeting URL format")
 )

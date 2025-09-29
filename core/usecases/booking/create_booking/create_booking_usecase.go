@@ -1,13 +1,14 @@
 package create_booking
 
 import (
-	"log/slog"
 	"time"
 
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/domain/booking"
+	"github.com/mishkahtherapy/brain/core/domain/schedule"
 	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/common"
+	"github.com/mishkahtherapy/brain/core/usecases/common/overlap_detector"
 	"github.com/mishkahtherapy/brain/core/usecases/schedule/get_schedule"
 )
 
@@ -44,7 +45,7 @@ func NewUsecase(
 	}
 }
 
-func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
+func (u *Usecase) Execute(input Input) (*ports.BookingResponse, error) {
 	// Validate required fields
 	if err := validateInput(input); err != nil {
 		return nil, err
@@ -72,31 +73,18 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 		return nil, common.ErrTimeSlotAlreadyBooked
 	}
 
-	if len(availabilities) > 1 {
-		slog.Error(
-			"multiple availabilities found for the same time slot",
-			"timeSlotId", input.TimeSlotID,
-			"availabilities", availabilities,
-			"startTime", input.StartTime,
-			"endTime", endTime,
-		)
-		return nil, common.ErrTimeSlotAlreadyBooked
+	var matchingAvailability *schedule.AvailableTimeRange
+	for _, availability := range availabilities {
+		matches := checkIfAvailabilityMatches(availability, input)
+
+		if matches {
+			matchingAvailability = &availability
+			break
+		}
 	}
 
-	availability := availabilities[0]
-	// Make sure the booked timeslot is within the availability
-	availabilityStartTime := time.Time(availability.From)
-	availabilityEndTime := availabilityStartTime.Add(time.Duration(availability.Duration) * time.Minute)
-	if input.StartTime.Time().Before(availabilityStartTime) || input.StartTime.Time().Add(time.Duration(input.Duration)*time.Minute).After(availabilityEndTime) {
-		slog.Error(
-			"booked timeslot is not within the availability",
-			"timeSlotId", input.TimeSlotID,
-			"availabilityStartTime", availabilityStartTime,
-			"availabilityEndTime", availabilityEndTime,
-			"startTime", input.StartTime,
-			"endTime", endTime,
-		)
-		return nil, common.ErrTimeSlotAlreadyBooked
+	if matchingAvailability == nil {
+		return nil, common.ErrInvalidBookingTime
 	}
 
 	// Create booking with Pending state and timezone (no conversion, just store as hint)
@@ -119,7 +107,15 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 		return nil, common.ErrFailedToCreateBooking
 	}
 
-	return createdBooking, nil
+	return &ports.BookingResponse{
+		RegularBookingID:     createdBooking.ID,
+		TherapistID:          createdBooking.TherapistID,
+		ClientID:             createdBooking.ClientID,
+		State:                createdBooking.State,
+		StartTime:            createdBooking.StartTime,
+		Duration:             createdBooking.Duration,
+		ClientTimezoneOffset: createdBooking.ClientTimezoneOffset,
+	}, nil
 }
 
 func validateInput(input Input) error {
@@ -137,4 +133,21 @@ func validateInput(input Input) error {
 	}
 
 	return nil
+}
+
+func checkIfAvailabilityMatches(availability schedule.AvailableTimeRange, input Input) bool {
+	// Make sure the booked timeslot is within the availability
+	availabilityStartTime := time.Time(availability.From)
+	availabilityEndTime := availabilityStartTime.Add(time.Duration(availability.Duration) * time.Minute)
+
+	inputStartTime := time.Time(input.StartTime)
+	inputEndTime := inputStartTime.Add(time.Duration(input.Duration) * time.Minute)
+
+	return overlap_detector.New(
+		availabilityStartTime,
+		availabilityEndTime,
+	).HasOverlap(
+		inputStartTime,
+		inputEndTime,
+	)
 }

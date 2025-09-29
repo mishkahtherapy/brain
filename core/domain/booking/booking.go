@@ -1,6 +1,11 @@
 package booking
 
-import "github.com/mishkahtherapy/brain/core/domain"
+import (
+	"fmt"
+	"strings"
+
+	"github.com/mishkahtherapy/brain/core/domain"
+)
 
 type BookingState string
 
@@ -9,6 +14,24 @@ const (
 	BookingStateConfirmed BookingState = "confirmed"
 	BookingStateCancelled BookingState = "cancelled"
 )
+
+type BookingType int
+
+const (
+	BookingTypeRegular BookingType = 0
+	BookingTypeAdhoc   BookingType = 1
+)
+
+func GetType(bookingID string) (BookingType, error) {
+	if strings.HasPrefix(bookingID, "booking_") {
+		return BookingTypeRegular, nil
+	}
+	if strings.HasPrefix(bookingID, "adhoc_booking_") {
+		return BookingTypeAdhoc, nil
+	}
+
+	return 0, fmt.Errorf("invalid booking id: %s", bookingID)
+}
 
 type Booking struct {
 	ID                   domain.BookingID       `json:"id"`

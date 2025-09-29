@@ -34,18 +34,18 @@ func TestNewSession(t *testing.T) {
 	// Create a valid session
 	now := NewUTCTimestamp()
 	session := &Session{
-		ID:          NewSessionID(),
-		BookingID:   BookingID("booking_test"),
-		TherapistID: TherapistID("therapist_test"),
-		ClientID:    ClientID("client_test"),
-		StartTime:   now,
-		PaidAmount:  5000, // $50.00
-		Language:    SessionLanguageEnglish,
-		State:       SessionStatePlanned,
-		Notes:       "",
-		MeetingURL:  "",
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:               NewSessionID(),
+		RegularBookingID: BookingID("booking_test"),
+		TherapistID:      TherapistID("therapist_test"),
+		ClientID:         ClientID("client_test"),
+		StartTime:        now,
+		PaidAmount:       5000, // $50.00
+		Language:         SessionLanguageEnglish,
+		State:            SessionStatePlanned,
+		Notes:            "",
+		MeetingURL:       "",
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 
 	// Verify the session has the expected initial values
@@ -262,16 +262,16 @@ func TestSessionLanguage(t *testing.T) {
 	t.Run("Session with invalid language", func(t *testing.T) {
 		now := NewUTCTimestamp()
 		session := &Session{
-			ID:          NewSessionID(),
-			BookingID:   BookingID("booking_test"),
-			TherapistID: TherapistID("therapist_test"),
-			ClientID:    ClientID("client_test"),
-			StartTime:   now,
-			PaidAmount:  5000,
-			Language:    SessionLanguage("invalid"),
-			State:       SessionStatePlanned,
-			CreatedAt:   now,
-			UpdatedAt:   now,
+			ID:               NewSessionID(),
+			RegularBookingID: BookingID("booking_test"),
+			TherapistID:      TherapistID("therapist_test"),
+			ClientID:         ClientID("client_test"),
+			StartTime:        now,
+			PaidAmount:       5000,
+			Language:         SessionLanguage("invalid"),
+			State:            SessionStatePlanned,
+			CreatedAt:        now,
+			UpdatedAt:        now,
 		}
 
 		// Session creation should succeed even with invalid language
@@ -290,18 +290,18 @@ func TestFullSessionLifecycle(t *testing.T) {
 	// Create a new session
 	now := NewUTCTimestamp()
 	session := &Session{
-		ID:          NewSessionID(),
-		BookingID:   BookingID("booking_test"),
-		TherapistID: TherapistID("therapist_test"),
-		ClientID:    ClientID("client_test"),
-		StartTime:   now,
-		PaidAmount:  5000,
-		Language:    SessionLanguageEnglish,
-		State:       SessionStatePlanned,
-		Notes:       "",
-		MeetingURL:  "",
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:               NewSessionID(),
+		RegularBookingID: BookingID("booking_test"),
+		TherapistID:      TherapistID("therapist_test"),
+		ClientID:         ClientID("client_test"),
+		StartTime:        now,
+		PaidAmount:       5000,
+		Language:         SessionLanguageEnglish,
+		State:            SessionStatePlanned,
+		Notes:            "",
+		MeetingURL:       "",
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 
 	// 1. Initial state checks

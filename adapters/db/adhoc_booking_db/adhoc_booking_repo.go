@@ -1,6 +1,7 @@
 package adhoc_booking_db
 
 import (
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -19,6 +20,93 @@ func NewAdhocBookingRepository(db ports.SQLDatabase) ports.AdhocBookingRepositor
 	return &AdhocBookingRepository{db: db}
 }
 
+// GetByID implements ports.AdhocBookingRepository.
+func (r *AdhocBookingRepository) GetByID(id domain.AdhocBookingID) (*booking.AdhocBooking, error) {
+	query := `
+		SELECT 
+			id, therapist_id,
+			client_id, start_time,
+			duration_minutes, client_timezone_offset,
+			state, created_at, updated_at
+		FROM adhoc_bookings
+		WHERE id = ?
+	`
+	row := r.db.QueryRow(query, id)
+	booking := &booking.AdhocBooking{}
+	err := row.Scan(
+		&booking.ID,
+		&booking.TherapistID,
+		&booking.ClientID,
+		&booking.StartTime,
+		&booking.Duration,
+		&booking.ClientTimezoneOffset,
+		&booking.State,
+		&booking.CreatedAt,
+		&booking.UpdatedAt,
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ports.ErrBookingNotFound
+		}
+		slog.Error("error getting booking by id", "error", err)
+		return nil, ports.ErrFailedToGetBookings
+	}
+	return booking, nil
+}
+
+// UpdateStateTx implements ports.AdhocBookingRepository.
+func (r *AdhocBookingRepository) UpdateStateTx(
+	sqlExec ports.SQLExec,
+	adhocBookingID domain.AdhocBookingID,
+	state booking.BookingState,
+	updatedAt time.Time,
+) error {
+	if adhocBookingID == "" {
+		return ports.ErrBookingIDIsRequired
+	}
+
+	if state == "" {
+		return ports.ErrBookingStateIsRequired
+	}
+
+	query := `
+		UPDATE adhoc_bookings 
+			SET state = ?, updated_at = ?
+		WHERE id = ?
+	`
+	result, err := sqlExec.Exec(
+		query,
+		state,
+		updatedAt,
+		adhocBookingID,
+	)
+
+	if err != nil {
+		slog.Error("error updating adhoc booking", "error", err)
+		return ports.ErrFailedToUpdateBooking
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		slog.Error("error getting rows affected after update", "error", err)
+		return ports.ErrFailedToUpdateBooking
+	}
+
+	if rowsAffected == 0 {
+		return ports.ErrBookingNotFound
+	}
+
+	return nil
+}
+
+func (r *AdhocBookingRepository) UpdateState(
+	adhocBookingID domain.AdhocBookingID,
+	state booking.BookingState,
+	updatedAt time.Time,
+) error {
+	return r.UpdateStateTx(r.db, adhocBookingID, state, updatedAt)
+}
+
 func (r *AdhocBookingRepository) Create(adhocBooking *booking.AdhocBooking) error {
 	query := `
 		INSERT INTO adhoc_bookings (id, therapist_id, client_id, start_time, duration_minutes, client_timezone_offset, state, created_at, updated_at)
@@ -29,6 +117,24 @@ func (r *AdhocBookingRepository) Create(adhocBooking *booking.AdhocBooking) erro
 		return ports.ErrFailedToCreateBooking
 	}
 	return nil
+}
+
+func (r *AdhocBookingRepository) ListByTherapistForDateRange(
+	therapistID domain.TherapistID,
+	states []booking.BookingState,
+	startDate time.Time,
+	endDate time.Time,
+) ([]*booking.AdhocBooking, error) {
+	adhocBookings, err := r.BulkListByTherapistForDateRange(
+		[]domain.TherapistID{therapistID},
+		states,
+		startDate,
+		endDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return adhocBookings[therapistID], nil
 }
 
 func (r *AdhocBookingRepository) BulkListByTherapistForDateRange(
@@ -125,5 +231,138 @@ func (r *AdhocBookingRepository) BulkListByTherapistForDateRange(
 		adhocBookings[adhocBooking.TherapistID] = append(adhocBookings[adhocBooking.TherapistID], adhocBooking)
 	}
 
+	return adhocBookings, nil
+}
+
+func (r *AdhocBookingRepository) BulkCancel(tx ports.SQLTx, adhocBookingIDs []domain.AdhocBookingID) error {
+	query := `
+		UPDATE adhoc_bookings
+		SET state = ?
+		WHERE id IN (%s)
+	`
+	values := make([]any, 0)
+	values = append(values, booking.BookingStateCancelled)
+
+	placeholders := make([]string, len(adhocBookingIDs))
+	for i := range adhocBookingIDs {
+		placeholders[i] = "?"
+		values = append(values, adhocBookingIDs[i])
+	}
+	placeholdersStr := strings.Join(placeholders, ",")
+	query = fmt.Sprintf(query, placeholdersStr)
+
+	_, err := tx.Exec(query, values...)
+	if err != nil {
+		slog.Error("error bulk cancelling adhoc bookings", "error", err)
+		return ports.ErrFailedToUpdateBooking
+	}
+	return nil
+}
+
+func (r *AdhocBookingRepository) Search(startDate, endDate time.Time, states []booking.BookingState) ([]*booking.AdhocBooking, error) {
+	query := `
+		SELECT id, therapist_id, client_id, start_time, duration_minutes, client_timezone_offset, state, created_at, updated_at
+		FROM adhoc_bookings
+		WHERE 1=1
+	`
+	params := []interface{}{}
+
+	// Add start date filter if provided (not zero time)
+	if !startDate.IsZero() {
+		query += " AND start_time >= ?"
+		params = append(params, startDate)
+	}
+
+	// Add states filter if provided
+	if len(states) > 0 {
+		placeholders := make([]string, len(states))
+		for i := range states {
+			placeholders[i] = "?"
+		}
+		placeholdersStr := strings.Join(placeholders, ",")
+		query += fmt.Sprintf(" AND state IN (%s)", placeholdersStr)
+		for _, state := range states {
+			params = append(params, state)
+		}
+	}
+
+	// Add end date filter if provided (not zero time)
+	if !endDate.IsZero() {
+		query += " AND start_time <= ?"
+		params = append(params, endDate)
+	}
+
+	query += " ORDER BY start_time ASC"
+
+	rows, err := r.db.Query(query, params...)
+	if err != nil {
+		slog.Error("error searching bookings", "error", err)
+		return nil, ports.ErrFailedToGetBookings
+	}
+	defer rows.Close()
+
+	return r.scanAdhocBookings(rows)
+}
+
+func (r *AdhocBookingRepository) List(filters ports.BookingFilters) ([]*booking.AdhocBooking, error) {
+	if !filters.IsValid() {
+		return nil, ports.ErrInvalidBookingFilters
+	}
+
+	query := `
+		SELECT id, therapist_id, client_id, start_time, duration_minutes, client_timezone_offset, state, created_at, updated_at
+		FROM adhoc_bookings
+		WHERE 1=1
+	`
+
+	params := []interface{}{}
+	if filters.TherapistID != "" {
+		query += ` AND therapist_id = ?`
+		params = append(params, filters.TherapistID)
+	}
+	if filters.ClientID != "" {
+		query += ` AND client_id = ?`
+		params = append(params, filters.ClientID)
+	}
+
+	if filters.State != "" {
+		query += ` AND state = ?`
+		params = append(params, filters.State)
+	}
+
+	query += ` ORDER BY start_time ASC`
+
+	rows, err := r.db.Query(query, params...)
+	if err != nil {
+		slog.Error("error listing bookings", "error", err)
+		return nil, ports.ErrFailedToGetBookings
+	}
+	defer rows.Close()
+
+	return r.scanAdhocBookings(rows)
+}
+
+// Helper method to scan multiple booking rows
+func (r *AdhocBookingRepository) scanAdhocBookings(rows *sql.Rows) ([]*booking.AdhocBooking, error) {
+	adhocBookings := make([]*booking.AdhocBooking, 0)
+	for rows.Next() {
+		adhocBooking := &booking.AdhocBooking{}
+		err := rows.Scan(
+			&adhocBooking.ID,
+			&adhocBooking.TherapistID,
+			&adhocBooking.ClientID,
+			&adhocBooking.StartTime,
+			&adhocBooking.Duration,
+			&adhocBooking.ClientTimezoneOffset,
+			&adhocBooking.State,
+			&adhocBooking.CreatedAt,
+			&adhocBooking.UpdatedAt,
+		)
+		if err != nil {
+			slog.Error("error scanning adhoc booking", "error", err)
+			return nil, ports.ErrFailedToGetBookings
+		}
+		adhocBookings = append(adhocBookings, adhocBooking)
+	}
 	return adhocBookings, nil
 }

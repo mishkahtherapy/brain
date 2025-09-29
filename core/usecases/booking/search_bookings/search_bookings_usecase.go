@@ -25,7 +25,8 @@ type Input struct {
 }
 
 type Output struct {
-	ID                      domain.BookingID       `json:"id"`
+	RegularBookingID        domain.BookingID       `json:"regularBookingId,omitempty"`
+	AdhocBookingID          domain.AdhocBookingID  `json:"adhocBookingId,omitempty"`
 	TherapistID             domain.TherapistID     `json:"therapistId"`
 	TherapistName           string                 `json:"therapistName"`
 	ClientID                domain.ClientID        `json:"clientId"`
@@ -38,17 +39,24 @@ type Output struct {
 }
 
 type Usecase struct {
-	bookingRepo   ports.BookingRepository
-	therapistRepo ports.TherapistRepository
-	clientRepo    ports.ClientRepository
+	bookingRepo      ports.BookingRepository
+	adhocBookingRepo ports.AdhocBookingRepository
+	therapistRepo    ports.TherapistRepository
+	clientRepo       ports.ClientRepository
 }
 
 func NewUsecase(
 	bookingRepo ports.BookingRepository,
+	adhocBookingRepo ports.AdhocBookingRepository,
 	therapistRepo ports.TherapistRepository,
 	clientRepo ports.ClientRepository,
 ) *Usecase {
-	return &Usecase{bookingRepo: bookingRepo, therapistRepo: therapistRepo, clientRepo: clientRepo}
+	return &Usecase{
+		bookingRepo:      bookingRepo,
+		adhocBookingRepo: adhocBookingRepo,
+		therapistRepo:    therapistRepo,
+		clientRepo:       clientRepo,
+	}
 }
 
 func (u *Usecase) Execute(input Input) ([]*Output, error) {
@@ -63,7 +71,12 @@ func (u *Usecase) Execute(input Input) ([]*Output, error) {
 		return nil, common.ErrFailedToListBookings
 	}
 
-	therapistIds, clientIds := getTherapistAndClientIds(bookings)
+	adhocBookings, err := u.adhocBookingRepo.Search(input.Start, input.End, input.States)
+	if err != nil {
+		return nil, common.ErrFailedToListBookings
+	}
+
+	therapistIds, clientIds := getTherapistAndClientIds(bookings, adhocBookings)
 	therapists, err := u.therapistRepo.FindByIDs(therapistIds)
 	if err != nil {
 		return nil, common.ErrFailedToListBookings
@@ -92,11 +105,11 @@ func (u *Usecase) Execute(input Input) ([]*Output, error) {
 		clientMap[client.ID] = client
 	}
 
-	outputs := make([]*Output, len(bookings))
+	outputs := make([]*Output, 0)
 
-	for i, booking := range bookings {
-		outputs[i] = &Output{
-			ID:                      booking.ID,
+	for _, booking := range bookings {
+		outputs = append(outputs, &Output{
+			RegularBookingID:        booking.ID,
 			TherapistID:             booking.TherapistID,
 			TherapistName:           therapistMap[booking.TherapistID].Name,
 			ClientID:                booking.ClientID,
@@ -106,18 +119,39 @@ func (u *Usecase) Execute(input Input) ([]*Output, error) {
 			Duration:                booking.Duration,
 			ClientTimezoneOffset:    booking.ClientTimezoneOffset,
 			TherapistTimezoneOffset: therapistMap[booking.TherapistID].TimezoneOffset,
-		}
+		})
 	}
+
+	for _, adhocBooking := range adhocBookings {
+		outputs = append(outputs, &Output{
+			AdhocBookingID:          adhocBooking.ID,
+			TherapistID:             adhocBooking.TherapistID,
+			TherapistName:           therapistMap[adhocBooking.TherapistID].Name,
+			ClientID:                adhocBooking.ClientID,
+			ClientName:              clientMap[adhocBooking.ClientID].Name,
+			State:                   adhocBooking.State,
+			StartTime:               adhocBooking.StartTime,
+			Duration:                adhocBooking.Duration,
+			ClientTimezoneOffset:    adhocBooking.ClientTimezoneOffset,
+			TherapistTimezoneOffset: therapistMap[adhocBooking.TherapistID].TimezoneOffset,
+		})
+	}
+
 	return outputs, nil
 }
 
-func getTherapistAndClientIds(bookings []*booking.Booking) ([]domain.TherapistID, []domain.ClientID) {
+func getTherapistAndClientIds(bookings []*booking.Booking, adhocBookings []*booking.AdhocBooking) ([]domain.TherapistID, []domain.ClientID) {
 	therapistIds := make(map[domain.TherapistID]struct{})
 	clientIds := make(map[domain.ClientID]struct{})
 
 	for _, booking := range bookings {
 		therapistIds[booking.TherapistID] = struct{}{}
 		clientIds[booking.ClientID] = struct{}{}
+	}
+
+	for _, adhocBooking := range adhocBookings {
+		therapistIds[adhocBooking.TherapistID] = struct{}{}
+		clientIds[adhocBooking.ClientID] = struct{}{}
 	}
 
 	therapistIdsSlice := make([]domain.TherapistID, 0, len(therapistIds))

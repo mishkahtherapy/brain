@@ -112,52 +112,32 @@ func (r *BookingRepository) Create(booking *booking.Booking) error {
 	return nil
 }
 
-func (r *BookingRepository) UpdateTx(sqlExec ports.SQLExec, booking *booking.Booking) error {
-	if booking.ID == "" {
+func (r *BookingRepository) UpdateStateTx(
+	sqlExec ports.SQLExec,
+	bookingID domain.BookingID,
+	state booking.BookingState,
+	updatedAt time.Time,
+) error {
+	if bookingID == "" {
 		return ports.ErrBookingIDIsRequired
 	}
 
-	if booking.TimeSlotID == "" {
-		return ports.ErrBookingTimeSlotIDIsRequired
-	}
-
-	if booking.TherapistID == "" {
-		return ports.ErrBookingTherapistIDIsRequired
-	}
-
-	if booking.ClientID == "" {
-		return ports.ErrBookingClientIDIsRequired
-	}
-
-	if booking.State == "" {
+	if state == "" {
 		return ports.ErrBookingStateIsRequired
-	}
-
-	if booking.StartTime == (domain.UTCTimestamp{}) {
-		return ports.ErrBookingStartTimeIsRequired
-	}
-
-	if booking.UpdatedAt == (domain.UTCTimestamp{}) {
-		return ports.ErrBookingUpdatedAtIsRequired
 	}
 
 	query := `
 		UPDATE bookings 
-			SET timeslot_id = ?, therapist_id = ?, client_id = ?, start_time = ?, duration_minutes = ?, client_timezone_offset = ?, state = ?, updated_at = ?
+			SET state = ?, updated_at = ?
 		WHERE id = ?
 	`
 	result, err := sqlExec.Exec(
 		query,
-		booking.TimeSlotID,
-		booking.TherapistID,
-		booking.ClientID,
-		booking.StartTime,
-		booking.Duration,
-		booking.ClientTimezoneOffset,
-		booking.State,
-		booking.UpdatedAt,
-		booking.ID,
+		state,
+		updatedAt,
+		bookingID,
 	)
+
 	if err != nil {
 		slog.Error("error updating booking", "error", err)
 		return ports.ErrFailedToUpdateBooking
@@ -176,8 +156,12 @@ func (r *BookingRepository) UpdateTx(sqlExec ports.SQLExec, booking *booking.Boo
 	return nil
 }
 
-func (r *BookingRepository) Update(booking *booking.Booking) error {
-	return r.UpdateTx(r.db, booking)
+func (r *BookingRepository) UpdateState(
+	bookingID domain.BookingID,
+	state booking.BookingState,
+	updatedAt time.Time,
+) error {
+	return r.UpdateStateTx(r.db, bookingID, state, updatedAt)
 }
 
 func (r *BookingRepository) Delete(id domain.BookingID) error {
@@ -205,112 +189,37 @@ func (r *BookingRepository) Delete(id domain.BookingID) error {
 	return nil
 }
 
-func (r *BookingRepository) ListByTherapist(therapistID domain.TherapistID) ([]*booking.Booking, error) {
-	if therapistID == "" {
-		return nil, ports.ErrBookingTherapistIDIsRequired
+func (r *BookingRepository) List(filters ports.BookingFilters) ([]*booking.Booking, error) {
+	if !filters.IsValid() {
+		return nil, ports.ErrInvalidBookingFilters
 	}
 
 	query := `
 		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, client_timezone_offset, state, created_at, updated_at
 		FROM bookings
-		WHERE therapist_id = ?
-		ORDER BY start_time ASC
+		WHERE 1=1
 	`
-	rows, err := r.db.Query(query, therapistID)
+
+	params := []interface{}{}
+	if filters.TherapistID != "" {
+		query += ` AND therapist_id = ?`
+		params = append(params, filters.TherapistID)
+	}
+	if filters.ClientID != "" {
+		query += ` AND client_id = ?`
+		params = append(params, filters.ClientID)
+	}
+
+	if filters.State != "" {
+		query += ` AND state = ?`
+		params = append(params, filters.State)
+	}
+
+	query += ` ORDER BY start_time ASC`
+
+	rows, err := r.db.Query(query, params...)
 	if err != nil {
-		slog.Error("error listing bookings by therapist", "error", err)
-		return nil, ports.ErrFailedToGetBookings
-	}
-	defer rows.Close()
-
-	return r.scanBookings(rows)
-}
-
-func (r *BookingRepository) ListByClient(clientID domain.ClientID) ([]*booking.Booking, error) {
-	if clientID == "" {
-		return nil, ports.ErrBookingClientIDIsRequired
-	}
-
-	query := `
-		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, client_timezone_offset, state, created_at, updated_at
-		FROM bookings
-		WHERE client_id = ?
-		ORDER BY start_time ASC
-	`
-	rows, err := r.db.Query(query, clientID)
-	if err != nil {
-		slog.Error("error listing bookings by client", "error", err)
-		return nil, ports.ErrFailedToGetBookings
-	}
-	defer rows.Close()
-
-	return r.scanBookings(rows)
-}
-
-func (r *BookingRepository) ListByState(state booking.BookingState) ([]*booking.Booking, error) {
-	if state == "" {
-		return nil, ports.ErrBookingStateIsRequired
-	}
-
-	query := `
-		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, client_timezone_offset, state, created_at, updated_at
-		FROM bookings
-		WHERE state = ?
-		ORDER BY start_time ASC
-	`
-	rows, err := r.db.Query(query, state)
-	if err != nil {
-		slog.Error("error listing bookings by state", "error", err)
-		return nil, ports.ErrFailedToGetBookings
-	}
-	defer rows.Close()
-
-	return r.scanBookings(rows)
-}
-
-func (r *BookingRepository) ListByTherapistAndState(therapistID domain.TherapistID, state booking.BookingState) ([]*booking.Booking, error) {
-	if therapistID == "" {
-		return nil, ports.ErrBookingTherapistIDIsRequired
-	}
-
-	if state == "" {
-		return nil, ports.ErrBookingStateIsRequired
-	}
-
-	query := `
-		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, client_timezone_offset, state, created_at, updated_at
-		FROM bookings
-		WHERE therapist_id = ? AND state = ?
-		ORDER BY start_time ASC
-	`
-	rows, err := r.db.Query(query, therapistID, state)
-	if err != nil {
-		slog.Error("error listing bookings by therapist and state", "error", err)
-		return nil, ports.ErrFailedToGetBookings
-	}
-	defer rows.Close()
-
-	return r.scanBookings(rows)
-}
-
-func (r *BookingRepository) ListByClientAndState(clientID domain.ClientID, state booking.BookingState) ([]*booking.Booking, error) {
-	if clientID == "" {
-		return nil, ports.ErrBookingClientIDIsRequired
-	}
-
-	if state == "" {
-		return nil, ports.ErrBookingStateIsRequired
-	}
-
-	query := `
-		SELECT id, timeslot_id, therapist_id, client_id, start_time, duration_minutes, client_timezone_offset, state, created_at, updated_at
-		FROM bookings
-		WHERE client_id = ? AND state = ?
-		ORDER BY start_time ASC
-	`
-	rows, err := r.db.Query(query, clientID, state)
-	if err != nil {
-		slog.Error("error listing bookings by client and state", "error", err)
+		slog.Error("error listing bookings", "error", err)
 		return nil, ports.ErrFailedToGetBookings
 	}
 	defer rows.Close()
@@ -342,6 +251,19 @@ func (r *BookingRepository) scanBookings(rows *sql.Rows) ([]*booking.Booking, er
 		bookings = append(bookings, booking)
 	}
 	return bookings, nil
+}
+
+func (r *BookingRepository) ListByTherapistForDateRange(
+	therapistID domain.TherapistID,
+	states []booking.BookingState,
+	startDate time.Time,
+	endDate time.Time,
+) ([]*booking.Booking, error) {
+	bookings, err := r.BulkListByTherapistForDateRange([]domain.TherapistID{therapistID}, states, startDate, endDate)
+	if err != nil {
+		return nil, err
+	}
+	return bookings[therapistID], nil
 }
 
 func (r *BookingRepository) BulkListByTherapistForDateRange(

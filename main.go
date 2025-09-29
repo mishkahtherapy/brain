@@ -27,16 +27,15 @@ import (
 	firebase_notifier "github.com/mishkahtherapy/brain/adapters/firebase"
 	"github.com/mishkahtherapy/brain/config"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/cancel_booking"
-	"github.com/mishkahtherapy/brain/core/usecases/booking/confirm_booking"
+	"github.com/mishkahtherapy/brain/core/usecases/booking/confirm_booking/confirm_adhoc_booking"
+	"github.com/mishkahtherapy/brain/core/usecases/booking/confirm_booking/confirm_regular_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/create_adhoc_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/create_booking"
-	"github.com/mishkahtherapy/brain/core/usecases/booking/get_booking"
-	"github.com/mishkahtherapy/brain/core/usecases/booking/list_bookings_by_client"
-	"github.com/mishkahtherapy/brain/core/usecases/booking/list_bookings_by_therapist"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/search_bookings"
 	"github.com/mishkahtherapy/brain/core/usecases/client/create_client"
 	"github.com/mishkahtherapy/brain/core/usecases/client/get_all_clients"
 	"github.com/mishkahtherapy/brain/core/usecases/client/get_client"
+	"github.com/mishkahtherapy/brain/core/usecases/notify_therapist_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/schedule/get_schedule"
 	"github.com/mishkahtherapy/brain/core/usecases/session/get_meeting_link"
 	"github.com/mishkahtherapy/brain/core/usecases/session/get_session"
@@ -133,6 +132,12 @@ func main() {
 		adhocBookingRepo,
 		bookingConfig.MinimumBookingTime(),
 	)
+	notifyTherapistUsecase := notify_therapist_booking.NewUsecase(
+		therapistRepo,
+		notificationPort,
+		notificationRepo,
+		notificationConfig.TherapistAppBaseURL,
+	)
 
 	// Initialize booking usecases
 	createBookingUsecase := create_booking.NewUsecase(
@@ -149,20 +154,30 @@ func main() {
 		therapistRepo,
 		clientRepo,
 	)
-	getBookingUsecase := get_booking.NewUsecase(bookingRepo)
-	confirmBookingUsecase := confirm_booking.NewUsecase(
+	confirmRegularBookingUsecase := confirm_regular_booking.NewUsecase(
 		bookingRepo,
+		adhocBookingRepo,
 		sessionRepo,
 		therapistRepo,
 		notificationPort,
 		notificationRepo,
 		notificationConfig.TherapistAppBaseURL,
 		transactionRepo,
+		notifyTherapistUsecase,
+	)
+	confirmAdhocBookingUsecase := confirm_adhoc_booking.NewUsecase(
+		bookingRepo,
+		adhocBookingRepo,
+		sessionRepo,
+		therapistRepo,
+		notificationPort,
+		notificationRepo,
+		notificationConfig.TherapistAppBaseURL,
+		transactionRepo,
+		notifyTherapistUsecase,
 	)
 	cancelBookingUsecase := cancel_booking.NewUsecase(bookingRepo)
-	listBookingsByTherapistUsecase := list_bookings_by_therapist.NewUsecase(bookingRepo)
-	listBookingsByClientUsecase := list_bookings_by_client.NewUsecase(bookingRepo)
-	searchBookingsUsecase := search_bookings.NewUsecase(bookingRepo, therapistRepo, clientRepo)
+	searchBookingsUsecase := search_bookings.NewUsecase(bookingRepo, adhocBookingRepo, therapistRepo, clientRepo)
 
 	// Initialize session usecases
 	getSessionUsecase := get_session.NewUsecase(sessionRepo)
@@ -200,11 +215,9 @@ func main() {
 	bookingHandler := bookingHandler.NewBookingHandler(
 		*createBookingUsecase,
 		*createAdhocBookingUsecase,
-		*getBookingUsecase,
-		*confirmBookingUsecase,
+		*confirmRegularBookingUsecase,
+		*confirmAdhocBookingUsecase,
 		*cancelBookingUsecase,
-		*listBookingsByTherapistUsecase,
-		*listBookingsByClientUsecase,
 		*searchBookingsUsecase,
 	)
 

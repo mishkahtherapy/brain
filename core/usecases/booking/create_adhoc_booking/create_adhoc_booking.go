@@ -43,7 +43,7 @@ func NewUsecase(
 	}
 }
 
-func (u *Usecase) Execute(input Input) (*booking.AdhocBooking, error) {
+func (u *Usecase) Execute(input Input) (*ports.BookingResponse, error) {
 	// Validate required fields
 	if err := validateInput(input); err != nil {
 		return nil, err
@@ -157,7 +157,15 @@ func (u *Usecase) Execute(input Input) (*booking.AdhocBooking, error) {
 		return nil, err
 	}
 
-	return adhocBooking, nil
+	return &ports.BookingResponse{
+		AdhocBookingID:       adhocBooking.ID,
+		TherapistID:          adhocBooking.TherapistID,
+		ClientID:             adhocBooking.ClientID,
+		State:                adhocBooking.State,
+		StartTime:            adhocBooking.StartTime,
+		Duration:             adhocBooking.Duration,
+		ClientTimezoneOffset: adhocBooking.ClientTimezoneOffset,
+	}, nil
 }
 
 func validateInput(input Input) error {

@@ -1,11 +1,11 @@
 meta {
-  name: New Adhoc Booking
+  name: New Booking
   type: http
-  seq: 7
+  seq: 4
 }
 
 post {
-  url: {{API_URL}}/bookings/adhoc
+  url: {{API_URL}}/bookings
   body: json
   auth: inherit
 }
@@ -14,7 +14,8 @@ body:json {
   {
     "therapistId": "therapist_2ee61d4c197f44a2ab6f12f84dbfd1bf",
     "clientId": "client_08d1302a55e84090ba42e05d21cdf587",
-    "startTime": "2025-09-29T17:10:00Z",
+    "timeSlotId": "timeslot_14e39b206fdf4aa8a22cbaecabd73205",
+    "startTime": "2025-09-29T18:10:00Z",
     "duration": 30,
     "clientTimezoneOffset": 120
   }

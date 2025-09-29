@@ -19,7 +19,7 @@ func NewUsecase(bookingRepo ports.BookingRepository) *Usecase {
 	return &Usecase{bookingRepo: bookingRepo}
 }
 
-func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
+func (u *Usecase) Execute(input Input) (*ports.BookingResponse, error) {
 	// Validate required fields
 	if input.BookingID == "" {
 		return nil, common.ErrBookingIDIsRequired
@@ -37,13 +37,23 @@ func (u *Usecase) Execute(input Input) (*booking.Booking, error) {
 	}
 
 	// Change state to Cancelled
-	existingBooking.State = booking.BookingStateCancelled
-	existingBooking.UpdatedAt = domain.NewUTCTimestamp()
-
-	err = u.bookingRepo.Update(existingBooking)
+	updatedAt := domain.NewUTCTimestamp().Time()
+	err = u.bookingRepo.UpdateState(
+		existingBooking.ID,
+		booking.BookingStateCancelled,
+		updatedAt,
+	)
 	if err != nil {
 		return nil, common.ErrFailedToCancelBooking
 	}
 
-	return existingBooking, nil
+	return &ports.BookingResponse{
+		RegularBookingID:     existingBooking.ID,
+		TherapistID:          existingBooking.TherapistID,
+		ClientID:             existingBooking.ClientID,
+		State:                existingBooking.State,
+		StartTime:            existingBooking.StartTime,
+		Duration:             existingBooking.Duration,
+		ClientTimezoneOffset: existingBooking.ClientTimezoneOffset,
+	}, nil
 }

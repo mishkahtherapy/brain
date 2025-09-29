@@ -135,12 +135,13 @@ CREATE TABLE IF NOT EXISTS adhoc_bookings (
 -- Sessions table, derived from bookings
 CREATE TABLE IF NOT EXISTS sessions (
     id VARCHAR(128) PRIMARY KEY,
-    booking_id VARCHAR(128) NOT NULL UNIQUE,
+    regular_booking_id VARCHAR(128) NULL UNIQUE,
+    adhoc_booking_id VARCHAR(128) NULL UNIQUE,
     therapist_id VARCHAR(128) NOT NULL,
     client_id VARCHAR(128) NOT NULL,
     start_time DATETIME NOT NULL,
-    duration_minutes INTEGER NOT NULL, -- Duration in minutes
-    client_timezone_offset INTEGER NOT NULL, -- Frontend hint for timezone adjustments (minutes ahead of UTC)
+    duration_minutes INTEGER NOT NULL,
+    client_timezone_offset INTEGER NOT NULL,
     paid_amount INTEGER NOT NULL, -- USD cents
     language VARCHAR(10) NOT NULL CHECK (
         language IN ('arabic', 'english')
@@ -150,15 +151,14 @@ CREATE TABLE IF NOT EXISTS sessions (
             'planned',
             'done',
             'rescheduled',
-            'cancelled', -- Won't be used for now
-            'refunded' -- Won't be used for now
+            'cancelled',
+            'refunded'
         )
     ),
     notes TEXT,
-    meeting_url VARCHAR(512), -- nullable, added manually
+    meeting_url VARCHAR(512),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_sessions_booking FOREIGN KEY (booking_id) REFERENCES bookings (id) ON DELETE NO ACTION,
     CONSTRAINT fk_sessions_therapist FOREIGN KEY (therapist_id) REFERENCES therapists (id) ON DELETE NO ACTION,
     CONSTRAINT fk_sessions_client FOREIGN KEY (client_id) REFERENCES clients (id) ON DELETE NO ACTION
 );
@@ -209,7 +209,7 @@ CREATE INDEX idx_bookings_state ON bookings (state);
 -- CREATE INDEX idx_bookings_timezone_offset ON bookings (timezone_offset);
 
 -- Session queries
-CREATE INDEX idx_sessions_booking ON sessions (booking_id);
+CREATE INDEX idx_sessions_regular_booking ON sessions (regular_booking_id);
 
 CREATE INDEX idx_sessions_therapist ON sessions (therapist_id);
 

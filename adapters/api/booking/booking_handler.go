@@ -9,59 +9,48 @@ import (
 	"github.com/mishkahtherapy/brain/adapters/api"
 	"github.com/mishkahtherapy/brain/core/domain"
 	"github.com/mishkahtherapy/brain/core/domain/booking"
+	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/cancel_booking"
-	"github.com/mishkahtherapy/brain/core/usecases/booking/confirm_booking"
+	"github.com/mishkahtherapy/brain/core/usecases/booking/confirm_booking/confirm_adhoc_booking"
+	"github.com/mishkahtherapy/brain/core/usecases/booking/confirm_booking/confirm_regular_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/create_adhoc_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/create_booking"
-	"github.com/mishkahtherapy/brain/core/usecases/booking/get_booking"
-	"github.com/mishkahtherapy/brain/core/usecases/booking/list_bookings_by_client"
-	"github.com/mishkahtherapy/brain/core/usecases/booking/list_bookings_by_therapist"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/search_bookings"
 	"github.com/mishkahtherapy/brain/core/usecases/common"
 )
 
 type BookingHandler struct {
-	createBookingUsecase           create_booking.Usecase
-	createAdhocBookingUsecase      create_adhoc_booking.Usecase
-	getBookingUsecase              get_booking.Usecase
-	confirmBookingUsecase          confirm_booking.Usecase
-	cancelBookingUsecase           cancel_booking.Usecase
-	listBookingsByTherapistUsecase list_bookings_by_therapist.Usecase
-	listBookingsByClientUsecase    list_bookings_by_client.Usecase
-	searchBookingsUsecase          search_bookings.Usecase
+	createBookingUsecase         create_booking.Usecase
+	createAdhocBookingUsecase    create_adhoc_booking.Usecase
+	confirmRegularBookingUsecase confirm_regular_booking.Usecase
+	confirmAdhocBookingUsecase   confirm_adhoc_booking.Usecase
+	cancelBookingUsecase         cancel_booking.Usecase
+	searchBookingsUsecase        search_bookings.Usecase
 }
 
 func NewBookingHandler(
 	createUsecase create_booking.Usecase,
 	createAdhocBookingUsecase create_adhoc_booking.Usecase,
-	getUsecase get_booking.Usecase,
-	confirmUsecase confirm_booking.Usecase,
+	confirmRegularBookingUsecase confirm_regular_booking.Usecase,
+	confirmAdhocBookingUsecase confirm_adhoc_booking.Usecase,
 	cancelUsecase cancel_booking.Usecase,
-	listByTherapistUsecase list_bookings_by_therapist.Usecase,
-	listByClientUsecase list_bookings_by_client.Usecase,
 	searchUsecase search_bookings.Usecase,
 ) *BookingHandler {
 	return &BookingHandler{
-		createBookingUsecase:           createUsecase,
-		createAdhocBookingUsecase:      createAdhocBookingUsecase,
-		getBookingUsecase:              getUsecase,
-		confirmBookingUsecase:          confirmUsecase,
-		cancelBookingUsecase:           cancelUsecase,
-		listBookingsByTherapistUsecase: listByTherapistUsecase,
-		listBookingsByClientUsecase:    listByClientUsecase,
-		searchBookingsUsecase:          searchUsecase,
+		createBookingUsecase:         createUsecase,
+		createAdhocBookingUsecase:    createAdhocBookingUsecase,
+		confirmRegularBookingUsecase: confirmRegularBookingUsecase,
+		confirmAdhocBookingUsecase:   confirmAdhocBookingUsecase,
+		cancelBookingUsecase:         cancelUsecase,
+		searchBookingsUsecase:        searchUsecase,
 	}
 }
 
 func (h *BookingHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/v1/bookings", h.handleCreateBooking)
 	mux.HandleFunc("GET /api/v1/bookings/search", h.handleSearchBookings)
-	mux.HandleFunc("GET /api/v1/bookings/{id}", h.handleGetBooking)
 	mux.HandleFunc("PUT /api/v1/bookings/{id}/confirm", h.handleConfirmBooking)
 	mux.HandleFunc("PUT /api/v1/bookings/{id}/cancel", h.handleCancelBooking)
-	mux.HandleFunc("GET /api/v1/therapists/{id}/bookings", h.handleListBookingsByTherapist)
-	mux.HandleFunc("GET /api/v1/clients/{id}/bookings", h.handleListBookingsByClient)
-
 	mux.HandleFunc("POST /api/v1/bookings/adhoc", h.handleCreateAdhocBooking)
 }
 
@@ -201,36 +190,11 @@ func (h *BookingHandler) handleSearchBookings(w http.ResponseWriter, r *http.Req
 	}
 }
 
-func (h *BookingHandler) handleGetBooking(w http.ResponseWriter, r *http.Request) {
-	rw := api.NewResponseWriter(w)
-
-	// Read id from path
-	id := domain.BookingID(r.PathValue("id"))
-	if id == "" {
-		rw.WriteBadRequest("Missing booking ID")
-		return
-	}
-
-	booking, err := h.getBookingUsecase.Execute(id)
-	if err != nil {
-		if err == common.ErrBookingNotFound {
-			rw.WriteNotFound(err.Error())
-			return
-		}
-		rw.WriteError(err, http.StatusInternalServerError)
-		return
-	}
-
-	if err := rw.WriteJSON(booking, http.StatusOK); err != nil {
-		rw.WriteError(err, http.StatusInternalServerError)
-	}
-}
-
 func (h *BookingHandler) handleConfirmBooking(w http.ResponseWriter, r *http.Request) {
 	rw := api.NewResponseWriter(w)
 
 	// Read id from path
-	id := domain.BookingID(r.PathValue("id"))
+	id := r.PathValue("id")
 	if id == "" {
 		rw.WriteBadRequest("Missing booking ID")
 		return
@@ -240,6 +204,7 @@ func (h *BookingHandler) handleConfirmBooking(w http.ResponseWriter, r *http.Req
 	var requestBody struct {
 		PaidAmountUSD int                    `json:"paidAmount"` // WhatsApp currency (smallest unit integer)
 		Language      domain.SessionLanguage `json:"language"`
+		Notes         string                 `json:"notes"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
@@ -247,13 +212,29 @@ func (h *BookingHandler) handleConfirmBooking(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	input := confirm_booking.Input{
-		BookingID:     id,
-		PaidAmountUSD: requestBody.PaidAmountUSD,
-		Language:      requestBody.Language,
+	bookingType, err := booking.GetType(id)
+	if err != nil {
+		rw.WriteBadRequest(err.Error())
+		return
 	}
 
-	booking, err := h.confirmBookingUsecase.Execute(input)
+	var confirmedBooking *ports.BookingResponse
+	if bookingType == booking.BookingTypeRegular {
+		input := confirm_regular_booking.Input{
+			BookingID:     domain.BookingID(id),
+			PaidAmountUSD: requestBody.PaidAmountUSD,
+			Language:      requestBody.Language,
+		}
+		confirmedBooking, err = h.confirmRegularBookingUsecase.Execute(input)
+	} else {
+		input := confirm_adhoc_booking.Input{
+			BookingID:     domain.AdhocBookingID(id),
+			PaidAmountUSD: requestBody.PaidAmountUSD,
+			Language:      requestBody.Language,
+		}
+		confirmedBooking, err = h.confirmAdhocBookingUsecase.Execute(input)
+	}
+
 	if err != nil {
 		// Handle specific business logic errors
 		switch err {
@@ -266,7 +247,7 @@ func (h *BookingHandler) handleConfirmBooking(w http.ResponseWriter, r *http.Req
 			rw.WriteNotFound(err.Error())
 		case common.ErrInvalidBookingState:
 			rw.WriteBadRequest(err.Error())
-		case confirm_booking.ErrFailedToCreateSession:
+		case booking.ErrFailedToCreateSession:
 			rw.WriteError(err, http.StatusInternalServerError)
 		default:
 			rw.WriteError(err, http.StatusInternalServerError)
@@ -274,7 +255,7 @@ func (h *BookingHandler) handleConfirmBooking(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if err := rw.WriteJSON(booking, http.StatusOK); err != nil {
+	if err := rw.WriteJSON(confirmedBooking, http.StatusOK); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
 }
@@ -310,96 +291,6 @@ func (h *BookingHandler) handleCancelBooking(w http.ResponseWriter, r *http.Requ
 	}
 
 	if err := rw.WriteJSON(booking, http.StatusOK); err != nil {
-		rw.WriteError(err, http.StatusInternalServerError)
-	}
-}
-
-func (h *BookingHandler) handleListBookingsByTherapist(w http.ResponseWriter, r *http.Request) {
-	rw := api.NewResponseWriter(w)
-
-	// Read therapist id from path
-	therapistID := domain.TherapistID(r.PathValue("id"))
-	if therapistID == "" {
-		rw.WriteBadRequest("Missing therapist ID")
-		return
-	}
-
-	// Parse optional state query parameter
-	var state *booking.BookingState
-	if stateParam := r.URL.Query().Get("state"); stateParam != "" {
-		bookingState := booking.BookingState(stateParam)
-		// Validate state value
-		if bookingState != booking.BookingStatePending &&
-			bookingState != booking.BookingStateConfirmed &&
-			bookingState != booking.BookingStateCancelled {
-			rw.WriteBadRequest("Invalid state parameter. Must be one of: pending, confirmed, cancelled")
-			return
-		}
-		state = &bookingState
-	}
-
-	input := list_bookings_by_therapist.Input{
-		TherapistID: therapistID,
-		State:       state,
-	}
-
-	bookings, err := h.listBookingsByTherapistUsecase.Execute(input)
-	if err != nil {
-		switch err {
-		case common.ErrTherapistIDIsRequired:
-			rw.WriteBadRequest(err.Error())
-		default:
-			rw.WriteError(err, http.StatusInternalServerError)
-		}
-		return
-	}
-
-	if err := rw.WriteJSON(bookings, http.StatusOK); err != nil {
-		rw.WriteError(err, http.StatusInternalServerError)
-	}
-}
-
-func (h *BookingHandler) handleListBookingsByClient(w http.ResponseWriter, r *http.Request) {
-	rw := api.NewResponseWriter(w)
-
-	// Read client id from path
-	clientID := domain.ClientID(r.PathValue("id"))
-	if clientID == "" {
-		rw.WriteBadRequest("Missing client ID")
-		return
-	}
-
-	// Parse optional state query parameter
-	var state *booking.BookingState
-	if stateParam := r.URL.Query().Get("state"); stateParam != "" {
-		bookingState := booking.BookingState(stateParam)
-		// Validate state value
-		if bookingState != booking.BookingStatePending &&
-			bookingState != booking.BookingStateConfirmed &&
-			bookingState != booking.BookingStateCancelled {
-			rw.WriteBadRequest("Invalid state parameter. Must be one of: pending, confirmed, cancelled")
-			return
-		}
-		state = &bookingState
-	}
-
-	input := list_bookings_by_client.Input{
-		ClientID: clientID,
-		State:    state,
-	}
-
-	bookings, err := h.listBookingsByClientUsecase.Execute(input)
-	if err != nil {
-		switch err {
-		case common.ErrClientIDIsRequired:
-			rw.WriteBadRequest(err.Error())
-		default:
-			rw.WriteError(err, http.StatusInternalServerError)
-		}
-		return
-	}
-
-	if err := rw.WriteJSON(bookings, http.StatusOK); err != nil {
 		rw.WriteError(err, http.StatusInternalServerError)
 	}
 }

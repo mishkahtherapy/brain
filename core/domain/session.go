@@ -28,7 +28,8 @@ func (s SessionState) IsFinalState() bool {
 // Session represents a confirmed therapy session derived from a booking
 type Session struct {
 	ID                   SessionID       `json:"id"`
-	BookingID            BookingID       `json:"bookingId"`
+	RegularBookingID     BookingID       `json:"regularBookingId,omitempty"`
+	AdhocBookingID       AdhocBookingID  `json:"adhocBookingId,omitempty"`
 	TherapistID          TherapistID     `json:"therapistId"`
 	ClientID             ClientID        `json:"clientId"`
 	StartTime            UTCTimestamp    `json:"startTime"`

@@ -159,7 +159,7 @@ func TestBookingE2E(t *testing.T) {
 	notificationRepo := &TestNotificationRepository{db: database}
 
 	// Setup usecases
-	createBookingUsecase := create_booking.NewUsecase(bookingRepo, therapistRepo, clientRepo, timeSlotRepo)
+	createBookingUsecase := create_booking.NewUsecase(bookingRepo, therapistRepo, clientRepo, timeSlotRepo, getScheduleUsecase)
 	getBookingUsecase := get_booking.NewUsecase(bookingRepo)
 	confirmBookingUsecase := confirm_booking.NewUsecase(bookingRepo, sessionRepo, therapistRepo, notificationPort, notificationRepo)
 	cancelBookingUsecase := cancel_booking.NewUsecase(bookingRepo)
