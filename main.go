@@ -35,7 +35,7 @@ import (
 	"github.com/mishkahtherapy/brain/core/usecases/client/create_client"
 	"github.com/mishkahtherapy/brain/core/usecases/client/get_all_clients"
 	"github.com/mishkahtherapy/brain/core/usecases/client/get_client"
-	"github.com/mishkahtherapy/brain/core/usecases/notify_therapist_booking"
+	"github.com/mishkahtherapy/brain/core/usecases/notification/notify_therapist_new_booking"
 	"github.com/mishkahtherapy/brain/core/usecases/schedule/get_schedule"
 	"github.com/mishkahtherapy/brain/core/usecases/session/get_meeting_link"
 	"github.com/mishkahtherapy/brain/core/usecases/session/get_session"
@@ -132,7 +132,7 @@ func main() {
 		adhocBookingRepo,
 		bookingConfig.MinimumBookingTime(),
 	)
-	notifyTherapistUsecase := notify_therapist_booking.NewUsecase(
+	notifyTherapistUsecase := notify_therapist_new_booking.NewUsecase(
 		therapistRepo,
 		notificationPort,
 		notificationRepo,

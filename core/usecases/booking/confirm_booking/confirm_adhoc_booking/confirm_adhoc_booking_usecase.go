@@ -7,8 +7,9 @@ import (
 	"github.com/mishkahtherapy/brain/core/domain/booking"
 	"github.com/mishkahtherapy/brain/core/ports"
 	"github.com/mishkahtherapy/brain/core/usecases/booking/confirm_booking"
+	"github.com/mishkahtherapy/brain/core/usecases/notification/notify_therapist_new_booking"
+
 	"github.com/mishkahtherapy/brain/core/usecases/common"
-	"github.com/mishkahtherapy/brain/core/usecases/notify_therapist_booking"
 )
 
 type Input struct {
@@ -27,7 +28,7 @@ type Usecase struct {
 	transactionPort     ports.TransactionPort
 
 	cancelPendingBookings *confirm_booking.PendingBookingConflictResolver
-	notifyTherapist       *notify_therapist_booking.Usecase
+	notifyTherapist       *notify_therapist_new_booking.Usecase
 }
 
 func NewUsecase(
@@ -39,7 +40,7 @@ func NewUsecase(
 	notificationRepo ports.NotificationRepository,
 	therapistAppBaseURL string,
 	transactionPort ports.TransactionPort,
-	notifyTherapist *notify_therapist_booking.Usecase,
+	notifyTherapist *notify_therapist_new_booking.Usecase,
 ) *Usecase {
 	return &Usecase{
 		adhocBookingRepo:    adhocBookingRepo,
